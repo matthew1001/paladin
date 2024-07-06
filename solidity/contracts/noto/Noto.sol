@@ -12,12 +12,17 @@ contract Noto is NotoBase {
     function transfer(
         bytes32[] memory inputs,
         bytes32[] memory outputs,
+        bytes memory /*signature*/,
         bytes memory data
     ) public onlyNotary {
         _transfer(inputs, outputs, data);
     }
 
-    function approve(address delegate, bytes32 txhash) public onlyNotary {
+    function approve(
+        address delegate,
+        bytes32 txhash,
+        bytes memory /*signature*/
+    ) public onlyNotary {
         _approve(delegate, txhash);
     }
 }

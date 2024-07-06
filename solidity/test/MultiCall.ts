@@ -21,7 +21,9 @@ describe("MultiCall", function () {
 
     // Bring TXOs and tokens into being
     const [f1txo1, f1txo2] = [fakeTXO(), fakeTXO()];
-    await noto.connect(notary1).transfer([], [f1txo1, f1txo2], randomBytes32());
+    await noto
+      .connect(notary1)
+      .transfer([], [f1txo1, f1txo2], "0x", randomBytes32());
 
     await erc20.mint(notary2, 1000);
 
@@ -61,7 +63,7 @@ describe("MultiCall", function () {
     // Do the delegation/approval transactions
     const f1tx = await noto
       .connect(notary1)
-      .approve(mcAddr, multiTXF1Part.hash);
+      .approve(mcAddr, multiTXF1Part.hash, "0x");
     const delegateResult1: ContractTransactionReceipt | null =
       await f1tx.wait();
     const delegateEvent1 = noto.interface.parseLog(

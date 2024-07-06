@@ -55,7 +55,7 @@ describe("Noto", function () {
     outputs: string[],
     data: string
   ) {
-    const tx = await noto.connect(notary).transfer(inputs, outputs, data);
+    const tx = await noto.connect(notary).transfer(inputs, outputs, "0x", data);
     const results: ContractTransactionReceipt | null = await tx.wait();
 
     for (const log of results?.logs || []) {
