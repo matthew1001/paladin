@@ -12,13 +12,14 @@ enum OperationType {
 }
 
 const newOperation = (
-  op: Partial<MultiCall.OperationStruct> &
-    Pick<MultiCall.OperationStruct, "opType" | "contractAddress">
-): MultiCall.OperationStruct => {
+  op: Partial<MultiCall.OperationInputStruct> &
+    Pick<MultiCall.OperationInputStruct, "opType" | "contractAddress">
+): MultiCall.OperationInputStruct => {
   return {
     fromAddress: ethers.ZeroAddress,
     toAddress: ethers.ZeroAddress,
     value: 0,
+    tokenIndex: 0,
     inputs: [],
     outputs: [],
     signature: "0x",
@@ -200,8 +201,13 @@ describe("MultiCall", function () {
   it("test revert propagation", async function () {
     const [notary1, anybody1, anybody2] = await ethers.getSigners();
 
-    // Deploy noto contract
     const Noto = await ethers.getContractFactory("Noto");
+    const MultiCallFactory = await ethers.getContractFactory(
+      "MultiCallFactory"
+    );
+    const MultiCall = await ethers.getContractFactory("MultiCall");
+
+    // Deploy noto contract
     const noto = await Noto.connect(notary1).deploy(notary1.address);
 
     // Fake up a delegation
@@ -222,9 +228,6 @@ describe("MultiCall", function () {
     ]);
 
     // Deploy the delegation contract
-    const MultiCallFactory = await ethers.getContractFactory(
-      "MultiCallFactory"
-    );
     const multiCallFactory = await MultiCallFactory.connect(anybody1).deploy();
     const mcFactoryInvoke = await multiCallFactory.connect(anybody1).create([
       newOperation({
@@ -240,7 +243,6 @@ describe("MultiCall", function () {
     const mcAddr = createMFEvent?.args.addr;
 
     // Run the atomic op (will revert because delegation was never actually created)
-    const MultiCall = await ethers.getContractFactory("MultiCall");
     const multiCall = MultiCall.connect(anybody2).attach(mcAddr) as MultiCall;
     await expect(multiCall.execute())
       .to.be.revertedWithCustomError(Noto, "NotoInvalidDelegate")

@@ -18,17 +18,22 @@ contract MultiCall is Initializable {
         NotoTransfer
     }
 
-    // Common set of parameters for all supported operations.
-    // Any changes to this struct must be reflected in MultiCallFactory as well.
-    struct Operation {
+    struct OperationInput {
         OperationType opType;
         address contractAddress;
         address fromAddress;
         address toAddress;
         uint256 value;
+        uint256 tokenIndex;
         bytes32[] inputs;
         bytes32[] outputs;
         bytes signature;
+        bytes data;
+    }
+
+    struct Operation {
+        OperationType opType;
+        address contractAddress;
         bytes data;
     }
 
@@ -39,10 +44,57 @@ contract MultiCall is Initializable {
         _disableInitializers();
     }
 
-    function initialize(Operation[] memory operations) public initializer {
+    function initialize(OperationInput[] memory operations) public initializer {
         _operationCount = operations.length;
         for (uint256 i = 0; i < _operationCount; i++) {
-            _operations.push(operations[i]);
+            if (operations[i].opType == OperationType.EncodedCall) {
+                _operations.push(
+                    Operation(
+                        operations[i].opType,
+                        operations[i].contractAddress,
+                        operations[i].data
+                    )
+                );
+            } else if (operations[i].opType == OperationType.ERC20Transfer) {
+                _operations.push(
+                    Operation(
+                        operations[i].opType,
+                        operations[i].contractAddress,
+                        abi.encode(
+                            operations[i].fromAddress,
+                            operations[i].toAddress,
+                            operations[i].value
+                        )
+                    )
+                );
+            } else if (operations[i].opType == OperationType.ERC721Transfer) {
+                _operations.push(
+                    Operation(
+                        operations[i].opType,
+                        operations[i].contractAddress,
+                        abi.encode(
+                            operations[i].fromAddress,
+                            operations[i].toAddress,
+                            operations[i].tokenIndex,
+                            operations[i].data
+                        )
+                    )
+                );
+            } else if (operations[i].opType == OperationType.NotoTransfer) {
+                _operations.push(
+                    Operation(
+                        operations[i].opType,
+                        operations[i].contractAddress,
+                        abi.encode(
+                            operations[i].inputs,
+                            operations[i].outputs,
+                            operations[i].data
+                        )
+                    )
+                );
+            } else {
+                revert MultiCallUnsupportedType(operations[i].opType);
+            }
         }
     }
 
@@ -66,24 +118,33 @@ contract MultiCall is Initializable {
                 }
             }
         } else if (op.opType == OperationType.ERC20Transfer) {
+            (address fromAddress, address toAddress, uint256 value) = abi
+                .decode(op.data, (address, address, uint256));
             IERC20(op.contractAddress).transferFrom(
-                op.fromAddress,
-                op.toAddress,
-                op.value
+                fromAddress,
+                toAddress,
+                value
             );
         } else if (op.opType == OperationType.ERC721Transfer) {
+            (
+                address fromAddress,
+                address toAddress,
+                uint256 tokenIndex,
+                bytes memory data
+            ) = abi.decode(op.data, (address, address, uint256, bytes));
             IERC721(op.contractAddress).safeTransferFrom(
-                op.fromAddress,
-                op.toAddress,
-                op.value,
-                op.data
+                fromAddress,
+                toAddress,
+                tokenIndex,
+                data
             );
         } else if (op.opType == OperationType.NotoTransfer) {
-            INoto(op.contractAddress).approvedTransfer(
-                op.inputs,
-                op.outputs,
-                op.data
-            );
+            (
+                bytes32[] memory inputs,
+                bytes32[] memory outputs,
+                bytes memory data
+            ) = abi.decode(op.data, (bytes32[], bytes32[], bytes));
+            INoto(op.contractAddress).approvedTransfer(inputs, outputs, data);
         } else {
             revert MultiCallUnsupportedType(op.opType);
         }
@@ -92,12 +153,6 @@ contract MultiCall is Initializable {
     function getOperationCount() public view returns (uint256) {
         return _operationCount;
     }
-
-    function getOperation(
-        uint256 operationIndex
-    ) public view returns (Operation memory) {
-        return _operations[operationIndex];
-    }
 }
 
 contract MultiCallFactory {
@@ -105,15 +160,15 @@ contract MultiCallFactory {
 
     event MultiCallDeployed(address addr);
 
-    // Must match the signature initialize(MultiCall.Operation[])
+    // Must match the signature initialize(MultiCall.OperationInput[])
     string private constant INIT_SIGNATURE =
-        "initialize((uint8,address,address,address,uint256,bytes32[],bytes32[],bytes,bytes)[])";
+        "initialize((uint8,address,address,address,uint256,uint256,bytes32[],bytes32[],bytes,bytes)[])";
 
     constructor() {
         logic = address(new MultiCall());
     }
 
-    function create(MultiCall.Operation[] memory operations) public {
+    function create(MultiCall.OperationInput[] calldata operations) public {
         bytes memory _initializationCalldata = abi.encodeWithSignature(
             INIT_SIGNATURE,
             operations
