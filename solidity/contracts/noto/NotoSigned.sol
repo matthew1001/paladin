@@ -16,7 +16,7 @@ contract NotoSigned is NotoBase {
         bytes32[] memory outputs,
         bytes memory signature,
         bytes memory data
-    ) public {
+    ) external {
         bytes32 txhash = _buildTXHash(inputs, outputs, data);
         address signer = ECDSA.recover(txhash, signature);
         requireNotary(signer);
@@ -27,7 +27,7 @@ contract NotoSigned is NotoBase {
         address delegate,
         bytes32 txhash,
         bytes memory signature
-    ) public {
+    ) external {
         address signer = ECDSA.recover(txhash, signature);
         requireNotary(signer);
         _approve(delegate, txhash);

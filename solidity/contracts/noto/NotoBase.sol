@@ -37,8 +37,6 @@ abstract contract NotoBase is EIP712, INoto {
 
     error NotoNotNotary(address sender);
 
-    error NotoInvalidTXHash(bytes32 expected, bytes32 calculated);
-
     error NotoInvalidDelegate(bytes32 txhash, address delegate, address sender);
 
     bytes32 private constant TRANSFER_TYPEHASH =
@@ -103,7 +101,6 @@ abstract contract NotoBase is EIP712, INoto {
     /**
      * @dev transfer via delegation - must be the approved delegate
      *
-     * @param txhash the transaction hash expected by the caller (avoids double calculation of hash)
      * @param inputs as per transfer()
      * @param outputs as per transfer()
      * @param data as per transfer()
@@ -111,16 +108,11 @@ abstract contract NotoBase is EIP712, INoto {
      * Emits a {UTXOTransfer} event.
      */
     function approvedTransfer(
-        bytes32 txhash,
         bytes32[] memory inputs,
         bytes32[] memory outputs,
         bytes memory data
     ) public {
-        bytes32 calculatedTXHash = _buildTXHash(inputs, outputs, data);
-        if (txhash != calculatedTXHash) {
-            revert NotoInvalidTXHash(txhash, calculatedTXHash);
-        }
-
+        bytes32 txhash = _buildTXHash(inputs, outputs, data);
         if (_approvals[txhash].delegate != msg.sender) {
             revert NotoInvalidDelegate(
                 txhash,

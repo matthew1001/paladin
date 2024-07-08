@@ -14,7 +14,7 @@ contract Noto is NotoBase {
         bytes32[] memory outputs,
         bytes memory /*signature*/,
         bytes memory data
-    ) public onlyNotary {
+    ) external onlyNotary {
         _transfer(inputs, outputs, data);
     }
 
@@ -22,7 +22,7 @@ contract Noto is NotoBase {
         address delegate,
         bytes32 txhash,
         bytes memory /*signature*/
-    ) public onlyNotary {
+    ) external onlyNotary {
         _approve(delegate, txhash);
     }
 }

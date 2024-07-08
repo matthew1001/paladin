@@ -18,4 +18,10 @@ interface INoto {
         bytes32 txhash,
         bytes memory signature
     ) external;
+
+    function approvedTransfer(
+        bytes32[] memory inputs,
+        bytes32[] memory outputs,
+        bytes memory data
+    ) external;
 }
