@@ -1,8 +1,11 @@
-go 1.22.4
+go 1.22.5
 
 use (
 	./blockchain-transaction-manager
+	./prototype/gable
+	./prototype/wazero
+	./prototype/uds-grpc/paladin
+	./prototype/uds-grpc/domains/domainA
 	./runtime
 	./transaction-manager
-	./prototype/gable
 )

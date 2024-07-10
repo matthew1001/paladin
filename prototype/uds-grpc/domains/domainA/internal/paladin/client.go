@@ -8,7 +8,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	pb "github.com/kaleido-io/paladin-domains/domainA/internal/protos/domain"
+	pb "github.com/kaleido-io/paladin/pkg/protos/domain"
 )
 
 func DoThatThing() {

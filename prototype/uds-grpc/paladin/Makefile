@@ -3,6 +3,7 @@ PROTOC_GEN_GO := $(shell which protoc-gen-go)
 PROTO_FILE := Paladin.proto
 PROTO_PATH := ./proto
 BINARY_NAME := ./bin/main
+
 # Default target
 all: generate build run
 

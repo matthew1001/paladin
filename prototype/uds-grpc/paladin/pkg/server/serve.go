@@ -8,7 +8,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/kaleido-io/paladin/internal/domain"
-	pb "github.com/kaleido-io/paladin/internal/protos/domain"
+	pb "github.com/kaleido-io/paladin/pkg/protos/domain"
 )
 
 // server is used to implement example.GreeterServer.
