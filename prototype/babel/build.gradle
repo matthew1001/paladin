@@ -90,6 +90,7 @@ dependencies {
             classifier = "osx-aarch_64"
         }
     }
+    implementation 'net.java.dev.jna:jna-platform:5.14.0'
 
     compileOnly "org.apache.tomcat:annotations-api:6.0.53"
     implementation "com.google.protobuf:protobuf-java-util:${protobufVersion}"

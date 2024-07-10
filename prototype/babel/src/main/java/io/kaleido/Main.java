@@ -30,12 +30,13 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 public class Main {
+
     public static void main(String[] args) throws Exception {
         File f = File.createTempFile("paladin", ".sock");
         if (!f.delete() ){
             throw new IOException(String.format("Failed to deleted socket placeholder after creation: %s", f.getAbsolutePath()));
         }
-        int rc = new PaladinJNI().run(f.getAbsolutePath());
+        int rc = new PaladinJNA().run(f.getAbsolutePath());
         if (rc != 0) {
             throw new IOException("Failed to start golang gRPC server");
         }

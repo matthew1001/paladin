@@ -6,6 +6,7 @@ build: protobufs gable.so
 
 gable.so: ${GO_FILES}
 	go build -o gable.so -buildmode=c-shared gable.go
+	cp gable.so libgable.dylib
 
 protobufs:
     # Use go.mod for dependency version management (tools/tools.go tracks deps for go mod tidy)
