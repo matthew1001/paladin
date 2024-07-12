@@ -5,6 +5,8 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "zeto/contracts/lib/common.sol";
+import "zeto/contracts/zeto_anon.sol";
 import "./interfaces/INoto.sol";
 
 contract MultiCall is Initializable {
@@ -15,7 +17,8 @@ contract MultiCall is Initializable {
         EncodedCall,
         ERC20Transfer,
         ERC721Transfer,
-        NotoTransfer
+        NotoTransfer,
+        ZetoTransfer
     }
 
     struct OperationInput {
@@ -25,10 +28,11 @@ contract MultiCall is Initializable {
         address toAddress;
         uint256 value;
         uint256 tokenIndex;
-        bytes32[] inputs;
-        bytes32[] outputs;
+        uint256[] inputs;
+        uint256[] outputs;
         bytes signature;
         bytes data;
+        Commonlib.Proof proof;
     }
 
     struct Operation {
@@ -92,6 +96,18 @@ contract MultiCall is Initializable {
                         )
                     )
                 );
+            } else if (operations[i].opType == OperationType.ZetoTransfer) {
+                _operations.push(
+                    Operation(
+                        operations[i].opType,
+                        operations[i].contractAddress,
+                        abi.encode(
+                            operations[i].inputs,
+                            operations[i].outputs,
+                            operations[i].proof
+                        )
+                    )
+                );
             } else {
                 revert MultiCallUnsupportedType(operations[i].opType);
             }
@@ -145,6 +161,19 @@ contract MultiCall is Initializable {
                 bytes memory data
             ) = abi.decode(op.data, (bytes32[], bytes32[], bytes));
             INoto(op.contractAddress).approvedTransfer(inputs, outputs, data);
+        } else if (op.opType == OperationType.ZetoTransfer) {
+            (
+                uint256[] memory inputs,
+                uint256[] memory outputs,
+                Commonlib.Proof memory proof
+            ) = abi.decode(op.data, (uint256[], uint256[], Commonlib.Proof));
+            require(inputs.length == 2);
+            require(outputs.length == 2);
+            Zeto_Anon(op.contractAddress).transfer(
+                [inputs[0], inputs[1]],
+                [outputs[0], outputs[1]],
+                proof
+            );
         } else {
             revert MultiCallUnsupportedType(op.opType);
         }
@@ -162,7 +191,7 @@ contract MultiCallFactory {
 
     // Must match the signature initialize(MultiCall.OperationInput[])
     string private constant INIT_SIGNATURE =
-        "initialize((uint8,address,address,address,uint256,uint256,bytes32[],bytes32[],bytes,bytes)[])";
+        "initialize((uint8,address,address,address,uint256,uint256,uint256[],uint256[],bytes,bytes,(uint256[2],uint256[2][2],uint256[2]))[])";
 
     constructor() {
         logic = address(new MultiCall());
