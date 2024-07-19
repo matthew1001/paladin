@@ -52,16 +52,9 @@ contract IdentityRegistry {
         identities[0] = Identity(0, new bytes32[](0), "root", msg.sender);
     }
 
-    function hasOwnership(bytes32 identityHash, address account) private view returns (bool) {
-        while(identities[identityHash].parent != 0 && identities[identityHash].owner != account) {
-            identityHash = identities[identityHash].parent;
-        }
-        return identities[identityHash].owner == account;
-    }
-
     function registerIdentity(bytes32 parentIdentityHash, string memory name, address owner) public {
         require(bytes(name).length != 0, "Name cannot be empty");
-        require(hasOwnership(parentIdentityHash, msg.sender), "Forbidden");
+        require(identities[parentIdentityHash].owner == msg.sender, "Forbidden");
         bytes32 hash = keccak256(abi.encodePacked(parentIdentityHash, keccak256(abi.encodePacked(name))));
         identities[hash] = Identity(parentIdentityHash, new bytes32[](0), name, owner);
         identities[parentIdentityHash].children.push(hash);
@@ -78,7 +71,7 @@ contract IdentityRegistry {
 
     function setIdentityProperty(bytes32 identityHash, string memory key, string memory value) public {
         require(bytes(key).length != 0, "Key cannot be empty");
-        require(hasOwnership(identityHash, msg.sender), "Forbidden");
+        require(identities[identityHash].owner == msg.sender, "Forbidden");
         bytes32 keyHash = keccak256(abi.encodePacked(key));
         if(bytes(properties[identityHash][keyHash].name).length == 0) {
             properties[identityHash][keyHash].name = key;
@@ -104,4 +97,3 @@ contract IdentityRegistry {
     }
 
 }
-

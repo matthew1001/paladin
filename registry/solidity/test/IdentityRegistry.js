@@ -32,14 +32,11 @@ const ZERO_ADDRESS = '0x00000000000000000000000000000000000000000000000000000000
  * 
  * The following properties are set:
  * 
- *   root      key=key-root-1, value=value-root-1/updated  (set by accounts[0])
- *             key=key-root-2, value=value-root-2          (set by accounts[0])
+ *   root      key=key-root-1, value=value-root-1/updated
+ *             key=key-root-2, value=value-root-2        
  *
- *   node-A    key=key-node-A-1, value=value-node-A-1      (set by accounts[1])
- *             key=key-node-A-2, value=value-node-A-2      (set by accounts[1])
- * 
- *   node-A-A  key=key-node-A-A-2, value=value-node-A-A-2  (set by accounts[1])
- *             key=key-node-A-A-3, value=value-node-A-A-3  (set by accounts[3])
+ *   node-A    key=key-node-A-1, value=value-node-A-1
+ *             key=key-node-A-2, value=value-node-A-2
  */
 
 contract('IdentityRegistry', accounts => {
@@ -310,43 +307,6 @@ contract('IdentityRegistry', accounts => {
     assert(errorReason === 'Forbidden');
   });
 
-  it('Check root node owner cannot set properties for other nodes', async () => {
-    // Attempt to set property on node-A owned by accounts[1] using accounts[0]
-    let errorReason;
-    try {
-      await identityRegistryContract.setIdentityProperty(node_A_Hash, 'key-node-A-3', 'value-node-A-3', { from: accounts[0] });
-    } catch (err) {
-      errorReason = err.reason;
-    }
-    assert(errorReason === 'Forbidden');
-
-    // Attempt to set property on node-A-A owned by account[2] using accounts[5]
-    try {
-      await await identityRegistryContract.setIdentityProperty(node_A_A_Hash, 'key-node-A-A-1', 'value-node-A-A-1', { from: accounts[0] });
-    } catch (err) {
-      errorReason = err.reason;
-    }
-    assert(errorReason === 'Forbidden');
-  });
-
-  it('Check that identities within the hierarchy can set properties (except for the root node)', async () => {
-    // Set property on node-A-A owned by accounts[3] using accounts[1] which owns the parent node
-    const transaction1 = await identityRegistryContract.setIdentityProperty(node_A_A_Hash, 'key-node-A-A-1', 'value-node-A-A-1', { from: accounts[1] });
-    const logEntry1 = transaction1.logs[0];
-    assert(logEntry1.event === 'PropertySet');
-    assert(logEntry1.args[0] === node_A_A_Hash);
-    assert(logEntry1.args[1] === 'key-node-A-A-1');
-    assert(logEntry1.args[2] === 'value-node-A-A-1');
-
-    // Set property on node-A-A owned by accounts[3] using accounts[3]
-    const transaction2 = await identityRegistryContract.setIdentityProperty(node_A_A_Hash, 'key-node-A-A-2', 'value-node-A-A-2', { from: accounts[3] });
-    const logEntry2 = transaction2.logs[0];
-    assert(logEntry2.event === 'PropertySet');
-    assert(logEntry2.args[0] === node_A_A_Hash);
-    assert(logEntry2.args[1] === 'key-node-A-A-2');
-    assert(logEntry2.args[2] === 'value-node-A-A-2');
-  });
-
   it('Should allow properties to be updated', async () => {
     // Update property key="key-root-1" setting value="updated" on root node using accounts[0]
     const transaction1 = await identityRegistryContract.setIdentityProperty(ZERO_ADDRESS, 'key-root-1', 'updated', { from: accounts[0] });
@@ -369,10 +329,6 @@ contract('IdentityRegistry', accounts => {
     // Access property in node-A node from accounts[5]
     const transaction2 = await identityRegistryContract.getIdentityPropertyValueByName(node_A_Hash, 'key-node-A-1', { from: accounts[5] });
     assert(transaction2 === 'value-node-A-1');
-
-    // Access property in node-A-A node from accounts[5]
-    const transaction3 = await identityRegistryContract.getIdentityPropertyValueByName(node_A_A_Hash, 'key-node-A-A-1', { from: accounts[5] });
-    assert(transaction3 === 'value-node-A-A-1');
 
   });
 
