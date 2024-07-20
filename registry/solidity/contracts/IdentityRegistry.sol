@@ -70,6 +70,9 @@ contract IdentityRegistry {
         // Calculate identiy has based on its name and the hash of the parent identity
         bytes32 hash = keccak256(abi.encodePacked(parentIdentityHash, keccak256(abi.encodePacked(name))));
 
+        // Ensure each child has a unique name
+        require(bytes(identities[hash].name).length == 0, "Name already taken");
+
         // Store new identity with a reference to the parent identity, empty list of children, name and owner
         identities[hash] = Identity(parentIdentityHash, new bytes32[](0), name, owner);
 

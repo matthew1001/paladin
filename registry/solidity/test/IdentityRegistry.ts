@@ -250,4 +250,10 @@ describe.only('Identity Registry', () => {
       .to.be.revertedWith('Key cannot be empty');
   });
 
+  it('Ensure there siblings have unique names', async () => {
+    // Attempt to register a new child node with repeated name
+    await expect(identityRegistry.connect(rootAccount).registerIdentity(hre.ethers.ZeroHash, 'node-A', otherAccount))
+    .to.be.revertedWith('Name already taken');
+  });
+
 });
