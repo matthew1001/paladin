@@ -13,9 +13,17 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
- 
-package io.kaleido.kata;
-import paladin.kata.Kata;
-public interface ResponseHandler {
-    void onResponse(Kata.Message response);
+syntax = "proto3";
+
+package protos.InterPaladinTransport;
+option go_package = "protos/InterPaladinTransport";
+
+service InterPaladinTransport {
+  rpc SendInterPaladinMessage(InterPaladinMessage) returns (Empty) {}
+}
+
+message Empty {}
+
+message InterPaladinMessage {
+  bytes payload = 1;
 }

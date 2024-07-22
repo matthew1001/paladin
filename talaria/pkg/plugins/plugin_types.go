@@ -13,9 +13,22 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
- 
-package io.kaleido.kata;
-import paladin.kata.Kata;
-public interface ResponseHandler {
-    void onResponse(Kata.Message response);
+package plugins
+
+import (
+	"context"
+)
+
+// Almost certainly not right, but works well enough for now
+type PluginRegistration struct {
+	Name           string
+	SocketLocation string
+}
+
+// All plugins are required to implement this interface in order to be managed by talaria
+type TransportPlugin interface {
+
+	// Methods specifically for plugin lifecycle
+	GetRegistration() PluginRegistration
+	Start(ctx context.Context)
 }
