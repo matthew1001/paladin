@@ -86,15 +86,16 @@ In the context of Paladin, an identity is defined as a resolvable identifier. Th
 A resolver is a pluggable component that, for any given identity, returns its associated metadata (if present).
 
 #### What is the associated metadata?
-A set key-value pairs (string) that can only be set and updated by the owning identity, but can be read by anyone.
+A set key-value pairs (string) that can only be set and updated by the owning identity, and can be read by anyone.
 
 #### What types of identities exist?
 There are two types of identities defined so far in Paladin: nodes and accounts. The registry plug-in however is not opinionated about identity types. Each identity can use its metadata for declaring what type they belong to.
 
 #### What syntax used for identifiers?
 The syntax used for identifiers is: <plugin-name>:[<account>@]<node> where:
- - plugin-name: string that identifies the pluggable identity component (resolver)
- - plugin-specific-value: string with a syntax defined by the pluggable identity component (resolver)
+ - plugin-name: identifies the pluggable identity component (resolver)
+ - account (optional): identifies an account within a Paladin node
+ - node: identifies a Paladin node
 
 ## Transports
 
