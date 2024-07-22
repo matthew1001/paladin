@@ -1,9 +1,45 @@
+/*
+ * Copyright © 2024 Kaleido, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import hre from 'hardhat';
 import { IdentityRegistry } from '../typechain-types/IdentityRegistry';
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { expect } from 'chai';
 import { getEvent } from './utils';
+
+/**
+ * Test design
+ * -----------
+ * 
+ * The following node hierarchy is registered:
+ * 
+ *    root              (owned by accounts[0])
+ *    ├── node-A        (owned by accounts[1])
+ *    │   ├── node-A-A  (owned by accounts[3])
+ *    │   └── node-A-B  (owned by accounts[4])
+ *    └── node-B        (owned by accounts[2])
+ * 
+ * The following properties are set:
+ * 
+ *   root      key=key-root-1, value=value-root-1/updated
+ *             key=key-root-2, value=value-root-2        
+ *
+ *   node-A    key=key-node-A-1, value=value-node-A-1
+ *             key=key-node-A-2, value=value-node-A-2
+ */
 
 describe.only('Identity Registry', () => {
 

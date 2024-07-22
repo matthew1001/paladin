@@ -76,7 +76,25 @@ Paladin solves this problem by requiring each specification of a target identity
 
 ## Registry plugin
 
-> TODO: Details to follow (Lead: Gabriel Indik)
+#### Introduction
+Whenever information needs to be exchanged between Paladin nodes, it is imperative to ensure that each party can identify each other.
+
+#### What is an identity?
+In the context of Paladin, an identity is defined as a resolvable identifier. This is, an identity is a piece of data (i.e. a string) that can be processed by a resolver.
+
+#### What is a resolver?
+A resolver is a pluggable component that, for any given identity, returns its associated metadata (if present).
+
+#### What is the associated metadata?
+A set key-value pairs (string) that can only be set and updated by the owning identity, but can be read by anyone.
+
+#### What types of identities exist?
+There are two types of identities defined so far in Paladin: nodes and accounts. The registry plug-in however is not opinionated about identity types. Each identity can use its metadata for declaring what type they belong to.
+
+#### What syntax used for identifiers?
+The syntax used for identifiers is: <plugin-name>:[<account>@]<node> where:
+ - plugin-name: string that identifies the pluggable identity component (resolver)
+ - plugin-specific-value: string with a syntax defined by the pluggable identity component (resolver)
 
 ## Transports
 
