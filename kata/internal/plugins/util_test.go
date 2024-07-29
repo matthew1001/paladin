@@ -95,7 +95,7 @@ func (g *goDirectBinding) InitializeTransportProvider(ctx context.Context, socke
 type goDirectBinding struct {
 }
 
-func (_ *goDirectLoader) Load(ctx context.Context, providerConfig loader.Config) (loader.ProviderBinding, error) {
+func (_ *goDirectLoader) Load(ctx context.Context, providerConfig loader.Config, commsBus commsbus.CommsBus) (loader.ProviderBinding, error) {
 	return &goDirectBinding{}, nil
 
 }

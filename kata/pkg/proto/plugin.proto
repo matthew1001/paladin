@@ -33,3 +33,10 @@ message PluginInstanceReadyEvent {
   string providerName = 1;
   string instanceName = 2;
 }
+
+// sent to portara as a request to load a given plugin provider jar file
+message LoadJavaProviderRequest {
+  string providerName = 1;
+  string jarPath = 2;
+  string providerClassName = 3;
+}

@@ -19,6 +19,7 @@ import (
 
 	"github.com/hyperledger/firefly-common/pkg/i18n"
 	"github.com/hyperledger/firefly-common/pkg/log"
+	"github.com/kaleido-io/paladin/kata/internal/commsbus"
 	"github.com/kaleido-io/paladin/kata/internal/msgs"
 )
 
@@ -56,7 +57,7 @@ type goProviderBinding struct {
 	initializeTransportProviderFunc func(string, string) error
 }
 
-func (_ *goPluginLoader) Load(ctx context.Context, providerConfig Config) (ProviderBinding, error) {
+func (_ *goPluginLoader) Load(ctx context.Context, providerConfig Config, commsBus commsbus.CommsBus) (ProviderBinding, error) {
 	// Load shared library
 	log.L(ctx).Info("Loading shared library")
 	plug, err := plugin.Open(providerConfig.Path)

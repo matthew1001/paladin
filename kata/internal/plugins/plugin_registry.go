@@ -42,9 +42,9 @@ const (
 type loaderConfig = loader.Config
 
 type ProviderConfig struct {
-	loaderConfig
-	Name string     `yaml:"name"`
-	Type PluginType `yaml:"type"`
+	loaderConfig `yaml:",inline"`
+	Name         string     `yaml:"name"`
+	Type         PluginType `yaml:"type"`
 }
 
 type Provider interface {
@@ -139,6 +139,8 @@ type pluginRegistry struct {
 	loadedPlugins   []*loadedPlugin
 	commsBus        commsbus.CommsBus
 	golangLoader    loader.ProviderLoader //TODO should be a map of loaders by binding
+	cSharedLoader   loader.ProviderLoader
+	javaLoader      loader.ProviderLoader
 	initialized     bool
 }
 
@@ -334,57 +336,69 @@ func (p *pluginRegistry) loadAllPlugins(ctx context.Context) error {
 	log.L(ctx).Info("Loading all plugins")
 	for _, providerConfig := range p.providerConfigs {
 		log.L(ctx).Infof("Loading plugin %s from %s", providerConfig.Name, providerConfig.Path)
+		var providerBinding loader.ProviderBinding
 		switch providerConfig.Binding {
 		case loader.GO_SHARED_LIBRARY:
-			providerBinding, err := p.golangLoader.Load(ctx, providerConfig.loaderConfig)
+			var err error
+			providerBinding, err = p.golangLoader.Load(ctx, providerConfig.loaderConfig, p.commsBus)
 			if err != nil {
 				log.L(ctx).Errorf("Failed to load plugin %s", providerConfig.Name)
 				return err
 			}
 
-			buildInfo, err := providerBinding.BuildInfo(ctx)
+		case loader.C_SHARED_LIBRARY:
+			var err error
+
+			providerBinding, err = p.cSharedLoader.Load(ctx, providerConfig.loaderConfig, p.commsBus)
 			if err != nil {
-				log.L(ctx).Errorf("Failed to get build info for plugin %s", providerConfig.Name)
+				log.L(ctx).Errorf("Failed to load plugin %s", providerConfig.Name)
 				return err
 			}
-			// add to the list before loading it because we have another thread listening for new listeners and updating the status
-			newlyLoadedPlugin := loadedPlugin{
-				buildInfo:        buildInfo,
-				name:             providerConfig.Name,
-				pluginType:       providerConfig.Type,
-				binding:          providerConfig.Binding,
-				status:           PluginProviderStatusNotReady,
-				providerListener: uuid.New().String(),
-				registry:         p,
-			}
-			p.loadedPlugins = append(p.loadedPlugins, &newlyLoadedPlugin)
+		case loader.JAVA:
+			var err error
 
-			err = providerBinding.InitializeTransportProvider(
-				ctx,
-				p.commsBus.GRPCServer().GetSocketAddress(),
-				newlyLoadedPlugin.providerListener)
+			providerBinding, err = p.javaLoader.Load(ctx, providerConfig.loaderConfig, p.commsBus)
 			if err != nil {
-				log.L(ctx).Errorf("Failed to initialize transport provider for plugin %s", providerConfig.Name)
+				log.L(ctx).Errorf("Failed to load plugin %s", providerConfig.Name)
 				return err
 			}
-
-			stopMonitoring, err := p.monitorPlugin(ctx, providerConfig.Name)
-			if err != nil {
-				log.L(ctx).Errorf("Failed to start monitoring plugin %s", providerConfig.Name)
-			}
-			newlyLoadedPlugin.stopMonitoring = stopMonitoring
-
-		//case loader.JAVA:
-		//TODO: this will be a case of sending a message to Portara asking it to load the jar
-		//log.L(ctx).Errorf("Java plugins not implemented yet")
-		//case loader.C_SHARED_LIBRARY:
-		//TODO: this will be similar to GO_SHARED_LIBRARY but we will use dlopen from from the "C" golang package and
-		// we need to be super careful about memory management so that we can pass strings across the
-		//log.L(ctx).Errorf("C shared library plugins not implemented yet")
 		default:
 			log.L(ctx).Errorf("Unsupported plugin binding %s", providerConfig.Binding)
 			return i18n.NewError(ctx, msgs.MsgPluginBindingNotSupported, providerConfig.Binding)
 		}
+
+		buildInfo, err := providerBinding.BuildInfo(ctx)
+		if err != nil {
+			log.L(ctx).Errorf("Failed to get build info for plugin %s", providerConfig.Name)
+			return err
+		}
+		// add to the list before loading it because we have another thread listening for new listeners and updating the status
+		newlyLoadedPlugin := loadedPlugin{
+			buildInfo:        buildInfo,
+			name:             providerConfig.Name,
+			pluginType:       providerConfig.Type,
+			binding:          providerConfig.Binding,
+			status:           PluginProviderStatusNotReady,
+			providerListener: uuid.New().String(),
+			registry:         p,
+		}
+		p.loadedPlugins = append(p.loadedPlugins, &newlyLoadedPlugin)
+
+		err = providerBinding.InitializeTransportProvider(
+			ctx,
+			p.commsBus.GRPCServer().GetSocketAddress(),
+			newlyLoadedPlugin.providerListener)
+		if err != nil {
+			log.L(ctx).Errorf("Failed to initialize transport provider for plugin %s", providerConfig.Name)
+			return err
+		}
+
+		stopMonitoring, err := p.monitorPlugin(ctx, providerConfig.Name)
+		if err != nil {
+			log.L(ctx).Errorf("Failed to start monitoring plugin %s", providerConfig.Name)
+		}
+		newlyLoadedPlugin.stopMonitoring = stopMonitoring
+
 	}
 	return nil
 }
@@ -427,7 +441,9 @@ func NewPluginRegistry(ctx context.Context, conf *Config, commsBus commsbus.Comm
 	p := &pluginRegistry{
 		providerConfigs: conf.Providers,
 		commsBus:        commsBus,
-		golangLoader:    loader.NewPluginLoader(ctx, "GO_SHARED_LIBRARY"),
+		golangLoader:    loader.NewPluginLoader(ctx, loader.GO_SHARED_LIBRARY, commsBus),
+		cSharedLoader:   loader.NewPluginLoader(ctx, loader.C_SHARED_LIBRARY, commsBus),
+		javaLoader:      loader.NewPluginLoader(ctx, loader.JAVA, commsBus),
 	}
 	return p, nil
 

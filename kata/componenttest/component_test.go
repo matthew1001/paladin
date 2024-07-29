@@ -113,6 +113,8 @@ persistence:
 commsBus:  
   grpc:
     socketAddress: ` + socketAddress + `
+plugins:
+  providers: []
 `)
 	_, err = configFile.Write(yamlContent)
 	require.NoError(t, err)

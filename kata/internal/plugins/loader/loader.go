@@ -15,12 +15,14 @@ package loader
 
 import (
 	"context"
+
+	"github.com/kaleido-io/paladin/kata/internal/commsbus"
 )
 
 type Binding string
 
 const (
-	GO_SHARED_LIBRARY Binding = "GO_SHARED_LIBRARY"
+	GO_SHARED_LIBRARY Binding = "GO_PLUGIN"
 	JAVA              Binding = "JAVA"
 	C_SHARED_LIBRARY  Binding = "C_SHARED_LIBRARY"
 )
@@ -31,7 +33,7 @@ type Config struct {
 }
 
 type ProviderLoader interface {
-	Load(ctx context.Context, providerConfig Config) (ProviderBinding, error)
+	Load(ctx context.Context, providerConfig Config, commsBus commsbus.CommsBus) (ProviderBinding, error)
 }
 
 // thin wrapper around the actual provider's language specific binding
@@ -40,9 +42,15 @@ type ProviderBinding interface {
 	InitializeTransportProvider(ctx context.Context, socketAddress string, providerListenerDestination string) error
 }
 
-func NewPluginLoader(ctx context.Context, binding Binding) ProviderLoader {
+func NewPluginLoader(ctx context.Context, binding Binding, commsBus commsbus.CommsBus) ProviderLoader {
 	if binding == GO_SHARED_LIBRARY {
 		return &goPluginLoader{}
+	}
+	if binding == C_SHARED_LIBRARY {
+		return &cSharedLoader{}
+	}
+	if binding == JAVA {
+		return &javaPluginLoader{}
 	}
 	return nil
 }

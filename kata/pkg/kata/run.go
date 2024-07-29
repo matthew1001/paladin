@@ -70,12 +70,14 @@ import (
 	"github.com/kaleido-io/paladin/kata/internal/commsbus"
 	"github.com/kaleido-io/paladin/kata/internal/confutil"
 	"github.com/kaleido-io/paladin/kata/internal/persistence"
+	"github.com/kaleido-io/paladin/kata/internal/plugins"
 	"github.com/kaleido-io/paladin/kata/internal/transaction"
 )
 
 type Config struct {
 	Peristence *persistence.Config `yaml:"persistence"`
 	CommsBus   *commsbus.Config    `yaml:"commsBus"`
+	Plugins    *plugins.Config     `yaml:"plugins"`
 }
 
 var commsBus commsbus.CommsBus
@@ -104,6 +106,18 @@ func Run(ctx context.Context, configFilePath string) {
 	commsBus, err = commsbus.NewCommsBus(ctx, config.CommsBus)
 	if err != nil {
 		log.L(ctx).Errorf("failed to initialise commsBus: %v", err)
+		return
+	}
+
+	//Initialise the plugin registry
+	pluginRegistry, err := plugins.NewPluginRegistry(ctx, config.Plugins, commsBus)
+	if err != nil {
+		log.L(ctx).Errorf("failed to create plugin registry: %v", err)
+		return
+	}
+	err = pluginRegistry.Initialize(ctx)
+	if err != nil {
+		log.L(ctx).Errorf("failed to initialize plugin registry: %v", err)
 		return
 	}
 

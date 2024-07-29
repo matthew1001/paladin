@@ -144,13 +144,41 @@ task buildTestPluginsSharedLibraryA(type:Exec) {
 
     executable 'go'
     args 'build'
-    args '-o', libName
     args '-buildmode=plugin'
+    args '-o', libName
     args 'test/plugins/transport/A/main.go'
+}
+
+task buildTestPluginsSharedLibraryB(type:Exec) {
+
+    workingDir '.'
+
+    def libName;
+    if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+        libName = "transportB.dll"
+    } else if (Os.isFamily(Os.FAMILY_MAC)) {
+        libName = "transportB.so"
+    } else {
+        libName = "libtransportB.so"
+    }
+
+    inputs.files(fileTree("${projectDir}").matching {
+        include "test/plugins/transport/B/*.go"
+    })
+    outputs.files([libName, 'libtransportB.h'])
+
+    environment("CGO_ENABLED", "1")
+
+    executable 'go'
+    args 'build'
+    args '-buildmode=c-shared'
+    args '-o', libName
+    args 'test/plugins/transport/B/main.go'
 }
 
 task buildTestPluginsSharedLibraries {
     dependsOn tasks.buildTestPluginsSharedLibraryA
+    dependsOn tasks.buildTestPluginsSharedLibraryB
 
 }
 
