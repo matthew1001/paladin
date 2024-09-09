@@ -33,6 +33,19 @@ jobs:
           curl -LO $PB_REL/download/v25.1/protoc-25.1-linux-x86_64.zip
           unzip protoc-25.1-linux-x86_64.zip -d protoc
           echo "${PWD}/protoc/bin" >> $GITHUB_PATH
+      
+      # Set up Docker Buildx for caching
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Cache Docker layers
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -51,6 +64,17 @@ jobs:
 
       - name: Build with Gradle
         run: ./gradlew -PcomposeLogs=true --parallel build
+        env:
+          DOCKER_BUILDKIT: 1  # Enable Docker BuildKit for caching
+          COMPOSE_DOCKER_CLI_BUILD: 1  # Enable Docker Compose BuildKit support
+
+      # Save Docker cache
+      - name: Save Docker cache
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-docker-${{ github.sha }}
+    
 
         # env:
         #   CREATE_TEST_DB: 0 # github action setup a PSQL db service, so no need to create a test db again
