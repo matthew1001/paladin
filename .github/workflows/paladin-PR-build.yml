@@ -38,29 +38,33 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # # Pull the required images and store them in cache
-      # - name: Pull and cache images
-      #   run: |
-      #     docker pull postgres:15-alpine
-      #     docker pull hyperledger/besu:24.8.0
-      #     docker save -o /tmp/.docker-cache/postgres.tar postgres:15-alpine
-      #     docker save -o /tmp/.docker-cache/besu.tar hyperledger/besu:24.8.0
+      # Pull the required images and store them in cache
+      - name: Pull and cache images
+        run: |
+          docker pull postgres:15-alpine
+          docker pull hyperledger/besu:24.8.0
+          docker pull golang:1.22
+          docker save -o /tmp/.docker-cache/postgres.tar postgres:15-alpine
+          docker save -o /tmp/.docker-cache/besu.tar hyperledger/besu:24.8.0
+          docker save -o /tmp/.docker-cache/golang.tar golang:1.22
 
-      # # Restore cached images (if available)
-      # - name: Load cached images
-      #   run: |
-      #     docker load -i /tmp/.docker-cache/postgres.tar
-      #     docker load -i /tmp/.docker-cache/besu.tar
-      # # Cache Docker layers
-      # - name: Cache Docker layers
-      #   uses: actions/cache@v3
-      #   with:
-      #     path: /tmp/.buildx-cache
-      #     key: ${{ runner.os }}-buildx-${{ github.sha }}
-      #     restore-keys: |
-      #       ${{ runner.os }}-buildx-
+      # Restore cached images (if available)
+      - name: Load cached images
+        run: |
+          docker load -i /tmp/.docker-cache/postgres.tar
+          docker load -i /tmp/.docker-cache/besu.tar
+          docker load -i /tmp/.docker-cache/golang.tar
+      
+      # Cache Docker layers
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
 
-        
+
       - name: Go Build Cache for Docker
         uses: actions/cache@v4
         with:
