@@ -53,16 +53,16 @@ jobs:
           docker pull postgres:15-alpine
           docker pull hyperledger/besu:24.8.0
           docker pull golang:1.22
-          docker save -o /tmp/.docker-cache/postgres.tar postgres:15-alpine
-          docker save -o /tmp/.docker-cache/besu.tar hyperledger/besu:24.8.0
-          docker save -o /tmp/.docker-cache/golang.tar golang:1.22
+          docker save -o /tmp/.buildx-cache/postgres.tar postgres:15-alpine
+          docker save -o /tmp/.buildx-cache/besu.tar hyperledger/besu:24.8.0
+          docker save -o /tmp/.buildx-cache/golang.tar golang:1.22
 
       # Restore cached images (if available)
       - name: Load cached images
         run: |
-          docker load -i /tmp/.docker-cache/postgres.tar
-          docker load -i /tmp/.docker-cache/besu.tar
-          docker load -i /tmp/.docker-cache/golang.tar
+          docker load -i /tmp/.buildx-cache/postgres.tar
+          docker load -i /tmp/.buildx-cache/besu.tar
+          docker load -i /tmp/.buildx-cache/golang.tar
 
       - name: Go Build Cache for Docker
         uses: actions/cache@v4
