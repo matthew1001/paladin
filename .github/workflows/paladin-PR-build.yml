@@ -67,7 +67,8 @@ jobs:
           tags: paladin/besu_bootstrap:local
           cache-from: type=registry,ref=paladin/besu_bootstrap:local
           cache-to: type=inline
-          file: testinfra/besu_bootstrap/Dockerfile
+          file: Dockerfile
+          context: testinfra/besu_bootstrap
     
       - name: Setup Java
         uses: actions/setup-java@v4
