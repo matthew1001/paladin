@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: my-secret
   besu_bootstrap:
-    image: paladin/besu_bootstrap
+    image: paladin/besu_bootstrap:local
     user: 0:0
     volumes:
       - besu_data:/var/besu:rw

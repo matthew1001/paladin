@@ -38,15 +38,37 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Cache Docker layers
-      - name: Cache Docker layers
-        uses: actions/cache@v3
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
+      # # Pull the required images and store them in cache
+      # - name: Pull and cache images
+      #   run: |
+      #     docker pull postgres:15-alpine
+      #     docker pull hyperledger/besu:24.8.0
+      #     docker save -o /tmp/.docker-cache/postgres.tar postgres:15-alpine
+      #     docker save -o /tmp/.docker-cache/besu.tar hyperledger/besu:24.8.0
 
+      # # Restore cached images (if available)
+      # - name: Load cached images
+      #   run: |
+      #     docker load -i /tmp/.docker-cache/postgres.tar
+      #     docker load -i /tmp/.docker-cache/besu.tar
+      # # Cache Docker layers
+      # - name: Cache Docker layers
+      #   uses: actions/cache@v3
+      #   with:
+      #     path: /tmp/.buildx-cache
+      #     key: ${{ runner.os }}-buildx-${{ github.sha }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-buildx-
+
+      - name: Build testinfra image
+        uses: docker/build-push-action@v6
+        with:
+          push: false # only build the image
+          tags: paladin/besu_bootstrap:local
+          cache-from: type=registry,ref=paladin/besu_bootstrap:local
+          cache-to: type=inline
+          file: testinfra/besu_bootstrap/Dockerfile
+    
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -67,15 +89,7 @@ jobs:
         env:
           DOCKER_BUILDKIT: 1  # Enable Docker BuildKit for caching
           COMPOSE_DOCKER_CLI_BUILD: 1  # Enable Docker Compose BuildKit support
-
-      # Save Docker cache
-      - name: Save Docker cache
-        uses: actions/cache@v3
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-docker-${{ github.sha }}
-    
-
+ 
         # env:
         #   CREATE_TEST_DB: 0 # github action setup a PSQL db service, so no need to create a test db again
         #   POSTGRES_HOSTNAME: postgres
