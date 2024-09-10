@@ -50,6 +50,7 @@ jobs:
       # Pull the required images and store them in cache
       - name: Pull and cache images
         run: |
+          mkdir -p /tmp/.buildx-cache
           docker pull postgres:15-alpine
           docker pull hyperledger/besu:24.8.0
           docker pull golang:1.22
