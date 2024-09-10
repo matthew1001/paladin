@@ -47,23 +47,33 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-buildx-
     
-      # Pull the required images and store them in cache
+      # Load cached images (if available)
+      - name: Load cached images
+        continue-on-error: true
+        run: |
+          docker load -i /tmp/.buildx-cache/postgres.tar || echo "No cached postgres image found"
+          docker load -i /tmp/.buildx-cache/besu.tar || echo "No cached besu image found"
+          docker load -i /tmp/.buildx-cache/golang.tar || echo "No cached golang image found"
+
+      # Pull the required images only if not cached and store them in cache
       - name: Pull and cache images
         run: |
-          mkdir -p /tmp/.buildx-cache
-          docker pull postgres:15-alpine
-          docker pull hyperledger/besu:24.8.0
-          docker pull golang:1.22
-          docker save -o /tmp/.buildx-cache/postgres.tar postgres:15-alpine
-          docker save -o /tmp/.buildx-cache/besu.tar hyperledger/besu:24.8.0
-          docker save -o /tmp/.buildx-cache/golang.tar golang:1.22
+          mkdir -p /tmp/.buildx-cache  # Create the cache directory if it doesn't exist
+          
+          if [[ "$(docker images -q postgres:15-alpine 2> /dev/null)" == "" ]]; then
+            docker pull postgres:15-alpine
+            docker save -o /tmp/.buildx-cache/postgres.tar postgres:15-alpine
+          fi
 
-      # Restore cached images (if available)
-      - name: Load cached images
-        run: |
-          docker load -i /tmp/.buildx-cache/postgres.tar
-          docker load -i /tmp/.buildx-cache/besu.tar
-          docker load -i /tmp/.buildx-cache/golang.tar
+          if [[ "$(docker images -q hyperledger/besu:24.8.0 2> /dev/null)" == "" ]]; then
+            docker pull hyperledger/besu:24.8.0
+            docker save -o /tmp/.buildx-cache/besu.tar hyperledger/besu:24.8.0
+          fi
+
+          if [[ "$(docker images -q golang:1.22 2> /dev/null)" == "" ]]; then
+            docker pull golang:1.22
+            docker save -o /tmp/.buildx-cache/golang.tar golang:1.22
+          fi
 
       - name: Go Build Cache for Docker
         uses: actions/cache@v4
