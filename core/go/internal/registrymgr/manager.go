@@ -113,10 +113,6 @@ func (rm *registryManager) RegistryRegistered(name string, id uuid.UUID, toRegis
 }
 
 func (rm *registryManager) GetNodeTransports(ctx context.Context, node string) ([]*components.RegistryNodeTransportEntry, error) {
-	// re, isCached := rm.registryCache.Get(node)
-	// if isCached {
-	// 	return re, nil
-	// }
 
 	// Scroll through all the configured registries to see if one of them knows about this node
 	var transports []*components.RegistryNodeTransportEntry
@@ -127,20 +123,5 @@ func (rm *registryManager) GetNodeTransports(ctx context.Context, node string) (
 		return nil, i18n.NewError(ctx, msgs.MsgRegistryNodeEntiresNotFound, node)
 	}
 
-	// rm.registryCache.Set(node, transports)
-
 	return transports, nil
 }
-
-// func (rm *registryManager) persistRegistryNodeTransportEntry() {
-// 	query := rm.persistence.DB().Table("registry")
-// 	query = setWhere(query)
-// 	err := query.
-// 		WithContext(ctx).
-// 		Limit(1).
-// 		Find(&contracts).
-// 		Error
-// 	if err != nil || len(contracts) == 0 {
-// 		return nil, err
-// 	}
-// }
