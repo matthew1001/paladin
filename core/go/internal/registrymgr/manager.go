@@ -21,6 +21,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/hyperledger/firefly-common/pkg/i18n"
+	"github.com/kaleido-io/paladin/core/internal/cache"
 	"github.com/kaleido-io/paladin/core/internal/components"
 	"github.com/kaleido-io/paladin/core/internal/msgs"
 	"github.com/kaleido-io/paladin/toolkit/pkg/plugintk"
@@ -34,6 +35,7 @@ type registryManager struct {
 
 	registriesByID   map[uuid.UUID]*registry
 	registriesByName map[string]*registry
+	registryCache    cache.Cache[string, []*components.RegistryNodeTransportEntry]
 }
 
 func NewRegistryManager(bgCtx context.Context, conf *RegistryManagerConfig) components.RegistryManager {
@@ -42,6 +44,7 @@ func NewRegistryManager(bgCtx context.Context, conf *RegistryManagerConfig) comp
 		conf:             conf,
 		registriesByID:   make(map[uuid.UUID]*registry),
 		registriesByName: make(map[string]*registry),
+		registryCache:    cache.NewCache[string, []*components.RegistryNodeTransportEntry](&conf.RegistryManager.RegistryCache, RegistryCacheDefaults),
 	}
 }
 
@@ -115,6 +118,11 @@ func (rm *registryManager) RegistryRegistered(name string, id uuid.UUID, toRegis
 }
 
 func (rm *registryManager) GetNodeTransports(ctx context.Context, node string) ([]*components.RegistryNodeTransportEntry, error) {
+	re, isCached := rm.registryCache.Get(node)
+	if isCached {
+		return re, nil
+	}
+
 	// Scroll through all the configured registries to see if one of them knows about this node
 	var transports []*components.RegistryNodeTransportEntry
 	for _, r := range rm.registriesByID {
@@ -123,5 +131,8 @@ func (rm *registryManager) GetNodeTransports(ctx context.Context, node string) (
 	if len(transports) == 0 {
 		return nil, i18n.NewError(ctx, msgs.MsgRegistryNodeEntiresNotFound, node)
 	}
+
+	rm.registryCache.Set(node, transports)
+
 	return transports, nil
 }

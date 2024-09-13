@@ -15,12 +15,23 @@
 package registrymgr
 
 import (
+	"github.com/kaleido-io/paladin/core/internal/cache"
 	"github.com/kaleido-io/paladin/core/internal/components"
+	"github.com/kaleido-io/paladin/toolkit/pkg/confutil"
 	"github.com/kaleido-io/paladin/toolkit/pkg/retry"
 )
 
 type RegistryManagerConfig struct {
-	Registries map[string]*RegistryConfig `yaml:"registries"`
+	Registries      map[string]*RegistryConfig   `yaml:"registries"`
+	RegistryManager RegistryManagerManagerConfig `yaml:"registryManager"`
+}
+
+type RegistryManagerManagerConfig struct {
+	RegistryCache cache.Config `yaml:"registryCache"`
+}
+
+var RegistryCacheDefaults = &cache.Config{
+	Capacity: confutil.P(100),
 }
 
 type RegistryInitConfig struct {
