@@ -22,8 +22,7 @@ import (
 )
 
 type RegistryManagerConfig struct {
-	Registries      map[string]*RegistryConfig   `yaml:"registries"`
-	RegistryManager RegistryManagerManagerConfig `yaml:"registryManager"`
+	Registries map[string]*RegistryConfig `yaml:"registries"`
 }
 
 type RegistryManagerManagerConfig struct {
@@ -39,7 +38,8 @@ type RegistryInitConfig struct {
 }
 
 type RegistryConfig struct {
-	Init   RegistryInitConfig      `yaml:"init"`
-	Plugin components.PluginConfig `yaml:"plugin"`
-	Config map[string]any          `yaml:"config"`
+	Init            RegistryInitConfig           `yaml:"init"`
+	Plugin          components.PluginConfig      `yaml:"plugin"`
+	Config          map[string]any               `yaml:"config"`
+	RegistryManager RegistryManagerManagerConfig `yaml:"registryManager"`
 }

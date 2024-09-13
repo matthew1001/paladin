@@ -23,6 +23,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/hyperledger/firefly-common/pkg/i18n"
+	"github.com/kaleido-io/paladin/core/internal/cache"
 	"github.com/kaleido-io/paladin/core/internal/components"
 	"github.com/kaleido-io/paladin/core/internal/msgs"
 	"github.com/kaleido-io/paladin/toolkit/pkg/log"
@@ -40,9 +41,9 @@ type registry struct {
 	name string
 	api  components.RegistryManagerToRegistry
 
-	// TODO: Replace with a cache-backed DB system
-	stateLock           sync.Mutex
-	inMemoryPlaceholder map[string][]*components.RegistryNodeTransportEntry
+	stateLock sync.Mutex
+
+	registryCache cache.Cache[string, []*components.RegistryNodeTransportEntry]
 
 	initialized atomic.Bool
 	initRetry   *retry.Retry
@@ -53,14 +54,14 @@ type registry struct {
 
 func (rm *registryManager) newRegistry(id uuid.UUID, name string, conf *RegistryConfig, toRegistry components.RegistryManagerToRegistry) *registry {
 	r := &registry{
-		rm:                  rm,
-		conf:                conf,
-		initRetry:           retry.NewRetryIndefinite(&conf.Init.Retry),
-		name:                name,
-		id:                  id,
-		api:                 toRegistry,
-		inMemoryPlaceholder: make(map[string][]*components.RegistryNodeTransportEntry),
-		initDone:            make(chan struct{}),
+		rm:            rm,
+		conf:          conf,
+		initRetry:     retry.NewRetryIndefinite(&conf.Init.Retry),
+		name:          name,
+		id:            id,
+		api:           toRegistry,
+		initDone:      make(chan struct{}),
+		registryCache: cache.NewCache[string, []*components.RegistryNodeTransportEntry](&conf.RegistryManager.RegistryCache, RegistryCacheDefaults),
 	}
 	r.ctx, r.cancelCtx = context.WithCancel(log.WithLogField(rm.bgCtx, "registry", r.name))
 	return r
@@ -92,9 +93,9 @@ func (r *registry) init() {
 }
 
 func (r *registry) getNodeTransports(node string) []*components.RegistryNodeTransportEntry {
-	r.stateLock.Lock()
-	defer r.stateLock.Unlock()
-	return r.inMemoryPlaceholder[node]
+
+	re, _ := r.registryCache.Get(node)
+	return re
 }
 
 // Registry callback to the registry manager when new entries are available to upsert & cache
@@ -108,18 +109,21 @@ func (r *registry) UpsertTransportDetails(ctx context.Context, req *prototk.Upse
 		return nil, i18n.NewError(ctx, msgs.MsgRegistryInvalidEntry)
 	}
 
-	existingEntries := r.inMemoryPlaceholder[req.Node]
+	existingEntries, _ := r.registryCache.Get(req.Node)
+
 	deDuped := make([]*components.RegistryNodeTransportEntry, 0, len(existingEntries))
 	for _, existing := range existingEntries {
 		if existing.Node != req.Node || existing.Transport != req.Transport {
 			deDuped = append(deDuped, existing)
 		}
 	}
-	r.inMemoryPlaceholder[req.Node] = append(deDuped, &components.RegistryNodeTransportEntry{
+	entry := append(deDuped, &components.RegistryNodeTransportEntry{
 		Node:             req.Node,
 		Transport:        req.Transport,
 		TransportDetails: req.TransportDetails,
 	})
+
+	r.registryCache.Set(req.Node, entry)
 
 	return &prototk.UpsertTransportDetailsResponse{}, nil
 }
