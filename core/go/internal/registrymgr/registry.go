@@ -44,6 +44,8 @@ type registry struct {
 	stateLock           sync.Mutex
 	inMemoryPlaceholder map[string][]*components.RegistryNodeTransportEntry
 
+	identityMap map[string]*components.RegistryIdentityEntry
+
 	initialized atomic.Bool
 	initRetry   *retry.Retry
 
@@ -122,6 +124,20 @@ func (r *registry) UpsertTransportDetails(ctx context.Context, req *prototk.Upse
 	})
 
 	return &prototk.UpsertTransportDetailsResponse{}, nil
+}
+
+func (r *registry) UpsertIdentity(ctx context.Context, req *prototk.UpsertIdentity) (*prototk.UpsertIdentityResponse, error) {
+
+	r.stateLock.Lock()
+	defer r.stateLock.Unlock()
+
+	r.identityMap[req.Identifier] = &components.RegistryIdentityEntry{
+		Owner:      req.Owner,
+		Properties: req.Properties,
+	}
+
+	return &prototk.UpsertIdentityResponse{}, nil
+
 }
 
 func (r *registry) close() {

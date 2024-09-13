@@ -28,6 +28,11 @@ type RegistryNodeTransportEntry struct {
 	TransportDetails string
 }
 
+type RegistryIdentityEntry struct {
+	Owner      string
+	Properties map[string]string
+}
+
 type RegistryManagerToRegistry interface {
 	plugintk.RegistryAPI
 	Initialized()
