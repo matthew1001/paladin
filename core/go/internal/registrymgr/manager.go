@@ -106,7 +106,7 @@ func (rm *registryManager) RegistryRegistered(name string, id uuid.UUID, toRegis
 	}
 
 	// Initialize
-	t := rm.newRegistry(id, name, conf, toRegistry)
+	t := rm.newRegistry(id, name, conf, toRegistry, rm.persistence)
 	rm.registriesByID[id] = t
 	rm.registriesByName[name] = t
 	go t.init()

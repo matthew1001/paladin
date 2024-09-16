@@ -26,10 +26,18 @@ import (
 	"github.com/kaleido-io/paladin/core/internal/cache"
 	"github.com/kaleido-io/paladin/core/internal/components"
 	"github.com/kaleido-io/paladin/core/internal/msgs"
+	"github.com/kaleido-io/paladin/core/pkg/persistence"
 	"github.com/kaleido-io/paladin/toolkit/pkg/log"
 	"github.com/kaleido-io/paladin/toolkit/pkg/prototk"
 	"github.com/kaleido-io/paladin/toolkit/pkg/retry"
 )
+
+type registryDbEntry struct {
+	registry          string
+	node              string
+	transport         string
+	transport_details string
+}
 
 type registry struct {
 	ctx       context.Context
@@ -43,6 +51,7 @@ type registry struct {
 
 	stateLock sync.Mutex
 
+	persistence   persistence.Persistence
 	registryCache cache.Cache[string, []*components.RegistryNodeTransportEntry]
 
 	initialized atomic.Bool
@@ -52,7 +61,7 @@ type registry struct {
 	initDone  chan struct{}
 }
 
-func (rm *registryManager) newRegistry(id uuid.UUID, name string, conf *RegistryConfig, toRegistry components.RegistryManagerToRegistry) *registry {
+func (rm *registryManager) newRegistry(id uuid.UUID, name string, conf *RegistryConfig, toRegistry components.RegistryManagerToRegistry, p persistence.Persistence) *registry {
 	r := &registry{
 		rm:            rm,
 		conf:          conf,
@@ -61,6 +70,7 @@ func (rm *registryManager) newRegistry(id uuid.UUID, name string, conf *Registry
 		id:            id,
 		api:           toRegistry,
 		initDone:      make(chan struct{}),
+		persistence:   p,
 		registryCache: cache.NewCache[string, []*components.RegistryNodeTransportEntry](&conf.RegistryManager.RegistryCache, RegistryCacheDefaults),
 	}
 	r.ctx, r.cancelCtx = context.WithCancel(log.WithLogField(rm.bgCtx, "registry", r.name))
@@ -123,6 +133,13 @@ func (r *registry) UpsertTransportDetails(ctx context.Context, req *prototk.Upse
 	})
 
 	r.registryCache.Set(req.Node, entry)
+
+	r.persistence.DB().Table("registry").Updates(&registryDbEntry{
+		registry:          r.id.String(),
+		node:              req.Node,
+		transport:         req.Transport,
+		transport_details: req.TransportDetails,
+	})
 
 	return &prototk.UpsertTransportDetailsResponse{}, nil
 }

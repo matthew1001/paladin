@@ -22,7 +22,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kaleido-io/paladin/core/internal/components"
-	"github.com/kaleido-io/paladin/core/mocks/componentmocks"
 	"github.com/kaleido-io/paladin/toolkit/pkg/plugintk"
 	"github.com/kaleido-io/paladin/toolkit/pkg/prototk"
 	"github.com/stretchr/testify/assert"
@@ -49,8 +48,8 @@ func newTestPlugin(registryFuncs *plugintk.RegistryAPIFunctions) *testPlugin {
 	}
 }
 
-func newTestRegistry(t *testing.T, extraSetup ...func(mc *componentmocks.AllComponents)) (context.Context, *registryManager, *testPlugin, func()) {
-	ctx, rm, done := newTestRegistryManager(t, &RegistryManagerConfig{
+func newTestRegistry(t *testing.T, extraSetup ...func(mc *mockComponents)) (context.Context, *registryManager, *testPlugin, *mockComponents, func()) {
+	ctx, rm, mc, done := newTestRegistryManager(t, false, &RegistryManagerConfig{
 		Registries: map[string]*RegistryConfig{
 			"test1": {
 				Config: map[string]any{"some": "conf"},
@@ -68,7 +67,7 @@ func newTestRegistry(t *testing.T, extraSetup ...func(mc *componentmocks.AllComp
 	}
 
 	registerTestRegistry(t, rm, tp)
-	return ctx, rm, tp, done
+	return ctx, rm, tp, mc, done
 }
 
 func registerTestRegistry(t *testing.T, rm *registryManager, tp *testPlugin) {
@@ -85,7 +84,7 @@ func registerTestRegistry(t *testing.T, rm *registryManager, tp *testPlugin) {
 
 func TestDoubleRegisterReplaces(t *testing.T) {
 
-	_, rm, tp0, done := newTestRegistry(t)
+	_, rm, tp0, _, done := newTestRegistry(t)
 	defer done()
 	assert.Nil(t, tp0.r.initError.Load())
 	assert.True(t, tp0.initialized.Load())
@@ -106,7 +105,7 @@ func TestDoubleRegisterReplaces(t *testing.T) {
 }
 
 func TestRecordAndResolveInformation(t *testing.T) {
-	ctx, rm, tp, done := newTestRegistry(t)
+	ctx, rm, tp, mc, done := newTestRegistry(t)
 	defer done()
 
 	_, err := rm.GetNodeTransports(ctx, "node1")
@@ -115,6 +114,9 @@ func TestRecordAndResolveInformation(t *testing.T) {
 	// Upsert bad entry
 	_, err = tp.r.UpsertTransportDetails(ctx, &prototk.UpsertTransportDetails{})
 	assert.Regexp(t, "PD012101", err)
+
+	mc.db.ExpectBegin()
+	mc.db.ExpectCommit()
 
 	entry1 := &prototk.UpsertTransportDetails{
 		Node:             "node1",
@@ -126,6 +128,9 @@ func TestRecordAndResolveInformation(t *testing.T) {
 	res, err := tp.r.UpsertTransportDetails(ctx, entry1)
 	require.NoError(t, err)
 	assert.NotNil(t, res)
+
+	mc.db.ExpectBegin()
+	mc.db.ExpectCommit()
 
 	// Check we get it
 	transports, err := rm.GetNodeTransports(ctx, "node1")
@@ -143,6 +148,9 @@ func TestRecordAndResolveInformation(t *testing.T) {
 		Transport:        "websockets",
 		TransportDetails: "more things and stuff",
 	}
+
+	mc.db.ExpectBegin()
+	mc.db.ExpectCommit()
 
 	// Upsert second entry
 	res, err = tp.r.UpsertTransportDetails(ctx, entry2)
