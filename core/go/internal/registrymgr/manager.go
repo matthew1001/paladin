@@ -23,6 +23,7 @@ import (
 	"github.com/hyperledger/firefly-common/pkg/i18n"
 	"github.com/kaleido-io/paladin/core/internal/components"
 	"github.com/kaleido-io/paladin/core/internal/msgs"
+	"github.com/kaleido-io/paladin/core/pkg/persistence"
 	"github.com/kaleido-io/paladin/toolkit/pkg/plugintk"
 )
 
@@ -30,8 +31,8 @@ type registryManager struct {
 	bgCtx context.Context
 	mux   sync.Mutex
 
-	conf *RegistryManagerConfig
-	// persistence persistence.Persistence
+	conf        *RegistryManagerConfig
+	persistence persistence.Persistence
 
 	registriesByID   map[uuid.UUID]*registry
 	registriesByName map[string]*registry
@@ -47,7 +48,7 @@ func NewRegistryManager(bgCtx context.Context, conf *RegistryManagerConfig) comp
 }
 
 func (rm *registryManager) PreInit(pic components.PreInitComponents) (*components.ManagerInitResult, error) {
-	// rm.persistence = pic.Persistence()
+	rm.persistence = pic.Persistence()
 	return &components.ManagerInitResult{}, nil
 }
 

@@ -23,6 +23,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kaleido-io/paladin/core/internal/components"
 	"github.com/kaleido-io/paladin/core/mocks/componentmocks"
+	"github.com/kaleido-io/paladin/core/pkg/persistence"
 	"github.com/kaleido-io/paladin/toolkit/pkg/plugintk"
 	"github.com/kaleido-io/paladin/toolkit/pkg/prototk"
 	"github.com/stretchr/testify/assert"
@@ -34,26 +35,29 @@ func newTestRegistryManager(t *testing.T, conf *RegistryManagerConfig, extraSetu
 
 	mc := componentmocks.NewAllComponents(t)
 
+	var p persistence.Persistence
+	mc.On("Persistence").Return(p)
+
 	for _, fn := range extraSetup {
 		fn(mc)
 	}
 
-	tm := NewRegistryManager(ctx, conf)
+	rm := NewRegistryManager(ctx, conf)
 
-	initData, err := tm.PreInit(mc)
+	initData, err := rm.PreInit(mc)
 	require.NoError(t, err)
 	assert.NotNil(t, initData)
 
-	err = tm.PostInit(mc)
+	err = rm.PostInit(mc)
 	require.NoError(t, err)
 
-	err = tm.Start()
+	err = rm.Start()
 	require.NoError(t, err)
 
-	return ctx, tm.(*registryManager), func() {
+	return ctx, rm.(*registryManager), func() {
 		cancelCtx()
 		// pDone()
-		tm.Stop()
+		rm.Stop()
 	}
 }
 

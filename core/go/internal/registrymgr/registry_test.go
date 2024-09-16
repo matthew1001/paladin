@@ -50,7 +50,7 @@ func newTestPlugin(registryFuncs *plugintk.RegistryAPIFunctions) *testPlugin {
 }
 
 func newTestRegistry(t *testing.T, extraSetup ...func(mc *componentmocks.AllComponents)) (context.Context, *registryManager, *testPlugin, func()) {
-	ctx, tm, done := newTestRegistryManager(t, &RegistryManagerConfig{
+	ctx, rm, done := newTestRegistryManager(t, &RegistryManagerConfig{
 		Registries: map[string]*RegistryConfig{
 			"test1": {
 				Config: map[string]any{"some": "conf"},
@@ -67,8 +67,8 @@ func newTestRegistry(t *testing.T, extraSetup ...func(mc *componentmocks.AllComp
 		},
 	}
 
-	registerTestRegistry(t, tm, tp)
-	return ctx, tm, tp, done
+	registerTestRegistry(t, rm, tp)
+	return ctx, rm, tp, done
 }
 
 func registerTestRegistry(t *testing.T, rm *registryManager, tp *testPlugin) {

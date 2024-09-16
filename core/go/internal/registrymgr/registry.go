@@ -93,7 +93,6 @@ func (r *registry) init() {
 }
 
 func (r *registry) getNodeTransports(node string) []*components.RegistryNodeTransportEntry {
-
 	re, _ := r.registryCache.Get(node)
 	return re
 }
