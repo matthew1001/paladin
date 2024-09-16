@@ -30,6 +30,7 @@ import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -107,7 +108,7 @@ public class Testbed implements Closeable {
                 db:
                   type: sqlite
                   sqlite:
-                    uri:           ":memory:"
+                    uri:           "file:%s?mode=memory&cache=shared"
                     autoMigrate:   true
                     migrationsDir: %s
                     debugQueries:  true
@@ -139,7 +140,7 @@ public class Testbed implements Closeable {
                   debug: true
                 log:
                   level: trace
-                """.formatted(new File(testbedSetup.dbMigrationsDir).getAbsolutePath(), availableRPCPort);
+                """.formatted(UUID.randomUUID(), new File(testbedSetup.dbMigrationsDir).getAbsolutePath(), availableRPCPort);
     }
 
     private void start() throws Exception {

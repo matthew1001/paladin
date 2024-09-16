@@ -18,6 +18,7 @@ package persistence
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
 
@@ -51,7 +52,7 @@ func TestGormMigrationMissingDir(t *testing.T) {
 		Type: "sqlite",
 		SQLite: SQLiteConfig{
 			SQLDBConfig: SQLDBConfig{
-				URI:           ":memory:",
+				URI:           fmt.Sprintf("file:%s?mode=memory&cache=shared", t.Name()),
 				AutoMigrate:   confutil.P(true),
 				MigrationsDir: tempFile,
 			},
@@ -71,7 +72,7 @@ func TestGormMigrationFail(t *testing.T) {
 		Type: "sqlite",
 		SQLite: SQLiteConfig{
 			SQLDBConfig: SQLDBConfig{
-				URI:         ":memory:",
+				URI:         fmt.Sprintf("file:%s?mode=memory&cache=shared", t.Name()),
 				AutoMigrate: confutil.P(true),
 			},
 		},

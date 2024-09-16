@@ -17,6 +17,7 @@ package testbed
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path"
 	"testing"
@@ -49,11 +50,11 @@ func writeTestConfig(t *testing.T) (configFile string) {
 }
 
 func TestYAMLConfigWorks(t *testing.T) {
-	yamlConf := `
+	yamlConf := fmt.Sprintf(`
 db:
   type: sqlite
   sqlite:
-    uri:           ":memory:"
+    uri:           "file:%s?mode=memory&cache=shared"
     autoMigrate:   true
     migrationsDir: any
     debugQueries:  true
@@ -84,7 +85,7 @@ domains:
       address: any
 log:
   level: debug	
-`
+`, t.Name())
 	var conf componentmgr.Config
 	err := yaml.Unmarshal([]byte(yamlConf), &conf)
 	require.NoError(t, err)

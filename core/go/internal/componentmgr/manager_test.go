@@ -18,6 +18,7 @@ package componentmgr
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"os"
 	"testing"
@@ -51,7 +52,7 @@ func TestInitOK(t *testing.T) {
 			Type: "sqlite",
 			SQLite: persistence.SQLiteConfig{
 				SQLDBConfig: persistence.SQLDBConfig{
-					URI:           ":memory:",
+					URI:           fmt.Sprintf("file:%s?mode=memory&cache=shared", t.Name()),
 					AutoMigrate:   confutil.P(true),
 					MigrationsDir: "../../db/migrations/sqlite",
 				},

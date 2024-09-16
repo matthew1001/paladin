@@ -21,7 +21,9 @@ package persistence
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/kaleido-io/paladin/toolkit/pkg/confutil"
 )
 
@@ -32,7 +34,7 @@ func NewUnitTestPersistence(ctx context.Context) (Persistence, func(), error) {
 		Type: "sqlite",
 		SQLite: SQLiteConfig{
 			SQLDBConfig: SQLDBConfig{
-				URI:           ":memory:",
+				URI:           fmt.Sprintf("file:%s?mode=memory&cache=shared", uuid.NewString()),
 				AutoMigrate:   confutil.P(true),
 				MigrationsDir: "../../db/migrations/sqlite",
 				DebugQueries:  true,

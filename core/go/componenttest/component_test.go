@@ -23,6 +23,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -144,11 +145,11 @@ func TestRunSimpleStorageEthTransaction(t *testing.T) {
 
 	var testConfig componentmgr.Config
 
-	err := yaml.Unmarshal([]byte(`
+	err := yaml.Unmarshal([]byte(fmt.Sprintf(`
 db:
   type: sqlite
   sqlite:
-    uri:           ":memory:"
+    uri:           "file:%s?mode=memory&cache=shared"
     autoMigrate:   true
     migrationsDir: ../db/migrations/sqlite
     debugQueries:  true
@@ -168,7 +169,7 @@ signer:
           seed:
             encoding: none
             inline: polar mechanic crouch jungle field room dry sure machine brisk seed bulk student total ethics
-`), &testConfig)
+`, t.Name())), &testConfig)
 	require.NoError(t, err)
 
 	p, err := persistence.NewPersistence(ctx, &testConfig.DB)
@@ -263,18 +264,18 @@ func runServiceForTesting(ctx context.Context, t *testing.T) (string, func()) {
 	require.NoError(t, err)
 
 	// Write YAML content to the temporary file
-	yamlContent := []byte(`
+	yamlContent := []byte(fmt.Sprintf(`
 persistence:
   type: sqlite
   sqlite:
-    uri:           ":memory:"
+    uri:           "file:%s?mode=memory&cache=shared"
     autoMigrate:   true
     migrationsDir: ../db/migrations/sqlite
     debugQueries:  true
 commsBus:  
   grpc:
-    socketAddress: ` + socketAddress + `
-`)
+    socketAddress: `+socketAddress+`
+`, t.Name()))
 	_, err = configFile.Write(yamlContent)
 	require.NoError(t, err)
 

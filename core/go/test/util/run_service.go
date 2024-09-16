@@ -21,6 +21,7 @@ package util
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -41,21 +42,21 @@ func RunServiceForTesting(ctx context.Context, t *testing.T) (string, func()) {
 	require.NoError(t, err)
 
 	// Write YAML content to the temporary file
-	yamlContent := []byte(`
+	yamlContent := []byte(fmt.Sprintf(`
 persistence:
   type: sqlite
   sqlite:
-    uri:           ":memory:"
+    uri:           "file:%s?mode=memory&cache=shared"
     autoMigrate:   true
     migrationsDir: ../../db/migrations/sqlite
     debugQueries:  true
 commsBus:  
   grpc:
-    socketAddress: ` + socketAddress + `
+    socketAddress: `+socketAddress+`
 plugins:
   - name: mock-transport-plugin
     type: interPaladinTransport  
-`)
+`, t.Name()))
 	_, err = configFile.Write(yamlContent)
 	require.NoError(t, err)
 
