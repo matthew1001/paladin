@@ -398,6 +398,16 @@ func (e *engine) HandleEndorsementRequest(ctx context.Context, messagePayload []
 		}
 	}
 
+	readStates := make([]*prototk.EndorsableState, len(endorsementRequest.GetReadStates()))
+	for i, s := range endorsementRequest.GetReadStates() {
+		readStates[i] = &prototk.EndorsableState{}
+		err = s.UnmarshalTo(readStates[i])
+		if err != nil {
+			log.L(ctx).Errorf("Failed to unmarshal attestation request: %s", err)
+			return
+		}
+	}
+
 	outputStates := make([]*prototk.EndorsableState, len(endorsementRequest.GetOutputStates()))
 	for i, s := range endorsementRequest.GetOutputStates() {
 		outputStates[i] = &prototk.EndorsableState{}
@@ -413,6 +423,7 @@ func (e *engine) HandleEndorsementRequest(ctx context.Context, messagePayload []
 		verifiers,
 		signatures,
 		inputStates,
+		readStates,
 		outputStates,
 		endorsementRequest.GetParty(),
 		attestationRequest)

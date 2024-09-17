@@ -146,15 +146,20 @@ func newMockBlockIndexer(t *testing.T, config *Config) (context.Context, *blockI
 
 }
 
-func testBlockArray(t *testing.T, l int) ([]*BlockInfoJSONRPC, map[string][]*TXReceiptJSONRPC) {
+func testBlockArray(t *testing.T, l int, knownAddress ...*ethtypes.Address0xHex) ([]*BlockInfoJSONRPC, map[string][]*TXReceiptJSONRPC) {
 	blocks := make([]*BlockInfoJSONRPC, l)
 	receipts := make(map[string][]*TXReceiptJSONRPC, l)
 	for i := 0; i < l; i++ {
-		var contractAddress, to *ethtypes.Address0xHex
-		if i == 0 {
-			contractAddress = ethtypes.MustNewAddress(tktypes.RandHex(20))
+		var contractAddress, to, emitAddr1 *ethtypes.Address0xHex
+		if knownAddress != nil {
+			emitAddr1 = knownAddress[0]
 		} else {
-			to = ethtypes.MustNewAddress(tktypes.RandHex(20))
+			emitAddr1 = ethtypes.MustNewAddress(tktypes.RandHex(20))
+		}
+		if i == 0 {
+			contractAddress = emitAddr1
+		} else {
+			to = emitAddr1
 		}
 		txHash := ethtypes.MustNewHexBytes0xPrefix(tktypes.RandHex(32))
 		blocks[i] = &BlockInfoJSONRPC{
@@ -189,8 +194,9 @@ func testBlockArray(t *testing.T, l int) ([]*BlockInfoJSONRPC, map[string][]*TXR
 				BlockHash:       blocks[i].Hash,
 				Status:          ethtypes.NewHexInteger64(1),
 				Logs: []*LogJSONRPC{
-					{Address: ethtypes.MustNewAddress(tktypes.RandHex(20)), BlockNumber: blocks[i].Number, LogIndex: 0, TransactionHash: txHash, Topics: []ethtypes.HexBytes0xPrefix{topicA, ethtypes.MustNewHexBytes0xPrefix(tktypes.RandHex(32))}},
-					{Address: ethtypes.MustNewAddress(tktypes.RandHex(20)), BlockNumber: blocks[i].Number, LogIndex: 1, TransactionHash: txHash, Topics: []ethtypes.HexBytes0xPrefix{topicB, ethtypes.MustNewHexBytes0xPrefix(tktypes.RandHex(32))}, Data: eventBData},
+					{Address: emitAddr1, BlockNumber: blocks[i].Number, LogIndex: 0, TransactionHash: txHash, Topics: []ethtypes.HexBytes0xPrefix{topicA, ethtypes.MustNewHexBytes0xPrefix(tktypes.RandHex(32))}},
+					{Address: emitAddr1, BlockNumber: blocks[i].Number, LogIndex: 1, TransactionHash: txHash, Topics: []ethtypes.HexBytes0xPrefix{topicB, ethtypes.MustNewHexBytes0xPrefix(tktypes.RandHex(32))}, Data: eventBData},
+					// the last event is set to a different address, to test the filtering in matchLog()
 					{Address: ethtypes.MustNewAddress(tktypes.RandHex(20)), BlockNumber: blocks[i].Number, LogIndex: 2, TransactionHash: txHash, Topics: []ethtypes.HexBytes0xPrefix{topicC, ethtypes.MustNewHexBytes0xPrefix(tktypes.RandHex(32))}, Data: eventCData},
 				},
 			},
@@ -372,6 +378,14 @@ func TestBlockIndexerCatchUpToHeadFromZeroWithConfirmations(t *testing.T) {
 		}
 		assert.NotNil(t, tx0.From)
 		assert.NotEqual(t, tktypes.EthAddress{}, *tx0.From)
+
+		// Decode events
+		decodedEvents, err := bi.DecodeTransactionEvents(ctx, tktypes.Bytes32(tx0.TransactionHash), testABI)
+		assert.NoError(t, err)
+		assert.Len(t, decodedEvents, 3)
+		assert.Equal(t, "event EventA()", decodedEvents[0].SoliditySignature)
+		assert.Equal(t, "event EventB(uint256 intParam1, string strParam2)", decodedEvents[1].SoliditySignature)
+		assert.Equal(t, "event EventC(Struct1 structParam1); struct Struct1 { string strField; int64[] intArrayField; }", decodedEvents[2].SoliditySignature)
 
 		// Get the transactions per block
 		indexedTXs, err := bi.GetBlockTransactionsByNumber(ctx, int64(blocks[i].Number))
@@ -707,6 +721,42 @@ func TestBlockIndexerResetsAfterHashLookupFail(t *testing.T) {
 	assert.True(t, sentFail)
 }
 
+func TestBlockIndexerResetsWhenPrePersistHookFails(t *testing.T) {
+	ctx, bi, mRPC, blDone := newTestBlockIndexer(t)
+	defer blDone()
+
+	blocks, receipts := testBlockArray(t, 5)
+
+	prePersistHookFailed := false
+	mockBlocksRPCCallsDynamic(mRPC, func(args mock.Arguments) ([]*BlockInfoJSONRPC, map[string][]*TXReceiptJSONRPC) {
+		return blocks, receipts
+	})
+
+	err := bi.RegisterIndexedTransactionHandler(ctx, func(ctx context.Context, indexedTransactions []*IndexedTransaction) error {
+		if !prePersistHookFailed && indexedTransactions[0].Hash == tktypes.NewBytes32FromSlice(blocks[2].Transactions[0].Hash) {
+			prePersistHookFailed = true
+			return fmt.Errorf("pop")
+		}
+		return nil
+	})
+	assert.NoError(t, err)
+
+	err = bi.RegisterIndexedTransactionHandler(ctx, func(ctx context.Context, indexedTransactions []*IndexedTransaction) error {
+		panic("should not override the first hook")
+	})
+	assert.Regexp(t, "PD011309", err)
+
+	bi.startOrReset() // do not start block listener
+
+	for i := 0; i < len(blocks); i++ {
+		b := <-bi.utBatchNotify
+		assert.Len(t, b.blocks, 1) // We should get one block per batch
+		assert.Equal(t, blocks[i], b.blocks[0])
+	}
+
+	assert.True(t, prePersistHookFailed)
+}
+
 func TestBlockIndexerDispatcherFallsBehindHead(t *testing.T) {
 	_, bi, mRPC, blDone := newTestBlockIndexer(t)
 	defer blDone()
@@ -919,6 +969,18 @@ func TestWaitForTransactionErrorCases(t *testing.T) {
 	p.Mock.ExpectQuery("SELECT.*indexed_transactions").WillReturnError(fmt.Errorf("pop"))
 
 	_, err := bi.WaitForTransaction(ctx, tktypes.Bytes32(tktypes.RandBytes(32)))
+	assert.Regexp(t, "pop", err)
+
+}
+
+func TestDecodeTransactionEventsFail(t *testing.T) {
+
+	ctx, bi, _, p, done := newMockBlockIndexer(t, &Config{})
+	defer done()
+
+	p.Mock.ExpectQuery("SELECT.*indexed_events").WillReturnError(fmt.Errorf("pop"))
+
+	_, err := bi.DecodeTransactionEvents(ctx, tktypes.Bytes32(tktypes.RandBytes(32)), testABI)
 	assert.Regexp(t, "pop", err)
 
 }
