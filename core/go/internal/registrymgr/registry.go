@@ -94,9 +94,6 @@ func (r *registry) UpsertTransportDetails(ctx context.Context, req *prototk.Upse
 
 	existingEntries, _ := r.rm.GetNodeTransports(ctx, req.Node)
 
-	// var existingEntries []*components.RegistryNodeTransportEntry
-	// r.rm.persistence.DB().Table("registry").Where("node = ?", req.Node).Find(&existingEntries)
-
 	deDuped := make([]*components.RegistryNodeTransportEntry, 0, len(existingEntries))
 	for _, existing := range existingEntries {
 		if existing.Registry != r.id.String() || existing.Node != req.Node || existing.Transport != req.Transport {
