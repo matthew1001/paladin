@@ -41,7 +41,7 @@ import (
 func TestPrivateSmartContractQueryFail(t *testing.T) {
 
 	ctx, dm, _, done := newTestDomain(t, false, goodDomainConf(), func(mc *mockComponents) {
-		mc.domainStateInterface.On("EnsureABISchemas", mock.Anything).Return(nil, nil)
+		mc.stateStore.On("EnsureABISchemas", mock.Anything, "test1", mock.Anything).Return(nil, nil)
 		mc.db.ExpectQuery("SELECT.*private_smart_contracts").WillReturnError(fmt.Errorf("pop"))
 	})
 	defer done()
@@ -54,7 +54,7 @@ func TestPrivateSmartContractQueryFail(t *testing.T) {
 func TestPrivateSmartContractQueryNoResult(t *testing.T) {
 
 	ctx, dm, _, done := newTestDomain(t, false, goodDomainConf(), func(mc *mockComponents) {
-		mc.domainStateInterface.On("EnsureABISchemas", mock.Anything).Return(nil, nil)
+		mc.stateStore.On("EnsureABISchemas", mock.Anything, "test1", mock.Anything).Return(nil, nil)
 		mc.db.ExpectQuery("SELECT.*private_smart_contracts").WillReturnRows(sqlmock.NewRows([]string{}))
 	})
 	defer done()
@@ -310,10 +310,10 @@ func TestFullTransactionRealDBOK(t *testing.T) {
 	psc, tx := doDomainInitTransactionOK(t, ctx, tp)
 	domain := tp.d
 
-	state1 := storeState(t, dm, tp, tx.ID, ethtypes.NewHexInteger64(1111111))
-	state2 := storeState(t, dm, tp, tx.ID, ethtypes.NewHexInteger64(2222222))
-	state3 := storeState(t, dm, tp, tx.ID, ethtypes.NewHexInteger64(3333333))
-	state4 := storeState(t, dm, tp, tx.ID, ethtypes.NewHexInteger64(4444444))
+	state1 := storeState(t, dm, tp, psc.Address(), tx.ID, ethtypes.NewHexInteger64(1111111))
+	state2 := storeState(t, dm, tp, psc.Address(), tx.ID, ethtypes.NewHexInteger64(2222222))
+	state3 := storeState(t, dm, tp, psc.Address(), tx.ID, ethtypes.NewHexInteger64(3333333))
+	state4 := storeState(t, dm, tp, psc.Address(), tx.ID, ethtypes.NewHexInteger64(4444444))
 
 	state5 := &fakeState{
 		Salt:   tktypes.Bytes32(tktypes.RandBytes(32)),
@@ -324,7 +324,8 @@ func TestFullTransactionRealDBOK(t *testing.T) {
 		assert.Same(t, req.Transaction, tx.PreAssembly.TransactionSpecification)
 
 		stateRes, err := domain.FindAvailableStates(ctx, &prototk.FindAvailableStatesRequest{
-			SchemaId: tp.stateSchemas[0].Id,
+			ContractAddress: req.Transaction.ContractAddress,
+			SchemaId:        tp.stateSchemas[0].Id,
 			QueryJson: `{
 				"or": [
 					{
@@ -382,7 +383,8 @@ func TestFullTransactionRealDBOK(t *testing.T) {
 	require.NoError(t, err)
 
 	stateRes, err := domain.FindAvailableStates(ctx, &prototk.FindAvailableStatesRequest{
-		SchemaId: tx.PostAssembly.OutputStatesPotential[0].SchemaId,
+		ContractAddress: psc.Address().String(),
+		SchemaId:        tx.PostAssembly.OutputStatesPotential[0].SchemaId,
 		QueryJson: `{
 			"or": [
 				{
@@ -399,8 +401,9 @@ func TestFullTransactionRealDBOK(t *testing.T) {
 	require.NoError(t, err)
 
 	stillAvailable, err := domain.FindAvailableStates(ctx, &prototk.FindAvailableStatesRequest{
-		SchemaId:  tx.PostAssembly.OutputStatesPotential[0].SchemaId,
-		QueryJson: `{}`,
+		ContractAddress: psc.Address().String(),
+		SchemaId:        tx.PostAssembly.OutputStatesPotential[0].SchemaId,
+		QueryJson:       `{}`,
 	})
 	require.NoError(t, err)
 	assert.Len(t, stillAvailable.States, 3)

@@ -18,11 +18,12 @@ package noto
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"math/big"
 
+	"github.com/hyperledger/firefly-common/pkg/i18n"
 	"github.com/hyperledger/firefly-signer/pkg/eip712"
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
+	"github.com/kaleido-io/paladin/domains/noto/internal/msgs"
 	"github.com/kaleido-io/paladin/domains/noto/pkg/types"
 	"github.com/kaleido-io/paladin/toolkit/pkg/log"
 	pb "github.com/kaleido-io/paladin/toolkit/pkg/prototk"
@@ -82,12 +83,13 @@ func (n *Noto) makeNewState(coin *types.NotoCoin) (*pb.NewState, error) {
 	}, nil
 }
 
-func (n *Noto) prepareInputs(ctx context.Context, owner ethtypes.Address0xHex, amount *ethtypes.HexInteger) ([]*types.NotoCoin, []*pb.StateRef, *big.Int, error) {
+func (n *Noto) prepareInputs(ctx context.Context, contractAddress string, owner ethtypes.Address0xHex, amount *ethtypes.HexInteger) ([]*types.NotoCoin, []*pb.StateRef, *big.Int, error) {
 	var lastStateTimestamp int64
 	total := big.NewInt(0)
 	stateRefs := []*pb.StateRef{}
 	coins := []*types.NotoCoin{}
 	for {
+		// TODO: make this configurable
 		queryBuilder := query.NewQueryBuilder().
 			Limit(10).
 			Sort(".created").
@@ -98,19 +100,19 @@ func (n *Noto) prepareInputs(ctx context.Context, owner ethtypes.Address0xHex, a
 		}
 
 		log.L(ctx).Debugf("State query: %s", queryBuilder.Query())
-		states, err := n.findAvailableStates(ctx, queryBuilder.Query().String())
+		states, err := n.findAvailableStates(ctx, contractAddress, queryBuilder.Query().String())
 
 		if err != nil {
 			return nil, nil, nil, err
 		}
 		if len(states) == 0 {
-			return nil, nil, nil, fmt.Errorf("insufficient funds (available=%s)", total.Text(10))
+			return nil, nil, nil, i18n.NewError(ctx, msgs.MsgInsufficientFunds, total.Text(10))
 		}
 		for _, state := range states {
 			lastStateTimestamp = state.StoredAt
 			coin, err := n.unmarshalCoin(state.DataJson)
 			if err != nil {
-				return nil, nil, nil, fmt.Errorf("coin %s is invalid: %s", state.Id, err)
+				return nil, nil, nil, i18n.NewError(ctx, msgs.MsgInvalidStateData, state.Id, err)
 			}
 			total = total.Add(total, coin.Amount.BigInt())
 			stateRefs = append(stateRefs, &pb.StateRef{
@@ -138,10 +140,11 @@ func (n *Noto) prepareOutputs(owner ethtypes.Address0xHex, amount *ethtypes.HexI
 	return []*types.NotoCoin{newCoin}, []*pb.NewState{newState}, err
 }
 
-func (n *Noto) findAvailableStates(ctx context.Context, query string) ([]*pb.StoredState, error) {
+func (n *Noto) findAvailableStates(ctx context.Context, contractAddress, query string) ([]*pb.StoredState, error) {
 	req := &pb.FindAvailableStatesRequest{
-		SchemaId:  n.coinSchema.Id,
-		QueryJson: query,
+		ContractAddress: contractAddress,
+		SchemaId:        n.coinSchema.Id,
+		QueryJson:       query,
 	}
 	res, err := n.Callbacks.FindAvailableStates(ctx, req)
 	if err != nil {
