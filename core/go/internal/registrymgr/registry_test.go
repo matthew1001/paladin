@@ -155,9 +155,6 @@ func TestRecordAndResolveInformation(t *testing.T) {
 		TransportDetails: "more things and stuff",
 	}
 
-	mc.db.ExpectQuery("SELECT.*registry").WillReturnRows(sqlmock.NewRows([]string{"node", "registry", "transport", "transport_details"}).AddRow(
-		"node1", registryID.String(), "grpc", "things and stuff"))
-
 	// Upsert second entry
 	res, err = tp.r.UpsertTransportDetails(ctx, entry2)
 	require.NoError(t, err)
@@ -165,9 +162,6 @@ func TestRecordAndResolveInformation(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, res)
 	assert.Len(t, transports, 2)
-
-	mc.db.ExpectQuery("SELECT.*registry").WillReturnRows(sqlmock.NewRows([]string{"node", "registry", "transport", "transport_details"}).AddRow(
-		"node1", registryID.String(), "grpc", "things and stuff").AddRow("node1", "test1", "websockets", "things and stuff"))
 
 	// Upsert first entry again
 	res, err = tp.r.UpsertTransportDetails(ctx, entry1)
