@@ -1,6 +1,6 @@
 BEGIN;
 
-CREATE TABLE registry (
+CREATE TABLE registry_transport_details (
     "node"               TEXT    NOT NULL,
     "registry"           TEXT    NOT NULL,
     "transport"          TEXT    NOT NULL,

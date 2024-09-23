@@ -1,1 +1,1 @@
-DROP TABLE registry;
+DROP TABLE registry_transport_details;

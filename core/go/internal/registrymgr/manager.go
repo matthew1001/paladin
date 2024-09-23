@@ -41,13 +41,6 @@ type registryManager struct {
 	registriesByName map[string]*registry
 }
 
-type RegistryEntry struct {
-	Registry          string `gorm:"primaryKey"`
-	Node              string `gorm:"primaryKey"`
-	Transport         string `gorm:"primaryKey"`
-	Transport_details string
-}
-
 func NewRegistryManager(bgCtx context.Context, conf *RegistryManagerConfig) components.RegistryManager {
 	return &registryManager{
 		bgCtx:            bgCtx,
@@ -139,8 +132,8 @@ func (rm *registryManager) GetNodeTransports(ctx context.Context, node string) (
 		// Set cache
 		rm.registryCache.Set(node, transports)
 		return transports, nil
-	} else {
-		return nil, i18n.NewError(ctx, msgs.MsgRegistryNodeEntiresNotFound, node)
 	}
+
+	return nil, i18n.NewError(ctx, msgs.MsgRegistryNodeEntiresNotFound, node)
 
 }
