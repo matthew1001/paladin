@@ -3,7 +3,15 @@ name: Paladin CI build
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md' 
+      - operator/**  # Ignore changes to the operator package
   pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - '**.md' 
+      - operator/**  # Ignore changes to the operator package
   workflow_dispatch:
 
 jobs:
