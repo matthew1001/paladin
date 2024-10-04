@@ -68,45 +68,63 @@ func (r *PaladinReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	var node corev1alpha1.Paladin
 	if err := r.Get(ctx, req.NamespacedName, &node); err != nil {
 		if errors.IsNotFound(err) {
+			// Resource not found; could have been deleted after reconcile request.
+			// Return and don't requeue.
 			return ctrl.Result{}, nil
 		}
+		// Error reading the object - requeue the request.
 		log.Error(err, "Failed to get Paladin resource")
 		return ctrl.Result{}, err
 	}
 
+	// Initialize status if empty
+	if node.Status.Phase == "" {
+		node.Status.Phase = corev1alpha1.StatusPhaseFailed
+	}
+
+	defer func() {
+		// Update the overall phase based on conditions
+		if err := r.Status().Update(ctx, &node); err != nil {
+			log.Error(err, "Failed to update Paladin status")
+		}
+	}()
+
+	// Create ConfigMap
 	configSum, _, err := r.createConfigMap(ctx, &node, name)
 	if err != nil {
 		log.Error(err, "Failed to create Paladin config map")
+		setCondition(&node.Status.Conditions, corev1alpha1.ConditionCM, metav1.ConditionFalse, corev1alpha1.ReasonCMCreationFailed, err.Error())
 		return ctrl.Result{}, err
 	}
 	log.Info("Created Paladin config map", "Name", name)
 
+	// Create Service
 	if _, err := r.createService(ctx, &node, name); err != nil {
 		log.Error(err, "Failed to create Paladin Service")
+		setCondition(&node.Status.Conditions, corev1alpha1.ConditionSVC, metav1.ConditionFalse, corev1alpha1.ReasonSVCCreationFailed, err.Error())
 		return ctrl.Result{}, err
 	}
 	log.Info("Created Paladin Service", "Name", name)
 
+	// Create Pod Disruption Budget
 	if _, err := r.createPDB(ctx, &node, name); err != nil {
 		log.Error(err, "Failed to create Paladin pod disruption budget")
+		setCondition(&node.Status.Conditions, corev1alpha1.ConditionPDB, metav1.ConditionFalse, corev1alpha1.ReasonPDBCreationFailed, err.Error())
 		return ctrl.Result{}, err
 	}
 	log.Info("Created Paladin pod disruption budget", "Name", name)
 
+	// Create StatefulSet
 	ss, err := r.createStatefulSet(ctx, &node, name, configSum)
 	if err != nil {
 		log.Error(err, "Failed to create Paladin StatefulSet")
+		setCondition(&node.Status.Conditions, corev1alpha1.ConditionSS, metav1.ConditionFalse, corev1alpha1.ReasonSSCreationFailed, err.Error())
 		return ctrl.Result{}, err
 	}
 	log.Info("Created Paladin StatefulSet", "Name", ss.Name, "Namespace", ss.Namespace)
 
-	// TODO: Update the Paladin status
-	// node.Status.Name = ss.GetName()
-	// node.Status.Namespace = ss.GetNamespace()
-	// if err := r.Status().Update(ctx, &node); err != nil {
-	// 	log.Error(err, "Failed to update Paladin status")
-	// 	return ctrl.Result{}, err
-	// }
+	// Update condition to Succeeded
+	node.Status.Phase = corev1alpha1.StatusPhaseCompleted
 
 	return ctrl.Result{}, nil
 }
@@ -133,6 +151,7 @@ func (r *PaladinReconciler) createStatefulSet(ctx context.Context, node *corev1a
 		// Earlier processing responsible for ensuring this is non-nil
 		r.addPostgresSidecar(statefulSet, *node.Spec.Database.PasswordSecret)
 		if err := r.createPostgresPVC(ctx, node, name); err != nil {
+			setCondition(&node.Status.Conditions, corev1alpha1.ConditionPVC, metav1.ConditionTrue, corev1alpha1.ReasonPVCCreationFailed, err.Error())
 			return nil, err
 		}
 	}
@@ -153,6 +172,7 @@ func (r *PaladinReconciler) createStatefulSet(ctx context.Context, node *corev1a
 		if err != nil {
 			return statefulSet, err
 		}
+		setCondition(&node.Status.Conditions, corev1alpha1.ConditionSS, metav1.ConditionTrue, corev1alpha1.ReasonSSCreated, fmt.Sprintf("Name: %s", statefulSet.Name))
 	} else if err != nil {
 		return statefulSet, err
 	} else {
@@ -162,10 +182,13 @@ func (r *PaladinReconciler) createStatefulSet(ctx context.Context, node *corev1a
 		foundStatefulSet.Spec.Template.Annotations = statefulSet.Spec.Template.Annotations
 		foundStatefulSet.Spec.Template.Labels = statefulSet.Spec.Template.Labels
 		// TODO: Other things that can be merged?
-		return &foundStatefulSet, r.Update(ctx, &foundStatefulSet)
+		if err := r.Update(ctx, &foundStatefulSet); err != nil {
+			return statefulSet, err
+		}
+		setCondition(&node.Status.Conditions, corev1alpha1.ConditionSS, metav1.ConditionTrue, corev1alpha1.ReasonSSUpdated, fmt.Sprintf("Name: %s", statefulSet.Name))
+		statefulSet = &foundStatefulSet
 	}
 	return statefulSet, nil
-
 }
 
 func (r *PaladinReconciler) withStandardAnnotations(annotations map[string]string) map[string]string {
@@ -214,8 +237,11 @@ func (r *PaladinReconciler) createPDB(ctx context.Context, node *corev1alpha1.Pa
 		if err != nil {
 			return pdb, err
 		}
+		setCondition(&node.Status.Conditions, corev1alpha1.ConditionPDB, metav1.ConditionTrue, corev1alpha1.ReasonPDBCreated, fmt.Sprintf("Name: %s", pdb.Name))
 	} else if err != nil {
 		return nil, err
+	} else {
+		setCondition(&node.Status.Conditions, corev1alpha1.ConditionPDB, metav1.ConditionTrue, corev1alpha1.ReasonPDBCreated, fmt.Sprintf("Name: %s", pdb.Name))
 	}
 	return &foundPDB, nil
 }
@@ -364,8 +390,11 @@ func (r *PaladinReconciler) createPostgresPVC(ctx context.Context, node *corev1a
 		if err != nil {
 			return err
 		}
+		setCondition(&node.Status.Conditions, corev1alpha1.ConditionPVC, metav1.ConditionTrue, corev1alpha1.ReasonPVCCreated, fmt.Sprintf("Name: %s", pvc.Name))
 	} else if err != nil {
 		return err
+	} else {
+		setCondition(&node.Status.Conditions, corev1alpha1.ConditionPVC, metav1.ConditionTrue, corev1alpha1.ReasonPVCUnchanged, fmt.Sprintf("Name: %s", pvc.Name))
 	}
 	return nil
 }
@@ -424,11 +453,16 @@ func (r *PaladinReconciler) createConfigMap(ctx context.Context, node *corev1alp
 		if err != nil {
 			return "", nil, err
 		}
+		setCondition(&node.Status.Conditions, corev1alpha1.ConditionCM, metav1.ConditionTrue, corev1alpha1.ReasonCMCreated, fmt.Sprintf("Name: %s", configMap.Name))
 	} else if err != nil {
 		return "", nil, err
 	} else {
 		foundConfigMap.Data = configMap.Data
-		return configSum, &foundConfigMap, r.Update(ctx, &foundConfigMap)
+		if err := r.Update(ctx, &foundConfigMap); err != nil {
+			return "", nil, err
+		}
+		setCondition(&node.Status.Conditions, corev1alpha1.ConditionCM, metav1.ConditionTrue, corev1alpha1.ReasonCMUpdated, fmt.Sprintf("Name: %s", configMap.Name))
+		configMap = &foundConfigMap
 	}
 	return configSum, configMap, nil
 }
@@ -563,8 +597,11 @@ func (r *PaladinReconciler) generateDBPasswordSecretIfNotExist(ctx context.Conte
 		if err != nil {
 			return err
 		}
+		setCondition(&node.Status.Conditions, corev1alpha1.ConditionPDB, metav1.ConditionTrue, corev1alpha1.ReasonPDBCreated, fmt.Sprintf("Name: %s", name))
 	} else if err != nil {
 		return err
+	} else {
+		setCondition(&node.Status.Conditions, corev1alpha1.ConditionPDB, metav1.ConditionTrue, corev1alpha1.ReasonPDBUnchanged, fmt.Sprintf("Name: %s", name))
 	}
 	return nil
 }
@@ -654,8 +691,11 @@ func (r *PaladinReconciler) createService(ctx context.Context, node *corev1alpha
 		if err != nil {
 			return svc, err
 		}
+		setCondition(&node.Status.Conditions, corev1alpha1.ConditionSVC, metav1.ConditionTrue, corev1alpha1.ReasonSVCCreated, fmt.Sprintf("Name: %s", name))
 	} else if err != nil {
 		return svc, err
+	} else {
+		setCondition(&node.Status.Conditions, corev1alpha1.ConditionSVC, metav1.ConditionTrue, corev1alpha1.ReasonSVCUnchanged, fmt.Sprintf("Name: %s", name))
 	}
 	return svc, nil
 }

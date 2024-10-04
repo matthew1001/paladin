@@ -17,9 +17,14 @@ limitations under the License.
 package controller
 
 import (
+	"context"
 	"sort"
 
+	corev1alpha1 "github.com/kaleido-io/paladin/operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 func mergeServicePorts(svcSpec *corev1.ServiceSpec, requiredPorts []corev1.ServicePort) {
@@ -52,4 +57,32 @@ func mergeServicePorts(svcSpec *corev1.ServiceSpec, requiredPorts []corev1.Servi
 	for i, portName := range portNames {
 		svcSpec.Ports[i] = *portsByName[portName]
 	}
+}
+
+func (r *BesuReconciler) updateStatus(ctx context.Context, node *corev1alpha1.Besu) error {
+	if err := r.Status().Update(ctx, node); err != nil {
+		log := log.FromContext(ctx)
+		log.Error(err, "Failed to update %s/%s status", node.Kind, node.Name)
+		return err
+	}
+	return nil
+}
+
+func setCondition(
+	conditions *[]metav1.Condition,
+	conditionType corev1alpha1.ConditionType,
+	status metav1.ConditionStatus,
+	reason corev1alpha1.ConditionReason,
+	message string,
+) {
+	condition := metav1.Condition{
+		Type:               string(conditionType),
+		Status:             status,
+		Reason:             string(reason),
+		Message:            message,
+		LastTransitionTime: metav1.Now(),
+	}
+
+	// Update or append the condition
+	meta.SetStatusCondition(conditions, condition)
 }
