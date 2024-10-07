@@ -58,14 +58,6 @@ const (
 	ReasonSVCUpdated    ConditionReason = "ServiceUpdated"
 	ReasonPDBUpdated    ConditionReason = "PodDisruptionBudgetUpdated"
 
-	// unchanged
-	ReasonCMUnchanged     ConditionReason = "ConfigMapUnchanged"
-	ReasonSSUnchanged     ConditionReason = "StatefulSetUnchanged"
-	ReasonSecretUnchanged ConditionReason = "SecretUnchanged"
-	ReasonSVCUnchanged    ConditionReason = "ServiceUnchanged"
-	ReasonPDBUnchanged    ConditionReason = "PodDisruptionBudgetUnchanged"
-	ReasonPVCUnchanged    ConditionReason = "PersistentVolumeClaimUnchanged"
-
 	ReasonSuccess         ConditionReason = "Success"
 	ReasonGenesisNotFound ConditionReason = "GenesisNotFound"
 )

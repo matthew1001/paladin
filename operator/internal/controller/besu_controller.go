@@ -364,8 +364,6 @@ func (r *BesuReconciler) createIdentitySecret(ctx context.Context, node *corev1a
 		setCondition(&node.Status.Conditions, corev1alpha1.ConditionSS, metav1.ConditionTrue, corev1alpha1.ReasonSecretCreated, fmt.Sprintf("Name: %s", name))
 	} else if err != nil {
 		return nil, err
-	} else {
-		setCondition(&node.Status.Conditions, corev1alpha1.ConditionSS, metav1.ConditionTrue, corev1alpha1.ReasonSecretUnchanged, fmt.Sprintf("Name: %s", name))
 	}
 
 	return &idSecret, nil
@@ -466,8 +464,6 @@ func (r *BesuReconciler) createDataPVC(ctx context.Context, node *corev1alpha1.B
 		setCondition(&node.Status.Conditions, corev1alpha1.ConditionPVC, metav1.ConditionTrue, corev1alpha1.ReasonPVCCreated, fmt.Sprintf("Name: %s", pvc.Name))
 	} else if err != nil {
 		return err
-	} else {
-		setCondition(&node.Status.Conditions, corev1alpha1.ConditionPVC, metav1.ConditionTrue, corev1alpha1.ReasonPVCUnchanged, fmt.Sprintf("Name: %s", pvc.Name))
 	}
 	return nil
 }
@@ -508,8 +504,6 @@ func (r *BesuReconciler) createPDB(ctx context.Context, node *corev1alpha1.Besu,
 		setCondition(&node.Status.Conditions, corev1alpha1.ConditionPDB, metav1.ConditionTrue, corev1alpha1.ReasonPDBCreated, fmt.Sprintf("Name: %s", name))
 	} else if err != nil {
 		return nil, err
-	} else {
-		setCondition(&node.Status.Conditions, corev1alpha1.ConditionPDB, metav1.ConditionTrue, corev1alpha1.ReasonPDBUnchanged, fmt.Sprintf("Name: %s", name))
 	}
 	return &foundPDB, nil
 }
@@ -654,8 +648,6 @@ func (r *BesuReconciler) createService(ctx context.Context, node *corev1alpha1.B
 		setCondition(&node.Status.Conditions, corev1alpha1.ConditionSVC, metav1.ConditionTrue, corev1alpha1.ReasonSVCCreated, fmt.Sprintf("Name: %s", name))
 	} else if err != nil {
 		return svc, err
-	} else {
-		setCondition(&node.Status.Conditions, corev1alpha1.ConditionSVC, metav1.ConditionTrue, corev1alpha1.ReasonSVCUnchanged, fmt.Sprintf("Name: %s", name))
 	}
 	return svc, nil
 }

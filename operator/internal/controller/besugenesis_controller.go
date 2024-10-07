@@ -123,8 +123,6 @@ func (r *BesuGenesisReconciler) createConfigMap(ctx context.Context, genesis *co
 		return newMap, true, nil
 	} else if err != nil {
 		return nil, false, err
-	} else {
-		setCondition(&genesis.Status.Conditions, corev1alpha1.ConditionCM, metav1.ConditionTrue, corev1alpha1.ReasonCMUnchanged, fmt.Sprintf("Name: %s", name))
 	}
 	return &genesisMap, true, nil
 }
