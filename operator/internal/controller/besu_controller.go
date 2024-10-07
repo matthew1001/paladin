@@ -177,7 +177,10 @@ func (r *BesuReconciler) createConfigMap(ctx context.Context, node *corev1alpha1
 	if err != nil {
 		return "", nil, err
 	}
-	controllerutil.SetControllerReference(node, configMap, r.Scheme)
+
+	if err := controllerutil.SetControllerReference(node, configMap, r.Scheme); err != nil {
+		return "", nil, err
+	}
 
 	var foundConfigMap corev1.ConfigMap
 	if err := r.Get(ctx, types.NamespacedName{Name: configMap.Name, Namespace: configMap.Namespace}, &foundConfigMap); err != nil && errors.IsNotFound(err) {
@@ -239,6 +242,7 @@ func (r *BesuReconciler) generateBesuConfigTOML(node *corev1alpha1.Besu) (string
 			return "", fmt.Errorf("failed to parse supplied Besu config as TOML: %s", err)
 		}
 	}
+	const localhost = "0.0.0.0"
 
 	// Setup from our mounts
 	tomlConfig["node-private-key-file"] = "/nodeid/key"
@@ -248,17 +252,17 @@ func (r *BesuReconciler) generateBesuConfigTOML(node *corev1alpha1.Besu) (string
 	// Set up the networking, as that's always in our control (we wire it up to the service)
 	comprehensiveRPCSet := []string{"ETH", "NET", "QBFT", "WEB3", "ADMIN", "DEBUG"}
 	tomlConfig["rpc-http-enabled"] = true
-	tomlConfig["rpc-http-host"] = "0.0.0.0"
+	tomlConfig["rpc-http-host"] = localhost
 	tomlConfig["rpc-http-port"] = "8545"
 	setIfUnset("rpc-http-api", comprehensiveRPCSet)
 	tomlConfig["rpc-ws-enabled"] = true
-	tomlConfig["rpc-ws-host"] = "0.0.0.0"
+	tomlConfig["rpc-ws-host"] = localhost
 	tomlConfig["rpc-ws-port"] = "8546"
 	setIfUnset("rpc-ws-api", comprehensiveRPCSet)
 	tomlConfig["graphql-http-enabled"] = true
-	tomlConfig["graphql-http-host"] = "0.0.0.0"
+	tomlConfig["graphql-http-host"] = localhost
 	tomlConfig["graphql-http-port"] = "8547"
-	tomlConfig["p2p-host"] = "0.0.0.0"
+	tomlConfig["p2p-host"] = localhost
 	tomlConfig["p2p-port"] = "30303"
 	setIfUnset("host-allowlist", []string{"*"})
 
@@ -331,6 +335,7 @@ func (r *BesuReconciler) getLabels(node *corev1alpha1.Besu, extraLabels ...map[s
 	for k, v := range r.config.Besu.Labels {
 		l[k] = v
 	}
+
 	for _, e := range extraLabels {
 		for k, v := range e {
 			l[k] = v
@@ -355,7 +360,9 @@ func (r *BesuReconciler) createIdentitySecret(ctx context.Context, node *corev1a
 			"id":      hex.EncodeToString(nodeKey.PublicKeyBytes()),
 			"address": nodeKey.Address.String(),
 		}
-		controllerutil.SetControllerReference(node, &idSecret, r.Scheme)
+		if err := controllerutil.SetControllerReference(node, &idSecret, r.Scheme); err != nil {
+			return nil, err
+		}
 
 		err = r.Create(ctx, &idSecret)
 		if err != nil {
@@ -407,7 +414,9 @@ func (r *BesuReconciler) createStatefulSet(ctx context.Context, node *corev1alph
 		setCondition(&node.Status.Conditions, corev1alpha1.ConditionPVC, metav1.ConditionTrue, corev1alpha1.ReasonPVCCreationFailed, err.Error())
 		return nil, err
 	}
-	controllerutil.SetControllerReference(node, statefulSet, r.Scheme)
+	if err := controllerutil.SetControllerReference(node, statefulSet, r.Scheme); err != nil {
+		return nil, err
+	}
 
 	// Check if the StatefulSet already exists, create if not
 	var foundStatefulSet appsv1.StatefulSet
@@ -455,10 +464,11 @@ func (r *BesuReconciler) createDataPVC(ctx context.Context, node *corev1alpha1.B
 		if _, resourceSet := pvc.Spec.Resources.Requests[corev1.ResourceStorage]; !resourceSet {
 			pvc.Spec.Resources.Requests[corev1.ResourceStorage] = resource.MustParse("1Gi")
 		}
-		controllerutil.SetControllerReference(node, &pvc, r.Scheme)
+		if err := controllerutil.SetControllerReference(node, &pvc, r.Scheme); err != nil {
+			return err
+		}
 
-		err = r.Create(ctx, &pvc)
-		if err != nil {
+		if err = r.Create(ctx, &pvc); err != nil {
 			return err
 		}
 		setCondition(&node.Status.Conditions, corev1alpha1.ConditionPVC, metav1.ConditionTrue, corev1alpha1.ReasonPVCCreated, fmt.Sprintf("Name: %s", pvc.Name))
@@ -493,7 +503,9 @@ func (r *BesuReconciler) generatePDBTemplate(node *corev1alpha1.Besu, name strin
 
 func (r *BesuReconciler) createPDB(ctx context.Context, node *corev1alpha1.Besu, name string) (*policyv1.PodDisruptionBudget, error) {
 	pdb := r.generatePDBTemplate(node, name)
-	controllerutil.SetControllerReference(node, pdb, r.Scheme)
+	if err := controllerutil.SetControllerReference(node, pdb, r.Scheme); err != nil {
+		return nil, err
+	}
 
 	var foundPDB policyv1.PodDisruptionBudget
 	if err := r.Get(ctx, types.NamespacedName{Name: name, Namespace: pdb.Namespace}, &foundPDB); err != nil && errors.IsNotFound(err) {
@@ -637,7 +649,9 @@ func (r *BesuReconciler) generateStatefulSetTemplate(node *corev1alpha1.Besu, na
 
 func (r *BesuReconciler) createService(ctx context.Context, node *corev1alpha1.Besu, name string) (*corev1.Service, error) {
 	svc := r.generateServiceTemplate(node, name)
-	controllerutil.SetControllerReference(node, svc, r.Scheme)
+	if err := controllerutil.SetControllerReference(node, svc, r.Scheme); err != nil {
+		return nil, err
+	}
 
 	var foundSvc corev1.Service
 	if err := r.Get(ctx, types.NamespacedName{Name: svc.Name, Namespace: svc.Namespace}, &foundSvc); err != nil && errors.IsNotFound(err) {

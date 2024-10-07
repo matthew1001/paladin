@@ -17,26 +17,26 @@ limitations under the License.
 package controller
 
 import (
-	"context"
 	"sort"
 
 	corev1alpha1 "github.com/kaleido-io/paladin/operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 func mergeServicePorts(svcSpec *corev1.ServiceSpec, requiredPorts []corev1.ServicePort) {
 	portsByName := map[string]*corev1.ServicePort{}
 	for _, providedPort := range svcSpec.Ports {
-		portsByName[providedPort.Name] = &providedPort
+		tmpPort := providedPort
+		portsByName[providedPort.Name] = &tmpPort
 	}
 	for _, requiredPort := range requiredPorts {
 		providedPort, isProvided := portsByName[requiredPort.Name]
 		if !isProvided {
 			// Just use our definition
-			portsByName[requiredPort.Name] = &requiredPort
+			tmpPort := requiredPort
+			portsByName[requiredPort.Name] = &tmpPort
 		} else {
 			// We own the target port number and protocol always
 			providedPort.TargetPort = requiredPort.TargetPort
@@ -57,15 +57,6 @@ func mergeServicePorts(svcSpec *corev1.ServiceSpec, requiredPorts []corev1.Servi
 	for i, portName := range portNames {
 		svcSpec.Ports[i] = *portsByName[portName]
 	}
-}
-
-func (r *BesuReconciler) updateStatus(ctx context.Context, node *corev1alpha1.Besu) error {
-	if err := r.Status().Update(ctx, node); err != nil {
-		log := log.FromContext(ctx)
-		log.Error(err, "Failed to update %s/%s status", node.Kind, node.Name)
-		return err
-	}
-	return nil
 }
 
 func setCondition(

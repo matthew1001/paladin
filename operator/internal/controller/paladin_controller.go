@@ -145,7 +145,9 @@ func (r *PaladinReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 func (r *PaladinReconciler) createStatefulSet(ctx context.Context, node *corev1alpha1.Paladin, name, configSum string) (*appsv1.StatefulSet, error) {
 	statefulSet := r.generateStatefulSetTemplate(node, name, configSum)
-	controllerutil.SetControllerReference(node, statefulSet, r.Scheme)
+	if err := controllerutil.SetControllerReference(node, statefulSet, r.Scheme); err != nil {
+		return nil, err
+	}
 
 	if node.Spec.Database.Mode == corev1alpha1.DBMode_SidecarPostgres {
 		// Earlier processing responsible for ensuring this is non-nil
@@ -229,7 +231,9 @@ func (r *PaladinReconciler) generatePDBTemplate(node *corev1alpha1.Paladin, name
 
 func (r *PaladinReconciler) createPDB(ctx context.Context, node *corev1alpha1.Paladin, name string) (*policyv1.PodDisruptionBudget, error) {
 	pdb := r.generatePDBTemplate(node, name)
-	controllerutil.SetControllerReference(node, pdb, r.Scheme)
+	if err := controllerutil.SetControllerReference(node, pdb, r.Scheme); err != nil {
+		return nil, err
+	}
 
 	var foundPDB policyv1.PodDisruptionBudget
 	if err := r.Get(ctx, types.NamespacedName{Name: name, Namespace: pdb.Namespace}, &foundPDB); err != nil && errors.IsNotFound(err) {
@@ -382,7 +386,9 @@ func (r *PaladinReconciler) createPostgresPVC(ctx context.Context, node *corev1a
 	if _, resourceSet := pvc.Spec.Resources.Requests[corev1.ResourceStorage]; !resourceSet {
 		pvc.Spec.Resources.Requests[corev1.ResourceStorage] = resource.MustParse("1Gi")
 	}
-	controllerutil.SetControllerReference(node, &pvc, r.Scheme)
+	if err := controllerutil.SetControllerReference(node, &pvc, r.Scheme); err != nil {
+		return err
+	}
 
 	var foundPVC corev1.PersistentVolumeClaim
 	if err := r.Get(ctx, types.NamespacedName{Name: pvc.Name, Namespace: pvc.Namespace}, &foundPVC); err != nil && errors.IsNotFound(err) {
@@ -443,7 +449,9 @@ func (r *PaladinReconciler) createConfigMap(ctx context.Context, node *corev1alp
 	if err != nil {
 		return "", nil, err
 	}
-	controllerutil.SetControllerReference(node, configMap, r.Scheme)
+	if err := controllerutil.SetControllerReference(node, configMap, r.Scheme); err != nil {
+		return "", nil, err
+	}
 
 	var foundConfigMap corev1.ConfigMap
 	if err := r.Get(ctx, types.NamespacedName{Name: configMap.Name, Namespace: configMap.Namespace}, &foundConfigMap); err != nil && errors.IsNotFound(err) {
@@ -583,7 +591,9 @@ func (r *PaladinReconciler) generatePaladinDBConfig(ctx context.Context, node *c
 
 func (r *PaladinReconciler) generateDBPasswordSecretIfNotExist(ctx context.Context, node *corev1alpha1.Paladin, name string) error {
 	secret := r.generateSecretTemplate(node, name)
-	controllerutil.SetControllerReference(node, secret, r.Scheme)
+	if err := controllerutil.SetControllerReference(node, secret, r.Scheme); err != nil {
+		return err
+	}
 
 	var foundSecret corev1.Secret
 	if err := r.Get(ctx, types.NamespacedName{Name: secret.Name, Namespace: secret.Namespace}, &foundSecret); err != nil && errors.IsNotFound(err) {
@@ -635,7 +645,9 @@ func (r *PaladinReconciler) generatePaladinSigners(ctx context.Context, node *co
 
 func (r *PaladinReconciler) generateBIP39SeedSecretIfNotExist(ctx context.Context, node *corev1alpha1.Paladin, name string) error {
 	secret := r.generateSecretTemplate(node, name)
-	controllerutil.SetControllerReference(node, secret, r.Scheme)
+	if err := controllerutil.SetControllerReference(node, secret, r.Scheme); err != nil {
+		return err
+	}
 
 	var foundSecret corev1.Secret
 	if err := r.Get(ctx, types.NamespacedName{Name: secret.Name, Namespace: secret.Namespace}, &foundSecret); err != nil && errors.IsNotFound(err) {
@@ -679,7 +691,9 @@ func (r *PaladinReconciler) retrieveUsernamePasswordSecret(ctx context.Context, 
 
 func (r *PaladinReconciler) createService(ctx context.Context, node *corev1alpha1.Paladin, name string) (*corev1.Service, error) {
 	svc := r.generateServiceTemplate(node, name)
-	controllerutil.SetControllerReference(node, svc, r.Scheme)
+	if err := controllerutil.SetControllerReference(node, svc, r.Scheme); err != nil {
+		return svc, err
+	}
 
 	var foundSvc corev1.Service
 	if err := r.Get(ctx, types.NamespacedName{Name: svc.Name, Namespace: svc.Namespace}, &foundSvc); err != nil && errors.IsNotFound(err) {

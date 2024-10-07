@@ -87,7 +87,7 @@ func (r *BesuGenesisReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		log.Info("Waiting for node identities before creating BesuGenesis config map")
 		return ctrl.Result{
 			// Keep polling on a short duration until we get the identities
-			RequeueAfter: time.Duration(1 * time.Second),
+			RequeueAfter: time.Duration(1),
 		}, nil
 
 	}
@@ -113,7 +113,9 @@ func (r *BesuGenesisReconciler) createConfigMap(ctx context.Context, genesis *co
 		if err != nil || !ready {
 			return nil, ready, err
 		}
-		controllerutil.SetControllerReference(genesis, newMap, r.Scheme)
+		if err := controllerutil.SetControllerReference(genesis, newMap, r.Scheme); err != nil {
+			return nil, false, err
+		}
 
 		err = r.Create(ctx, newMap)
 		if err != nil {
@@ -216,7 +218,8 @@ func (r *BesuGenesisReconciler) getInitialValidators(ctx context.Context, genesi
 		var secret *corev1.Secret
 		for _, possible := range secrets {
 			if possible.Labels["besu-node-id"] == validatorName {
-				secret = &possible
+				tmpPossible := possible
+				secret = &tmpPossible
 				break
 			}
 		}
