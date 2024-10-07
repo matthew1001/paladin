@@ -72,9 +72,11 @@ func (ss *stateManager) WriteReceivedStates(ctx context.Context, dbTX *gorm.DB, 
 	return ss.processInsertStates(ctx, dbTX, d, states)
 }
 
-func (ss *stateManager) processInsertStates(ctx context.Context, dbTX *gorm.DB, d components.Domain, inStates []*components.StateUpsertOutsideContext) (processedStates []*components.State, err error) {
+func (ss *stateManager) processInsertStates(ctx context.Context, dbTX *gorm.DB, d components.Domain, inStates []*components.StateUpsertOutsideContext) ([]*components.State, error) {
 
-	processedStates = make([]*components.State, len(inStates))
+	allStates := make([]*components.State, len(inStates))
+	normalStates := make([]*components.State, 0, len(inStates))
+	preConfirmedStates := make([]*components.State, 0)
 	for i, inState := range inStates {
 		schema, err := ss.GetSchema(ctx, d.Name(), inState.SchemaID, true)
 		if err != nil {
@@ -85,18 +87,23 @@ func (ss *stateManager) processInsertStates(ctx context.Context, dbTX *gorm.DB, 
 		if err != nil {
 			return nil, err
 		}
-		processedStates[i] = s.State
+		allStates[i] = s.State
+		if inState.PreConfirmed {
+			preConfirmedStates = append(preConfirmedStates, s.State)
+		} else {
+			normalStates = append(normalStates, s.State)
+		}
 	}
 
 	// Write them directly
-	if err = ss.writeStates(ctx, dbTX, processedStates); err != nil {
+	if err := ss.writeStates(ctx, dbTX, normalStates, preConfirmedStates); err != nil {
 		return nil, err
 	}
 
-	return processedStates, nil
+	return allStates, nil
 }
 
-func (ss *stateManager) writeStates(ctx context.Context, dbTX *gorm.DB, states []*components.State) (err error) {
+func (ss *stateManager) writeStates(ctx context.Context, dbTX *gorm.DB, states, preConfirmedStates []*components.State) (err error) {
 	var labels []*components.StateLabel
 	var int64Labels []*components.StateInt64Label
 	for _, s := range states {
@@ -104,7 +111,8 @@ func (ss *stateManager) writeStates(ctx context.Context, dbTX *gorm.DB, states [
 		int64Labels = append(int64Labels, s.Int64Labels...)
 	}
 
-	if len(states) > 0 {
+	allStates := append(append(make([]*components.State, 0, len(states)+len(preConfirmedStates)), states...), preConfirmedStates...)
+	if len(allStates) > 0 {
 		err = dbTX.
 			Table("states").
 			WithContext(ctx).
@@ -113,7 +121,7 @@ func (ss *stateManager) writeStates(ctx context.Context, dbTX *gorm.DB, states [
 				DoNothing: true, // immutable
 			}).
 			Omit("Labels", "Int64Labels", "Confirmed", "Spent"). // we do this ourselves below
-			Create(states).
+			Create(allStates).
 			Error
 	}
 	if err == nil && len(labels) > 0 {
@@ -134,6 +142,24 @@ func (ss *stateManager) writeStates(ctx context.Context, dbTX *gorm.DB, states [
 				DoNothing: true, // immutable
 			}).
 			Create(int64Labels).
+			Error
+	}
+	if err == nil && len(preConfirmedStates) > 0 {
+		confirms := make([]*components.StateConfirm, len(preConfirmedStates))
+		for i, s := range preConfirmedStates {
+			confirms[i] = &components.StateConfirm{
+				DomainName:  s.DomainName,
+				State:       s.ID,
+				Transaction: uuid.UUID{}, // this is the special case for the zero transaction ID
+			}
+		}
+		err = dbTX.
+			Table("state_confirms").
+			Clauses(clause.OnConflict{
+				Columns:   []clause.Column{{Name: "domain_name"}, {Name: "state"}},
+				DoNothing: true, // immutable
+			}).
+			Create(confirms).
 			Error
 	}
 	return err

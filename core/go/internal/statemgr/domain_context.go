@@ -138,9 +138,20 @@ func (dc *domainContext) mergeUnFlushedApplyLocks(schema components.Schema, dbSt
 	}
 
 	// Get the list of new un-flushed states, which are not already locked for spend
+	availableInMemoryStates := make([]*components.StateWithLabels, 0, len(dc.creatingStates))
+	// This includes all the creating states - which are being created with a lock to a transaction
+	for _, s := range dc.creatingStates {
+		availableInMemoryStates = append(availableInMemoryStates, s)
+	}
+	// It also includes all the pre-confirmed states (which will flush their own confirmation when they are written, to the zero transaction ID)
+	availableInMemoryStates = append(availableInMemoryStates, dc.unFlushed.preConfirmedStates...)
+	if dc.flushing != nil {
+		availableInMemoryStates = append(availableInMemoryStates, dc.flushing.preConfirmedStates...)
+	}
+
 	matches := make([]*components.StateWithLabels, 0, len(dc.creatingStates))
 	schemaId := schema.Persisted().ID
-	for _, state := range dc.creatingStates {
+	for _, state := range availableInMemoryStates {
 		if !state.Schema.Equals(&schemaId) {
 			continue
 		}
@@ -291,7 +302,8 @@ func (dc *domainContext) UpsertStates(stateUpserts ...*components.StateUpsert) (
 
 	states = make([]*components.State, len(stateUpserts))
 	stateLocks := make([]*components.StateLock, 0, len(stateUpserts))
-	withValues := make([]*components.StateWithLabels, len(stateUpserts))
+	withValues := make([]*components.StateWithLabels, 0, len(stateUpserts))
+	withValuesPreConfirmed := make([]*components.StateWithLabels, 0)
 	toMakeAvailable := make([]*components.StateWithLabels, 0, len(stateUpserts))
 	for i, ns := range stateUpserts {
 		schema, err := dc.ss.GetSchema(dc, dc.domainName, ns.SchemaID, true)
@@ -303,20 +315,28 @@ func (dc *domainContext) UpsertStates(stateUpserts ...*components.StateUpsert) (
 		if err != nil {
 			return nil, err
 		}
-		withValues[i] = vs
-		states[i] = withValues[i].State
+		states[i] = vs.State
 		if ns.CreatedBy != nil {
+			if ns.PreConfirmed {
+				return nil, i18n.NewError(dc, msgs.MsgStateCannotSetTXForPreConfirm)
+			}
 			createLock := &components.StateLock{
 				Type:        components.StateLockTypeCreate.Enum(),
 				Transaction: *ns.CreatedBy,
-				State:       withValues[i].State.ID,
+				State:       vs.State.ID,
 			}
 			stateLocks = append(stateLocks, createLock)
 			toMakeAvailable = append(toMakeAvailable, vs)
 			log.L(dc).Infof("Upserting state %s with create lock tx=%s", states[i].ID, ns.CreatedBy)
+			withValues = append(withValues, vs)
+		} else if ns.PreConfirmed {
+			log.L(dc).Infof("Upserting pre-confirmed state %s", states[i].ID)
+			withValuesPreConfirmed = append(withValuesPreConfirmed, vs)
 		} else {
 			log.L(dc).Infof("Upserting state %s (no create lock)", states[i].ID)
+			withValues = append(withValues, vs)
 		}
+
 	}
 
 	// Take lock and check flush state
@@ -339,6 +359,7 @@ func (dc *domainContext) UpsertStates(stateUpserts ...*components.StateUpsert) (
 
 	// Add all the states to the flush that will go to the DB
 	dc.unFlushed.states = append(dc.unFlushed.states, withValues...)
+	dc.unFlushed.preConfirmedStates = append(dc.unFlushed.preConfirmedStates, withValuesPreConfirmed...)
 	return states, nil
 }
 

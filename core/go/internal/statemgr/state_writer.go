@@ -43,8 +43,9 @@ type writeOperation struct {
 	// States and state nullifiers can be flushed to persistence, although
 	// are only available for consumption outside of a DomainContext
 	// with creation locks once they are confirmed via the blockchain.
-	states          []*components.StateWithLabels
-	stateNullifiers []*components.StateNullifier
+	states             []*components.StateWithLabels
+	preConfirmedStates []*components.StateWithLabels
+	stateNullifiers    []*components.StateNullifier
 }
 
 type noResult struct{}
@@ -88,23 +89,27 @@ func (sw *stateWriter) runBatch(ctx context.Context, tx *gorm.DB, values []*writ
 
 	// Build lists of things to insert (we are insert only)
 	var states []*components.State
+	var preConfirmedStates []*components.State
 	var stateLocks []*components.StateLock
 	var stateNullifiers []*components.StateNullifier
 	for _, op := range values {
 		for _, s := range op.states {
 			states = append(states, s.State)
 		}
+		for _, s := range op.preConfirmedStates {
+			preConfirmedStates = append(preConfirmedStates, s.State)
+		}
 		if len(op.stateNullifiers) > 0 {
 			stateNullifiers = append(stateNullifiers, op.stateNullifiers...)
 		}
 	}
-	log.L(ctx).Debugf("Writing state batch states=%d locks=%d nullifiers=%d ",
-		len(states), len(stateLocks), len(stateNullifiers))
+	log.L(ctx).Debugf("Writing state batch states=%d preConfirmedStates=%d locks=%d nullifiers=%d ",
+		len(states), len(preConfirmedStates), len(stateLocks), len(stateNullifiers))
 
 	var err error
 
-	if len(states) > 0 {
-		err = sw.ss.writeStates(ctx, tx, states)
+	if len(states) > 0 || len(preConfirmedStates) > 0 {
+		err = sw.ss.writeStates(ctx, tx, states, preConfirmedStates)
 	}
 
 	if err == nil && len(stateNullifiers) > 0 {

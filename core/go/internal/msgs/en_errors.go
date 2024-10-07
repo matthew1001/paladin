@@ -104,6 +104,7 @@ var (
 	MsgStateInvalidCalculatingHash    = ffe("PD010128", "Failed to generate hash as state is invalid")
 	MsgStateHashMismatch              = ffe("PD010129", "The supplied state ID '%s' does not match the state hash '%s'")
 	MsgStateIDMissing                 = ffe("PD010130", "The state id must be supplied for this domain")
+	MsgStateCannotSetTXForPreConfirm  = ffe("PD010131", "Cannot set a created-by transaction ID for a pre-confirmed state")
 
 	// Persistence PD0102XX
 	MsgPersistenceInvalidType         = ffe("PD010200", "Invalid persistence type: %s")

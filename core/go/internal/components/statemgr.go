@@ -169,16 +169,18 @@ type State struct {
 }
 
 type StateUpsert struct {
-	ID        tktypes.HexBytes
-	SchemaID  tktypes.Bytes32
-	Data      tktypes.RawJSON
-	CreatedBy *uuid.UUID
+	ID           tktypes.HexBytes
+	SchemaID     tktypes.Bytes32
+	Data         tktypes.RawJSON
+	PreConfirmed bool // implicit confirmation record, unrelated to a transaction
+	CreatedBy    *uuid.UUID
 }
 
 type StateUpsertOutsideContext struct {
 	ID              tktypes.HexBytes
 	SchemaID        tktypes.Bytes32
 	ContractAddress tktypes.EthAddress
+	PreConfirmed    bool // implicit confirmation record, unrelated to a transaction
 	Data            tktypes.RawJSON
 }
 
