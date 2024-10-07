@@ -371,6 +371,10 @@ func (as *abiSchema) ProcessState(ctx context.Context, contractAddress tktypes.E
 		id = tktypes.HexBytes(hash)
 	}
 
+	if contractAddress.IsZero() {
+		return nil, i18n.WrapError(ctx, err, msgs.MsgStateContractAddressMissing)
+	}
+
 	for i := range psd.labels {
 		psd.labels[i].DomainName = as.SchemaPersisted.DomainName
 		psd.labels[i].State = id

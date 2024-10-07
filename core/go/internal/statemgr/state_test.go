@@ -221,10 +221,31 @@ func TestWriteReceivedStatesValidateHashOkInsertFail(t *testing.T) {
 	md.On("ValidateStateHashes", mock.Anything, mock.Anything).Return([]tktypes.HexBytes{stateID1}, nil)
 
 	_, err = ss.WriteReceivedStates(ctx, ss.p.DB(), "domain1", []*components.StateUpsertOutsideContext{
-		{SchemaID: schema1.ID(), Data: tktypes.RawJSON(fmt.Sprintf(
+		{SchemaID: schema1.ID(), ContractAddress: *tktypes.RandAddress(), Data: tktypes.RawJSON(fmt.Sprintf(
 			`{"amount": 20, "owner": "0x615dD09124271D8008225054d85Ffe720E7a447A", "salt": "%s"}`,
 			tktypes.RandHex(32)))},
 	})
 	assert.Regexp(t, "pop", err)
+
+}
+
+func TestWriteReceivedStatesMissingAddressInsertFail(t *testing.T) {
+	ctx, ss, _, m, done := newDBMockStateManager(t)
+	defer done()
+
+	schema1, err := newABISchema(ctx, "domain1", testABIParam(t, fakeCoinABI))
+	require.NoError(t, err)
+	ss.abiSchemaCache.Set(schemaCacheKey("domain1", schema1.ID()), schema1)
+
+	md := mockDomain(t, m, "domain1", true)
+	stateID1 := tktypes.RandBytes(32)
+	md.On("ValidateStateHashes", mock.Anything, mock.Anything).Return([]tktypes.HexBytes{stateID1}, nil)
+
+	_, err = ss.WriteReceivedStates(ctx, ss.p.DB(), "domain1", []*components.StateUpsertOutsideContext{
+		{SchemaID: schema1.ID(), Data: tktypes.RawJSON(fmt.Sprintf(
+			`{"amount": 20, "owner": "0x615dD09124271D8008225054d85Ffe720E7a447A", "salt": "%s"}`,
+			tktypes.RandHex(32)))},
+	})
+	assert.Regexp(t, "PD010132", err)
 
 }

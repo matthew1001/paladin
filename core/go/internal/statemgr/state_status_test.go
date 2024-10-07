@@ -56,16 +56,20 @@ const widgetABI = `{
 	]
 }`
 
-func genWidget(t *testing.T, schemaID tktypes.Bytes32, txID *uuid.UUID, withoutSalt string) *components.StateUpsert {
+func addDataSalt(t *testing.T, withoutSalt string) tktypes.RawJSON {
 	var ij map[string]interface{}
 	err := json.Unmarshal([]byte(withoutSalt), &ij)
 	require.NoError(t, err)
 	ij["salt"] = tktypes.RandHex(32)
 	withSalt, err := json.Marshal(ij)
 	require.NoError(t, err)
+	return withSalt
+}
+
+func genWidget(t *testing.T, schemaID tktypes.Bytes32, txID *uuid.UUID, withoutSalt string) *components.StateUpsert {
 	return &components.StateUpsert{
 		SchemaID:  schemaID,
-		Data:      withSalt,
+		Data:      addDataSalt(t, withoutSalt),
 		CreatedBy: txID,
 	}
 }
@@ -269,6 +273,25 @@ func TestStateLockingQuery(t *testing.T) {
 	// check a sub-select
 	checkQuery(query.NewQueryBuilder().Equal("color", "pink").Query(), seqQual, 3)
 	checkQuery(query.NewQueryBuilder().Equal("color", "pink").Query(), StateStatusAvailable)
+
+	// add a pre-verified state outside of the context and make sure it's immediately available in the context
+	_, err = ss.WriteReceivedStates(ctx, ss.p.DB(), "domain1", []*components.StateUpsertOutsideContext{
+		{
+			SchemaID:        schemaID,
+			Data:            addDataSalt(t, `{"size": 77777, "color": "puce", "price": 700}`),
+			ContractAddress: contractAddress,
+			PreConfirmed:    true,
+		},
+	})
+	require.NoError(t, err)
+	widgets = append(widgets, contextStates...)
+
+	checkQuery(all, StateStatusAll, 0, 1, 2, 3, 4, 5, 6) // added 6
+	checkQuery(all, StateStatusAvailable, 1, 2, 4, 5, 6) // added 6
+	checkQuery(all, StateStatusConfirmed, 1, 2, 4, 5, 6) // added 6
+	checkQuery(all, StateStatusUnconfirmed, 3)           // unchanged
+	checkQuery(all, StateStatusSpent, 0)                 // unchanged
+	checkQuery(all, seqQual, 1, 2, 3, 4, 5, 6)           // added 6
 
 }
 

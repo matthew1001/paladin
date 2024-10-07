@@ -419,6 +419,49 @@ func TestStateContextMintSpendMint(t *testing.T) {
 
 }
 
+func TestPreConfirmedStates(t *testing.T) {
+
+	ctx, ss, _, done := newDBTestStateManager(t)
+	defer done()
+
+	// Pop in our widget ABI
+	var schemaID tktypes.Bytes32
+	schemas, err := ss.EnsureABISchemas(ctx, ss.p.DB(), "domain1", []*abi.Parameter{testABIParam(t, fakeCoinABI)})
+	require.NoError(t, err)
+	assert.Len(t, schemas, 1)
+	schemaID = schemas[0].ID()
+
+	_, dc := newTestDomainContext(t, ctx, ss, "domain1", false)
+	defer dc.Close()
+
+	// Store some states
+	preConfirmed, err := dc.UpsertStates(
+		&components.StateUpsert{SchemaID: schemaID, Data: tktypes.RawJSON(fmt.Sprintf(`{"amount": 100, "owner": "0xf7b1c69F5690993F2C8ecE56cc89D42b1e737180", "salt": "%s"}`, tktypes.RandHex(32))), PreConfirmed: true},
+	)
+	require.NoError(t, err)
+	assert.Len(t, preConfirmed, 1)
+
+	// Check it went to the right place
+	assert.Empty(t, dc.creatingStates)
+	assert.Len(t, dc.unFlushed.preConfirmedStates, 1)
+
+	// Check immediately available
+	_, states, err := dc.FindAvailableStates(schemaID, query.NewQueryBuilder().Sort("amount").Query())
+	require.NoError(t, err)
+	assert.Len(t, states, 1)
+	assert.Equal(t, int64(100), parseFakeCoin(t, states[0]).Amount.Int64())
+
+	// Check still available after flush
+	err = dc.FlushSync()
+	require.NoError(t, err)
+	_, states, err = dc.FindAvailableStates(schemaID, query.NewQueryBuilder().Sort("amount").Query())
+	require.NoError(t, err)
+	assert.Len(t, states, 1)
+	assert.Equal(t, int64(100), parseFakeCoin(t, states[0]).Amount.Int64())
+	assert.Empty(t, dc.creatingStates)
+
+}
+
 func TestStateContextMintSpendWithNullifier(t *testing.T) {
 
 	ctx, ss, _, done := newDBTestStateManager(t)
@@ -788,6 +831,28 @@ func TestDCMergeUnFlushedWhileFlushingDedup(t *testing.T) {
 	}, false)
 	require.NoError(t, err)
 	assert.Len(t, states, 1)
+
+}
+
+func TestDCUpsertStatePreConfirmedWithTXIDError(t *testing.T) {
+
+	ctx, ss, _, _, done := newDBMockStateManager(t)
+	defer done()
+
+	schema, err := newABISchema(ctx, "domain1", testABIParam(t, fakeCoinABI))
+	require.NoError(t, err)
+	ss.abiSchemaCache.Set(schemaCacheKey("domain1", schema.ID()), schema)
+
+	contractAddress, dc := newTestDomainContext(t, ctx, ss, "domain1", false)
+	defer dc.Close()
+
+	s1, err := schema.ProcessState(ctx, contractAddress, tktypes.RawJSON(fmt.Sprintf(
+		`{"amount": 20, "owner": "0x615dD09124271D8008225054d85Ffe720E7a447A", "salt": "%s"}`,
+		tktypes.RandHex(32))), nil, dc.customHashFunction)
+	require.NoError(t, err)
+	tx1 := uuid.New()
+	_, err = dc.UpsertStates(&components.StateUpsert{ID: s1.ID, SchemaID: schema.ID(), Data: s1.Data, CreatedBy: &tx1, PreConfirmed: true})
+	assert.Regexp(t, "PD010131", err)
 
 }
 
