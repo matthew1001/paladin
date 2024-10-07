@@ -103,6 +103,7 @@ func (s *statesStorage) UpsertRootNodeIndex(root core.NodeIndex) error {
 		Id:            &newRoot.RootIndex,
 		SchemaId:      s.rootSchemaId,
 		StateDataJson: string(data),
+		PreConfirmed:  true, // merkle tree states are local and written immediately
 	}
 	s.newNodes = append(s.newNodes, newRootState)
 	s.rootNode = root

@@ -240,7 +240,7 @@ message NewLocalState {
   string schema_id = 1; // The id from the schema, which must be one of the ones established during the ConfigDomain+InitDomain phase
   string state_data_json = 2; // The data for this state that will be recorded by Paladin, and uniquely identified by Paladin using a hash (which might be additional to any hashing done in a unique way by the domain)
   optional string id = 3; // The hash id to uniquely identify this state (a default hashing algorithm will be used by Paladin if omitted)
-  bool pre_confirmed = 4; // Use only for non-blockchain confirmed state data. If set to true, this state will have a confirmation record written when the state is flushed to the database (rather than waiting for a separate confirmation from the blockchain)
+  bool pre_confirmed = 4; // This state will have a confirmation record written when the state is flushed to the database (rather than waiting for a separate confirmation from the blockchain)
 }
 
 message EndorsableState {
