@@ -25,6 +25,9 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/client-go/util/jsonpath"
+
 	"github.com/google/uuid"
 	"github.com/hyperledger/firefly-signer/pkg/abi"
 	"github.com/kaleido-io/paladin/toolkit/pkg/ptxapi"
@@ -149,9 +152,9 @@ func GetProjectDir() (string, error) {
 	return wd, nil
 }
 
-func KubectlApplyYAML(yaml string) error {
+func KubectlApplyJSON(jsonFile string) error {
 	cmd := exec.Command("kubectl", "apply", "-f", "-")
-	cmd.Stdin = strings.NewReader(yaml)
+	cmd.Stdin = strings.NewReader(jsonFile)
 	_, err := Run(cmd)
 	return err
 }
@@ -200,4 +203,75 @@ func (td *TestDeployer) DeploySmartContractBytecode(ctx context.Context, buildJS
 		}
 		fmt.Printf("... waiting for receipt TX=%s (%s)\n", txID, time.Since(startTime))
 	}
+}
+
+func StrToUnstructured(objStr string) (unstructured.Unstructured, error) {
+	obj := unstructured.Unstructured{}
+	objBytes, err := json.Marshal(objStr)
+	if err != nil {
+		return unstructured.Unstructured{}, err
+	}
+	if err := obj.UnmarshalJSON(objBytes); err != nil {
+		return unstructured.Unstructured{}, err
+	}
+	return obj, nil
+
+}
+
+// GetJSONPath evaluates a JSONPath expression against the provided JSON data.
+// It returns the results as a slice of strings.
+func GetJSONPath(jsonData []byte, jsonPath string) ([]string, error) {
+	// Unmarshal the JSON data into an interface{}
+	var obj interface{}
+	if err := json.Unmarshal(jsonData, &obj); err != nil {
+		return nil, fmt.Errorf("error unmarshalling JSON data: %v", err)
+	}
+
+	// Create a new JSONPath object
+	jp := jsonpath.New("jsonpath")
+	if err := jp.Parse(jsonPath); err != nil {
+		return nil, fmt.Errorf("error parsing JSONPath expression '%s': %v", jsonPath, err)
+	}
+
+	// Find the results
+	results, err := jp.FindResults(obj)
+	if err != nil {
+		return nil, fmt.Errorf("error evaluating JSONPath expression '%s': %v", jsonPath, err)
+	}
+
+	if len(results) == 0 {
+		return nil, fmt.Errorf("no results found for JSONPath expression '%s'", jsonPath)
+	}
+
+	// Collect the results into a slice of strings
+	var values []string
+	for _, result := range results {
+		for _, r := range result {
+			switch v := r.Interface().(type) {
+			case string:
+				values = append(values, v)
+			case fmt.Stringer:
+				values = append(values, v.String())
+			default:
+				// Convert other types to string
+				values = append(values, fmt.Sprintf("%v", v))
+			}
+		}
+	}
+
+	return values, nil
+}
+
+func GetJSONPathString(jsonData []byte, jsonPath string) (string, error) {
+	values, err := GetJSONPath(jsonData, jsonPath)
+	if err != nil {
+		return "", err
+	}
+	if len(values) == 0 {
+		return "", fmt.Errorf("no results found for JSONPath expression: %s", jsonPath)
+	}
+	if len(values) > 1 {
+		return "", fmt.Errorf("multiple results found for JSONPath expression: %s", jsonPath)
+	}
+	return values[0], nil
 }

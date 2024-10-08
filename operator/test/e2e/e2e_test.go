@@ -24,29 +24,28 @@ import (
 
 	_ "embed"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-
 	"github.com/kaleido-io/paladin/config/pkg/pldconf"
 	"github.com/kaleido-io/paladin/operator/test/utils"
 	"github.com/kaleido-io/paladin/toolkit/pkg/log"
 	"github.com/kaleido-io/paladin/toolkit/pkg/ptxapi"
 	"github.com/kaleido-io/paladin/toolkit/pkg/query"
 	"github.com/kaleido-io/paladin/toolkit/pkg/rpcclient"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
 const disableCleanup = true
 
-const namespace = "paladin-e2e" // if changed, must also change the YAML
+const namespace = "paladin-e2e" // if changed, must also change the JSON
 
-//go:embed e2e_single_node_besugenesis.yaml
-var e2eSingleNodeBesuGenesisYAML string
+//go:embed e2e_single_node_besugenesis.json
+var e2eSingleNodeBesuGenesisJSON string
 
-//go:embed e2e_single_node_besu.yaml
-var e2eSingleNodeBesuYAML string
+//go:embed e2e_single_node_besu.json
+var e2eSingleNodeBesuJSON string
 
-//go:embed e2e_single_node_paladin_psql_nodomains.yaml
-var e2eSingleNodePaladinPSQLNoDomainsYAML string
+//go:embed e2e_single_node_paladin_psql_nodomains.json
+var e2eSingleNodePaladinPSQLNoDomainsJSON string
 
 //go:embed abis/PenteFactory.json
 var penteFactoryBuild string
@@ -59,36 +58,39 @@ func startPaladinOperator() {
 	var err error
 	log.SetLevel("debug")
 
-	// projectimage stores the name of the image used in the example
-	var projectimage = "paladin-operator:latest"
+	// projectImage stores the name of the image used in the example
+	var projectImage = "paladin-operator:latest"
+
+	var clusterName = "paladin"
 
 	By("building the manager(Operator) image")
-	cmd := exec.Command("make", "docker-build", fmt.Sprintf("IMG=%s", projectimage))
+	cmd := exec.Command("make", "docker-build", fmt.Sprintf("IMG=%s", projectImage))
 	_, err = utils.Run(cmd)
 	ExpectWithOffset(0, err).NotTo(HaveOccurred())
 
 	By("ensuring the kind cluster is up")
-	cmd = exec.Command("make", "kind-start")
+	cmd = exec.Command("make", "kind-start",
+		fmt.Sprintf("CLUSTER_NAME=%s", clusterName),
+	)
 	_, err = utils.Run(cmd)
 	ExpectWithOffset(0, err).NotTo(HaveOccurred())
 
 	By("ensuring the latest built images are available in the kind cluster")
-	cmd = exec.Command("make", "kind-promote")
+	cmd = exec.Command("make", "kind-promote",
+		fmt.Sprintf("IMG=%s", projectImage),
+		fmt.Sprintf("CLUSTER_NAME=%s", clusterName),
+	)
 	_, err = utils.Run(cmd)
 	ExpectWithOffset(0, err).NotTo(HaveOccurred())
 
-	By("loading the the manager(Operator) image on Kind")
-	err = utils.LoadImageToKindClusterWithName(projectimage)
-	ExpectWithOffset(0, err).NotTo(HaveOccurred())
-
 	By("ensuring the latest CRDs are applied with kustomize before doing a helm install")
-	cmd = exec.Command("make", "update-crds")
+	cmd = exec.Command("make", "install-crds")
 	_, err = utils.Run(cmd)
 	ExpectWithOffset(0, err).NotTo(HaveOccurred())
 
 	By("installing via Helm")
 	cmd = exec.Command("make", "helm-install",
-		fmt.Sprintf("IMG=%s", projectimage),
+		fmt.Sprintf("IMG=%s", projectImage),
 		fmt.Sprintf("NAMESPACE=%s", namespace),
 	)
 	_, err = utils.Run(cmd)
@@ -131,6 +133,24 @@ func startPaladinOperator() {
 	EventuallyWithOffset(0, verifyControllerUp, time.Minute, time.Second).Should(Succeed())
 }
 
+func verifyStatusUpdate(namespace, kind, name, expectedPhase string, expectedConditions []string) {
+	cmd := exec.Command("kubectl", "get", kind, name, "-n", namespace, "-o", "json")
+	output, err := utils.Run(cmd)
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+
+	// Check the phase
+	phaseSlice, err := utils.GetJSONPath(output, "{.status.phase}")
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+	ExpectWithOffset(1, len(phaseSlice)).Should(Equal(1), "Expected exactly one phase")
+	phase := phaseSlice[0]
+	ExpectWithOffset(1, phase).Should(Equal(expectedPhase))
+
+	// Check the conditions
+	conditions, err := utils.GetJSONPath(output, "{.status.conditions[*].type}")
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+	ExpectWithOffset(1, conditions).Should(ConsistOf(expectedConditions))
+}
+
 var _ = Describe("controller", Ordered, func() {
 	BeforeAll(func() {
 		By("installing prometheus operator")
@@ -165,16 +185,45 @@ var _ = Describe("controller", Ordered, func() {
 			ctx := context.Background()
 
 			By("creating a genesis CR with a single validator")
-			err := utils.KubectlApplyYAML(e2eSingleNodeBesuGenesisYAML)
+			err := utils.KubectlApplyJSON(e2eSingleNodeBesuGenesisJSON)
 			ExpectWithOffset(1, err).NotTo(HaveOccurred())
+
+			// verify the CR status is updated
+			GenCR, err := utils.StrToUnstructured(e2eSingleNodeBesuGenesisJSON)
+			ExpectWithOffset(1, err).NotTo(HaveOccurred())
+			verifyStatusUpdate(GenCR.GetNamespace(), GenCR.GetKind(), GenCR.GetName(), "Completed", []string{
+				"ConfigMap",
+			})
 
 			By("creating a Besu node CR")
-			err = utils.KubectlApplyYAML(e2eSingleNodeBesuYAML)
+			err = utils.KubectlApplyJSON(e2eSingleNodeBesuJSON)
 			ExpectWithOffset(1, err).NotTo(HaveOccurred())
 
-			By("creating a Paladin node CR")
-			err = utils.KubectlApplyYAML(e2eSingleNodePaladinPSQLNoDomainsYAML)
+			// verify the CR status is updated
+			BesuCR, err := utils.StrToUnstructured(e2eSingleNodeBesuJSON)
 			ExpectWithOffset(1, err).NotTo(HaveOccurred())
+			verifyStatusUpdate(BesuCR.GetNamespace(), BesuCR.GetKind(), BesuCR.GetName(), "Completed", []string{
+				"StatefulSet",
+				"GenesisAvailable",
+				"Service",
+				"PodDisruptionBudget",
+				"PersistentVolumeClaim",
+			})
+
+			By("creating a Paladin node CR")
+			err = utils.KubectlApplyJSON(e2eSingleNodePaladinPSQLNoDomainsJSON)
+			ExpectWithOffset(1, err).NotTo(HaveOccurred())
+
+			// verify the CR status is updated
+			PaladinCR, err := utils.StrToUnstructured(e2eSingleNodePaladinPSQLNoDomainsJSON)
+			ExpectWithOffset(1, err).NotTo(HaveOccurred())
+			verifyStatusUpdate(PaladinCR.GetNamespace(), PaladinCR.GetKind(), PaladinCR.GetName(), "Completed", []string{
+				"StatefulSet",
+				"ConfigMap",
+				"Service",
+				"PersistentVolumeClaim",
+				"PodDisruptionBudget",
+			})
 
 			rpc, err := rpcclient.NewHTTPClient(ctx, &pldconf.HTTPClientConfig{
 				URL: "http://127.0.0.1:31548",
