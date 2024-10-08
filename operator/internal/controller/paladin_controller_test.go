@@ -54,7 +54,20 @@ var _ = Describe("Paladin Controller", func() {
 						Name:      resourceName,
 						Namespace: "default",
 					},
-					// TODO(user): Specify other spec details if needed.
+					Spec: corev1alpha1.PaladinSpec{
+						Database: corev1alpha1.Database{
+							Mode:          "sidecarPostgres",
+							MigrationMode: "auto",
+						},
+						BesuNode: "node1",
+						SecretBackedSigners: []corev1alpha1.SecretBackedSigner{
+							{
+								Name:   "signer-1",
+								Secret: "node1.keys",
+								Type:   "autoHDWallet",
+							},
+						},
+					},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 			}
@@ -63,6 +76,7 @@ var _ = Describe("Paladin Controller", func() {
 		AfterEach(func() {
 			// TODO(user): Cleanup logic after each test, like removing the resource instance.
 			resource := &corev1alpha1.Paladin{}
+
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -71,9 +85,23 @@ var _ = Describe("Paladin Controller", func() {
 		})
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
+			cfg := &config.Config{
+				Paladin: struct {
+					Image       string            `json:"image"`
+					Labels      map[string]string `json:"labels"`
+					Annotations map[string]string `json:"annotations"`
+					Envs        map[string]string `json:"envs"`
+				}{
+					Labels: map[string]string{
+						"env":  "production",
+						"tier": "backend",
+					},
+				},
+			}
 			controllerReconciler := &PaladinReconciler{
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
+				config: cfg,
 			}
 
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{

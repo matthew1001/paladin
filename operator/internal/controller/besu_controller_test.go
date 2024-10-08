@@ -35,7 +35,7 @@ import (
 
 var _ = Describe("Besu Controller", func() {
 	Context("When reconciling a resource", func() {
-		const resourceName = "test-resource"
+		const resourceName = "testnet"
 
 		ctx := context.Background()
 
@@ -54,7 +54,9 @@ var _ = Describe("Besu Controller", func() {
 						Name:      resourceName,
 						Namespace: "default",
 					},
-					// TODO(user): Specify other spec details if needed.
+					Spec: corev1alpha1.BesuSpec{
+						Genesis: "testnet",
+					},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 			}
@@ -71,9 +73,23 @@ var _ = Describe("Besu Controller", func() {
 		})
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
+			cfg := &config.Config{
+				Paladin: struct {
+					Image       string            `json:"image"`
+					Labels      map[string]string `json:"labels"`
+					Annotations map[string]string `json:"annotations"`
+					Envs        map[string]string `json:"envs"`
+				}{
+					Labels: map[string]string{
+						"env":  "production",
+						"tier": "backend",
+					},
+				},
+			}
 			controllerReconciler := &BesuReconciler{
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
+				config: cfg,
 			}
 
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{

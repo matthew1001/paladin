@@ -26,6 +26,7 @@ dependencies {
 }
 
 ext {
+    clusterName = project.hasProperty('clusterName') ? project.clusterName : 'paladin' 
     namespace = project.hasProperty('namespace') ? project.namespace : 'default' // Default namespace is 'default' 
     deleteCluster = project.hasProperty('deleteCluster') ? project.deleteCluster.toBoolean() : false // By default, do not delete the cluster
     buildPaladin = project.hasProperty('buildPaladin') ? project.buildPaladin == 'true' : true // Default is to build Paladin
@@ -73,6 +74,7 @@ task buildOperatorImage {
 task startKindCluster(type: Exec) {
     executable 'make'
     args 'kind-start'
+    args "CLUSTER_NAME=${clusterName}"
 }
 
 // Task to load images into the Kind cluster
@@ -83,6 +85,7 @@ task promoteKindImages(type: Exec, dependsOn: [
 ]) {
     executable 'make'
     args 'kind-promote'
+    args "CLUSTER_NAME=${clusterName}"
 }
 
 // Task to install Helm CRDs
@@ -150,6 +153,7 @@ task cleanCluster(type: Exec) {
     args 'clean'
     args "NAMESPACE=${namespace}"
     args "DELETE_CLUSTER=${deleteCluster}"
+    args "CLUSTER_NAME=${clusterName}"
 }
 
 task clean {
