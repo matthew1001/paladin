@@ -360,6 +360,11 @@ task goComponentTest(type: GoTestRunner, dependsOn: [
         copyContracts, // Ensure this task depends on copying the test contracts
     ]) {
     
+    inputs.files(project.goFiles)
+    inputs.files(project.fileTree("testbed") {
+        include "**/*.json"
+    })
+
     addTestArgs("./componenttest", "./pkg/testbed")
     testTimeout = "120s"
     coverPkg = "github.com/kaleido-io/paladin/core/..."

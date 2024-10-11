@@ -42,6 +42,9 @@ dependencies {
 }
 
 task goUnitTest(type: GoTestRunner, dependsOn: ":core:go:makeMocks") {
+    inputs.files(configurations.toolkitGo)
+    inputs.files(configurations.coreGo)
+    
     addTestArgs("./internal/...", "./pkg/...")
     def relativePath = project.path.replace(":", "_").replaceAll("^_","").replace("/", "_")
     def prefix = "${relativePath}.unit_test"

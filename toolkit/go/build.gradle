@@ -129,7 +129,7 @@ task lint(type: Exec, dependsOn:[protoc, makeMocks, ":installGolangCILint"]) {
 }
 
 task goIntegrationTest(type: GoTestRunner, dependsOn: [goGet, makeMocks]) {
-
+    inputs.files(getProject().goFiles)
     addTestArgs("./pkg/...")
     def relativePath = project.path.replace(":", "_").replaceAll("^_","").replace("/", "_")
     def prefix = "${relativePath}.integration_test"

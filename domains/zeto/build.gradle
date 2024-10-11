@@ -198,6 +198,10 @@ task copySolidityForTest(type: Copy, dependsOn: [extractZetoArtifacts, generateP
 }
 
 task goTestE2E(type: GoTestRunner, dependsOn: [protoc, copySolidity, copySolidityForTest, ':testinfra:startTestInfra', ":core:go:makeMocks"]) {
+    inputs.files(configurations.toolkitGo)
+    inputs.files(configurations.coreGo)
+    inputs.files(goFiles)
+    inputs.files(goFilesE2E)
     inputs.files('./integration-test/config-for-deploy.yaml')
 
     addTestArgs("./integration-test")
@@ -215,6 +219,10 @@ task testE2E(dependsOn: goTestE2E) {
 }
 
 task goUnitTests(type: GoTestRunner, dependsOn: [protoc, ":core:go:makeMocks", copySolidity, ':testinfra:startTestInfra']) {
+    inputs.files(configurations.toolkitGo)
+    inputs.files(configurations.coreGo)
+    inputs.files(goFiles)
+    
     def packages = project.properties["coveragePackages"].join(",")
 
     addTestArgs("./internal/...", "./pkg/...")

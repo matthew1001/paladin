@@ -83,6 +83,12 @@ task copySolidity(type: Copy) {
 }
 
 task goUnitTest(type: GoTestRunner, dependsOn: [":core:go:makeMocks", ':testinfra:startTestInfra', copySolidity]) {
+    inputs.files(configurations.toolkitGo)
+    inputs.files(configurations.coreGo)
+    inputs.files(configurations.notoGo)
+    inputs.files(configurations.zetoGo)
+    inputs.files(goFiles)
+    inputs.files(copySolidity)
     addTestArgs("./...")
     testTimeout = "90s"
     def relativePath = project.path.replace(":", "_").replaceAll("^_","").replace("/", "_")
@@ -90,7 +96,6 @@ task goUnitTest(type: GoTestRunner, dependsOn: [":core:go:makeMocks", ':testinfr
     resultsOutputFile = project.helpers.generateResultsFileName(name, prefix)}
 
 task test(dependsOn: goUnitTest) {
-    mustRunAfter goUnitTest
     doLast {
         project.helpers.dumpLogsOnFailure(goUnitTest, ':testinfra:startTestInfra')
     }

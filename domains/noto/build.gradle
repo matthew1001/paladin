@@ -69,6 +69,10 @@ task copySolidity(type: Copy) {
 }
 
 task goUnitTest(type: GoTestRunner, dependsOn: [":core:go:makeMocks", copySolidity, ':testinfra:startTestInfra']) {
+    inputs.files(configurations.toolkitGo)
+    inputs.files(configurations.coreGo)
+    inputs.files(goFiles)
+    
     addTestArgs("./internal/...", "./pkg/...")
     def relativePath = project.path.replace(":", "_").replaceAll("^_","").replace("/", "_")
     def prefix = "${relativePath}.unit_test"

@@ -65,6 +65,8 @@ task lint(type: Exec, dependsOn:[":installGolangCILint", tasks.protoc]) {
 }
 
 task goUnitTest(type: GoTestRunner, dependsOn: [tasks.protoc, ':testinfra:startTestInfra']) {
+    inputs.files(configurations.toolkitGo)
+    inputs.files(goFiles)
     addTestArgs("./internal/...")
     def relativePath = project.path.replace(":", "_").replaceAll("^_","").replace("/", "_")
     def prefix = "${relativePath}.unit_test"
