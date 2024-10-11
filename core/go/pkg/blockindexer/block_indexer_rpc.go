@@ -34,7 +34,8 @@ func (bi *blockIndexer) initRPC() {
 		Add("bidx_getIndexedTransactionByNonce", bi.rpcGetIndexedTransactionByNonce()).
 		Add("bidx_getBlockTransactionsByNumber", bi.rpcGetBlockTransactionsByNumber()).
 		Add("bidx_getTransactionEventsByHash", bi.rpcGetTransactionEventsByHash()).
-		Add("bidx_listTransactionEvents", bi.rpcListTransactionEvents())
+		Add("bidx_listTransactionEvents", bi.rpcListTransactionEvents()).
+		Add("bidx_GetConfirmedBlockHeight", bi.rpcGetConfirmedBlockHeight())
 }
 
 func (bi *blockIndexer) rpcGetIndexedBlockByNumber() rpcserver.RPCHandler {
