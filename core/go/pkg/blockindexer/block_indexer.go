@@ -34,6 +34,7 @@ import (
 
 	"github.com/kaleido-io/paladin/core/pkg/persistence"
 	"github.com/kaleido-io/paladin/toolkit/pkg/rpcclient"
+	"github.com/kaleido-io/paladin/toolkit/pkg/rpcserver"
 
 	"github.com/kaleido-io/paladin/config/pkg/confutil"
 	"github.com/kaleido-io/paladin/config/pkg/pldconf"
@@ -96,6 +97,7 @@ type blockIndexer struct {
 	dispatcherTap              chan struct{}
 	processorDone              chan struct{}
 	dispatcherDone             chan struct{}
+	rpcModule                  *rpcserver.RPCModule
 }
 
 func NewBlockIndexer(ctx context.Context, config *pldconf.BlockIndexerConfig, wsConfig *pldconf.WSClientConfig, persistence persistence.Persistence) (_ BlockIndexer, err error) {
