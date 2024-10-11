@@ -132,7 +132,7 @@ task deploy(dependsOn: createNode) {
 }
 
 // Task to run E2E tests (if needed)
-task runE2ETests(type: Exec, dependsOn: e2e) {
+task runE2ETests(type: Exec, dependsOn: deploy) {
     executable 'make'
     args 'test-e2e'
 }
