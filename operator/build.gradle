@@ -131,17 +131,14 @@ task deploy(dependsOn: createNode) {
     }
 }
 
-// The 'e2e' task runs the whole flow
-task e2e(dependsOn: deploy) {
-    doLast {
-        println 'TODO: Run E2E tests'
-     }
-}
-
 // Task to run E2E tests (if needed)
 task runE2ETests(type: Exec, dependsOn: e2e) {
     executable 'make'
     args 'test-e2e'
+}
+
+// The 'e2e' task runs the whole flow
+task e2e(dependsOn: runE2ETests) {
 }
 
 // Task to clean up resources

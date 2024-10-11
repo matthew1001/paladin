@@ -245,15 +245,15 @@ generate-reference-docs: crd-ref-docs ## Generate API reference documentation.
 
 .PHONY: create-node-besu
 create-node-besu: ## Create a Besu Node instance.
-	$(KUBECTL) apply -f config/samples/core_v1alpha1_besu.yaml -n ${NAMESPACE}
+	$(KUBECTL) apply -f test/e2e/e2e_single_node_besu.yaml -n ${NAMESPACE}
 
 .PHONY: create-genesis
 create-genesis: ## Create a Besu Genesis instance.
-	$(KUBECTL) apply -f config/samples/core_v1alpha1_besugenesis.yaml -n ${NAMESPACE}
+	$(KUBECTL) apply -f test/e2e/e2e_single_node_besugenesis.yaml -n ${NAMESPACE}
 
 .PHONY: create-node-paladin
 create-node-paladin: ## Create a Paladin Node instance.
-	$(KUBECTL) apply -f config/samples/core_v1alpha1_paladin.yaml -n ${NAMESPACE}
+	$(KUBECTL) apply -f test/e2e/e2e_single_node_paladin_psql_nodomains.yaml -n ${NAMESPACE}
 
 .PHONY: create-node
 create-node: create-node-besu create-genesis create-node-paladin ## Create all instances.
