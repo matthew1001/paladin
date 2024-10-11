@@ -48,6 +48,7 @@ import (
 type BlockIndexer interface {
 	Start(...*InternalEventStream) error
 	Stop()
+	RPCModule() *rpcserver.RPCModule
 	AddEventStream(ctx context.Context, stream *InternalEventStream) (*EventStream, error)
 	GetIndexedBlockByNumber(ctx context.Context, number uint64) (*IndexedBlock, error)
 	GetIndexedTransactionByHash(ctx context.Context, hash tktypes.Bytes32) (*IndexedTransaction, error)
@@ -134,6 +135,7 @@ func newBlockIndexer(ctx context.Context, conf *pldconf.BlockIndexerConfig, pers
 	if err := bi.loadEventStreams(ctx); err != nil {
 		return nil, err
 	}
+	bi.initRPC()
 	return bi, nil
 }
 

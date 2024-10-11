@@ -393,6 +393,8 @@ func (cm *componentManager) registerRPCModules() {
 			cm.rpcServer.Register(rpcMod)
 		}
 	}
+	// Block indexer currently separate lifecycle
+	cm.rpcServer.Register(cm.blockIndexer.RPCModule())
 }
 
 func (cm *componentManager) Stop() {

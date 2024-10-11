@@ -29,12 +29,12 @@ func (bi *blockIndexer) RPCModule() *rpcserver.RPCModule {
 
 func (bi *blockIndexer) initRPC() {
 	bi.rpcModule = rpcserver.NewRPCModule("bidx").
-		Add("bidx_GetIndexedBlockByNumber", bi.rpcGetIndexedBlockByNumber()).
-		Add("bidx_GetIndexedBlockByNumber", bi.rpcGetIndexedTransactionByHash()).
-		Add("bidx_GetIndexedTransactionByNonce", bi.rpcGetIndexedTransactionByNonce()).
-		Add("bidx_GetBlockTransactionsByNumber", bi.rpcGetBlockTransactionsByNumber()).
-		Add("bidx_GetTransactionEventsByHash", bi.rpcGetTransactionEventsByHash()).
-		Add("bidx_ListTransactionEvents", bi.rpcListTransactionEvents())
+		Add("bidx_getIndexedBlockByNumber", bi.rpcGetIndexedBlockByNumber()).
+		Add("bidx_getIndexedTransactionByHash", bi.rpcGetIndexedTransactionByHash()).
+		Add("bidx_getIndexedTransactionByNonce", bi.rpcGetIndexedTransactionByNonce()).
+		Add("bidx_getBlockTransactionsByNumber", bi.rpcGetBlockTransactionsByNumber()).
+		Add("bidx_getTransactionEventsByHash", bi.rpcGetTransactionEventsByHash()).
+		Add("bidx_listTransactionEvents", bi.rpcListTransactionEvents())
 }
 
 func (bi *blockIndexer) rpcGetIndexedBlockByNumber() rpcserver.RPCHandler {
