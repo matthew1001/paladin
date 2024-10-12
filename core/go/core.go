@@ -22,6 +22,8 @@ import (
 	"os"
 	"runtime/debug"
 
+	"github.com/kaleido-io/paladin/core/cmd"
+
 	"github.com/kaleido-io/paladin/core/pkg/bootstrap"
 )
 
@@ -53,4 +55,6 @@ func Stop() {
 	bootstrap.Stop()
 }
 
-func main() {}
+func main() {
+	cmd.Execute()
+}

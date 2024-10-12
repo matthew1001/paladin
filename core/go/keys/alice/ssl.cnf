@@ -1,0 +1,18 @@
+[ req ]
+distinguished_name = 27b89620-2e6a-41ea-b4a7-8bf2f07b0000
+x509_extensions = v3_req
+prompt = no
+
+[ 27b89620-2e6a-41ea-b4a7-8bf2f07b0000 ]
+C = US
+ST = State
+L = City
+O = Organization
+OU = Unit
+CN = 27b89620-2e6a-41ea-b4a7-8bf2f07b0000
+
+[ v3_req ]
+keyUsage = digitalSignature
+extendedKeyUsage = clientAuth, serverAuth
+basicConstraints = CA:true, pathlen:1
+

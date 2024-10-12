@@ -1,0 +1,18 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Alice node",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/core/go/core.go",
+            "args": [
+                "start",
+                "--node-id", "27b89620-2e6a-41ea-b4a7-8bf2f07b0000",
+                "--node-name", "alice",
+                "--conf", "${workspaceFolder}/core/go/alice.yaml"
+            ]
+        }
+    ]
+}

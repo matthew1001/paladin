@@ -1,0 +1,17 @@
+[ req ]
+distinguished_name = 427cd8e2-ff68-4fbf-8b02-d016c2cf2525
+x509_extensions = v3_req
+prompt = no
+
+[ 427cd8e2-ff68-4fbf-8b02-d016c2cf2525 ]
+C = US
+ST = State
+L = City
+O = Organization
+OU = Unit
+CN = 427cd8e2-ff68-4fbf-8b02-d016c2cf2525
+
+[ v3_req ]
+keyUsage = digitalSignature
+extendedKeyUsage = clientAuth, serverAuth
+
