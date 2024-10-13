@@ -50,7 +50,7 @@ func (tm *txManager) rpcSendTransaction() rpcserver.RPCHandler {
 	return rpcserver.RPCMethod1(func(ctx context.Context,
 		tx ptxapi.TransactionInput,
 	) (*uuid.UUID, error) {
-		return tm.sendTransaction(ctx, &tx)
+		return tm.SendTransaction(ctx, &tx)
 	})
 }
 
@@ -58,7 +58,7 @@ func (tm *txManager) rpcSendTransactions() rpcserver.RPCHandler {
 	return rpcserver.RPCMethod1(func(ctx context.Context,
 		txs []*ptxapi.TransactionInput,
 	) ([]uuid.UUID, error) {
-		return tm.sendTransactions(ctx, txs)
+		return tm.SendTransactions(ctx, txs)
 	})
 }
 
@@ -68,9 +68,9 @@ func (tm *txManager) rpcGetTransaction() rpcserver.RPCHandler {
 		full bool,
 	) (any, error) {
 		if full {
-			return tm.getTransactionByIDFull(ctx, id)
+			return tm.GetTransactionByIDFull(ctx, id)
 		}
-		return tm.getTransactionByID(ctx, id)
+		return tm.GetTransactionByID(ctx, id)
 	})
 }
 
@@ -82,7 +82,7 @@ func (tm *txManager) rpcQueryTransactions() rpcserver.RPCHandler {
 		if full {
 			return tm.queryTransactionsFull(ctx, &query, false)
 		}
-		return tm.queryTransactions(ctx, &query, false)
+		return tm.QueryTransactions(ctx, &query, false)
 	})
 }
 
@@ -94,7 +94,7 @@ func (tm *txManager) rpcQueryPendingTransactions() rpcserver.RPCHandler {
 		if full {
 			return tm.queryTransactionsFull(ctx, &query, true)
 		}
-		return tm.queryTransactions(ctx, &query, true)
+		return tm.QueryTransactions(ctx, &query, true)
 	})
 }
 
@@ -102,7 +102,7 @@ func (tm *txManager) rpcGetTransactionReceipt() rpcserver.RPCHandler {
 	return rpcserver.RPCMethod1(func(ctx context.Context,
 		id uuid.UUID,
 	) (*ptxapi.TransactionReceipt, error) {
-		return tm.getTransactionReceiptByID(ctx, id)
+		return tm.GetTransactionReceiptByID(ctx, id)
 	})
 }
 
@@ -118,7 +118,7 @@ func (tm *txManager) rpcQueryTransactionReceipts() rpcserver.RPCHandler {
 	return rpcserver.RPCMethod1(func(ctx context.Context,
 		query query.QueryJSON,
 	) ([]*ptxapi.TransactionReceipt, error) {
-		return tm.queryTransactionReceipts(ctx, &query)
+		return tm.QueryTransactionReceipts(ctx, &query)
 	})
 }
 

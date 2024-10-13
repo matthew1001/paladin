@@ -68,7 +68,7 @@ func (tm *txManager) mapPersistedTXFull(pt *persistedTransaction) *ptxapi.Transa
 	return res
 }
 
-func (tm *txManager) queryTransactions(ctx context.Context, jq *query.QueryJSON, pending bool) ([]*ptxapi.Transaction, error) {
+func (tm *txManager) QueryTransactions(ctx context.Context, jq *query.QueryJSON, pending bool) ([]*ptxapi.Transaction, error) {
 	qw := &queryWrapper[persistedTransaction, ptxapi.Transaction]{
 		p:           tm.p,
 		table:       "transactions",
@@ -91,13 +91,13 @@ func (tm *txManager) queryTransactions(ctx context.Context, jq *query.QueryJSON,
 
 func (tm *txManager) queryTransactionsFull(ctx context.Context, jq *query.QueryJSON, pending bool) (results []*ptxapi.TransactionFull, err error) {
 	err = tm.p.DB().Transaction(func(dbTX *gorm.DB) error {
-		results, err = tm.queryTransactionsFullTx(ctx, jq, dbTX, pending)
+		results, err = tm.QueryTransactionsFullTx(ctx, jq, dbTX, pending)
 		return err
 	})
 	return
 }
 
-func (tm *txManager) queryTransactionsFullTx(ctx context.Context, jq *query.QueryJSON, dbTX *gorm.DB, pending bool) ([]*ptxapi.TransactionFull, error) {
+func (tm *txManager) QueryTransactionsFullTx(ctx context.Context, jq *query.QueryJSON, dbTX *gorm.DB, pending bool) ([]*ptxapi.TransactionFull, error) {
 	qw := &queryWrapper[persistedTransaction, ptxapi.TransactionFull]{
 		p:           tm.p,
 		table:       "transactions",
@@ -141,7 +141,7 @@ func (tm *txManager) mergePublicTransactions(ctx context.Context, dbTX *gorm.DB,
 
 }
 
-func (tm *txManager) getTransactionByIDFull(ctx context.Context, id uuid.UUID) (result *ptxapi.TransactionFull, err error) {
+func (tm *txManager) GetTransactionByIDFull(ctx context.Context, id uuid.UUID) (result *ptxapi.TransactionFull, err error) {
 	ptxs, err := tm.queryTransactionsFull(ctx, query.NewQueryBuilder().Limit(1).Equal("id", id).Query(), false)
 	if len(ptxs) == 0 || err != nil {
 		return nil, err
@@ -149,8 +149,8 @@ func (tm *txManager) getTransactionByIDFull(ctx context.Context, id uuid.UUID) (
 	return ptxs[0], nil
 }
 
-func (tm *txManager) getTransactionByID(ctx context.Context, id uuid.UUID) (*ptxapi.Transaction, error) {
-	ptxs, err := tm.queryTransactions(ctx, query.NewQueryBuilder().Limit(1).Equal("id", id).Query(), false)
+func (tm *txManager) GetTransactionByID(ctx context.Context, id uuid.UUID) (*ptxapi.Transaction, error) {
+	ptxs, err := tm.QueryTransactions(ctx, query.NewQueryBuilder().Limit(1).Equal("id", id).Query(), false)
 	if len(ptxs) == 0 || err != nil {
 		return nil, err
 	}
