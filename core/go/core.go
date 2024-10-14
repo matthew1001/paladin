@@ -53,5 +53,4 @@ func Stop() {
 	bootstrap.Stop()
 }
 
-func main() {
-}
+func main() {}
