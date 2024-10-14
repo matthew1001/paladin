@@ -8,22 +8,7 @@ gradle testinfra:startTestInfra
 
 #### Deploy the zeto factory contract
 
-Easiest way to do this is run one of the zeto integartion tests e.g. `TestZeto_Anon` .
-
-You will need the factory contract address so hack something like the following into  domains/zeto/integration-test/e2e_test.go:SetupSuite
-```go
-    // Marshal config to YAML
-	configYaml, err := yaml.Marshal(config)
-	if err != nil {
-		s.T().Fatalf("Failed to marshal config to YAML: %v", err)
-	}
-
-	// Write YAML to a file
-	err = os.WriteFile("domain_config.yaml", configYaml, 0644)
-	if err != nil {
-		s.T().Fatalf("Failed to write config YAML to file: %v", err)
-	}
-```
+Easiest way to do this is run one of the zeto integartion tests e.g. `TestZeto_Anon` under a debugger, break in the 
 
 ### Create alices mTLS key and cert
 pushd ./keys/alice
@@ -45,13 +30,13 @@ see example ./bob.yaml
 
 ### Start alices node
 ```bash
-go run core.go start -i 27b89620-2e6a-41ea-b4a7-8bf2f07b0000 -n alice -c ./alice.yaml 2>&1 | tee alice.log
+go run main.go start -i 27b89620-2e6a-41ea-b4a7-8bf2f07b0000 -n alice -c ../config/alice.yaml 2>&1 | tee alice.log
 ```
 (or use debug launch config )
 
 ### Start bobs node
 ```bash
-go run core.go start -i 427cd8e2-ff68-4fbf-8b02-d016c2cf2525  -n bob -c ./bob.yaml 2>&1 | tee bob.lo
+go run main.go start -i 427cd8e2-ff68-4fbf-8b02-d016c2cf2525  -n bob -c ../config/bob.yaml 2>&1 | tee bob.log
 ```
 
 You should be able to send some JSONRPC messages to test it out

@@ -12,4 +12,5 @@ use (
 	./testinfra
 	./toolkit/go
 	./transports/grpc
+	./hacks/manual-testing/core-harness
 )

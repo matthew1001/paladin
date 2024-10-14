@@ -21,14 +21,20 @@ import (
 	"os"
 
 	"github.com/google/uuid"
+	"github.com/kaleido-io/paladin/config/pkg/confutil"
 	"github.com/kaleido-io/paladin/config/pkg/pldconf"
-	"github.com/kaleido-io/paladin/core/internal/componentmgr"
-	"github.com/kaleido-io/paladin/core/internal/plugins"
+	"github.com/kaleido-io/paladin/core-harness/internal/plugin"
+	"github.com/kaleido-io/paladin/core/pkg/bootstrap"
 	"github.com/kaleido-io/paladin/domains/zeto/pkg/zeto"
 	"github.com/kaleido-io/paladin/registries/static/pkg/static"
+	"github.com/kaleido-io/paladin/transports/grpc/pkg/grpc"
+
+	//"github.com/kaleido-io/paladin/domains/zeto/pkg/zeto"
+
+	//"github.com/kaleido-io/paladin/domains/zeto/pkg/zeto"
 	"github.com/kaleido-io/paladin/toolkit/pkg/log"
 	"github.com/kaleido-io/paladin/toolkit/pkg/plugintk"
-	"github.com/kaleido-io/paladin/transports/grpc/pkg/grpc"
+	"github.com/kaleido-io/paladin/toolkit/pkg/retry"
 	"github.com/spf13/cobra"
 )
 
@@ -103,46 +109,31 @@ func newInstanceForManualTesting(ctx context.Context, nodeID string, nodeName st
 	i.ctx = log.WithLogField(context.Background(), "node-id", nodeID)
 	i.ctx = log.WithLogField(i.ctx, "node-name", nodeName)
 
-	var pl plugins.UnitTestPluginLoader
+	go func() {
+		context := context.Background()
+		retry.NewRetryIndefinite(&pldconf.RetryConfig{
+			InitialDelay: confutil.P("250ms"),
+		}).Do(
+			context,
+			func(attempt int) (retryable bool, err error) {
+				pluginLoader, err := plugin.NewPluginLoader(
+					fmt.Sprintf("unix:%s", i.grpcTarget),
+					i.id.String(),
+					map[string]plugintk.Plugin{
+						"zeto":      NewZetoPlugin(i.ctx),
+						"grpc":      grpc.NewPlugin(i.ctx),
+						"registry1": static.NewPlugin(i.ctx),
+					})
+				if err != nil {
+					return true, err
+				}
+				pluginLoader.Run()
+				return false, nil
+			},
+		)
+	}()
 
-	cm := componentmgr.NewComponentManager(i.ctx, i.grpcTarget, i.id, i.conf)
-	// Start it up
-	err = cm.Init()
-	if err != nil {
-		panic(err)
-	}
-
-	err = cm.StartComponents()
-	if err != nil {
-		panic(err)
-	}
-
-	err = cm.StartManagers()
-	if err != nil {
-		panic(err)
-	}
-
-	loaderMap := map[string]plugintk.Plugin{
-		"zeto":      NewZetoPlugin(i.ctx),
-		"grpc":      grpc.NewPlugin(i.ctx),
-		"registry1": static.NewPlugin(i.ctx),
-	}
-	pc := cm.PluginManager()
-	pl, err = plugins.NewUnitTestPluginLoader(pc.GRPCTargetURL(), pc.LoaderID().String(), loaderMap)
-	if err != nil {
-		panic(err)
-	}
-	go pl.Run()
-
-	err = cm.CompleteStart()
-	if err != nil {
-		panic(err)
-	}
-
-	i.cleanup = func() {
-		pl.Stop()
-		cm.Stop()
-	}
+	bootstrap.Run(i.grpcTarget, i.id.String(), confFile, "engine")
 
 	return i
 
