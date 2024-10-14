@@ -14,7 +14,7 @@ gradle testinfra:startTestInfra
 
 #### Deploy the zeto factory contract
 
-Easiest way to do this is run one of the zeto integartion tests e.g. `TestZeto_Anon` under a debugger, break in the 
+Easiest way to do this is run one of the zeto integartion tests e.g. `TestZeto_Anon` under a debugger, set a breakpoint in the `SetupSuite`  function to get the contract addresses (e.g. with watch expressions `config.FactoryAddress` , `config.DomainContracts.Implementations[0].ContractAddress` `config.DomainContracts.Implementations[1].ContractAddress` `config.DomainContracts.Implementations[2].ContractAddress`) ( make sure you match the correct address to the correct contract name)
 
 ### Create alices mTLS key and cert
 pushd ./keys/alice
