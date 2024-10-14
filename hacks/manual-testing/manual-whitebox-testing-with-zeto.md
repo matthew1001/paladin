@@ -1,6 +1,12 @@
 # Manual whitebox testing with Zeto
 Instructions for running Zeto on a network of private transaction engines running from uncompiled source from command line or under a debugger.
 
+### Copy the necessary files from this branch
+```
+git checkout origin/manual-core-testing hacks
+git checkout origin/manual-core-testing go.work
+git checkout origin/manual-core-testing .vscode/launch.json
+```
 ### Create the test infrastructure
 ```bash
 gradle testinfra:startTestInfra
