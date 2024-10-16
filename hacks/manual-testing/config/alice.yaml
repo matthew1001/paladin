@@ -24,6 +24,8 @@ rpcServer:
   ws:
     disabled: true
     shutdownTimeout: 0s
+blockIndexer:
+  fromBlock: latest
 blockchain:
   http:
     url: http://localhost:8545
@@ -41,6 +43,14 @@ signer:
           encoding: none
           inline: large economy hill exotic enroll smoke enter unusual anchor myself fat mountain width athlete visual
 domains:
+  noto:
+    allowSigning: true
+    plugin:
+      type: c-shared
+      library: loaded/via/unit/test/loader
+    config:
+      factoryaddress: 0xb7b5d8bcb97315864d68d28aad63ce35150c4b62
+    registryaddress: 0xb7b5d8bcb97315864d68d28aad63ce35150c4b62
   zeto:
     allowSigning: true
     plugin:
@@ -93,8 +103,8 @@ domains:
                   bip44directresolution: false
                   bip44prefix: null
                   bip44hardenedsegments: null
-          circuitsdir: ../../domains/zeto/zkp
-          provingkeysdir: ../../domains/zeto/zkp
+          circuitsdir: ../../../domains/zeto/zkp
+          provingkeysdir: ../../../domains/zeto/zkp
           maxproverpercircuit: null
     registryaddress: 0xd5df5af54dc0d538b2d2bdbf29de0b1094ea7fe3
 registries:
@@ -110,6 +120,13 @@ registries:
               { 
                 "endpoint": "dns:///localhost:19002",
                 "issuers": "-----BEGIN CERTIFICATE-----\nMIID3zCCAsegAwIBAgIUa42nLL9RDzGx9x5PalnyYZ9kGtUwDQYJKoZIhvcNAQEL\nBQAwgYExCzAJBgNVBAYTAlVTMQ4wDAYDVQQIDAVTdGF0ZTENMAsGA1UEBwwEQ2l0\neTEVMBMGA1UECgwMT3JnYW5pemF0aW9uMQ0wCwYDVQQLDARVbml0MS0wKwYDVQQD\nDCQ0MjdjZDhlMi1mZjY4LTRmYmYtOGIwMi1kMDE2YzJjZjI1MjUwHhcNMjQxMDEx\nMTQ0MDAzWhcNMjUxMDExMTQ0MDAzWjCBgTELMAkGA1UEBhMCVVMxDjAMBgNVBAgM\nBVN0YXRlMQ0wCwYDVQQHDARDaXR5MRUwEwYDVQQKDAxPcmdhbml6YXRpb24xDTAL\nBgNVBAsMBFVuaXQxLTArBgNVBAMMJDQyN2NkOGUyLWZmNjgtNGZiZi04YjAyLWQw\nMTZjMmNmMjUyNTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAKi+JYM+\nn09I2A5J2xXVr6vqU8b98kkDyk4YtOHXkY7wEC/MUQeEVHFvj8BVZo7tqhYSr0Hv\n5Y9y/TMNwfqEhcDDmmONFdncqzou2pH4ebPIOBzyUzXdEfQWi7Kb5ZTnDroQXGrV\nznvxubLGLvz3vSXOqubrUcIN8r826fFMAmfwWqMTGKxOfIIMi25ih5n/iJK8wROa\nQYts85/klOwD7n7jZMuNyBcNxchQ5lzO/hupvpumZQuXWnIi3qvJvdxjfmXk/fV+\nGNiQnt0waWPXpxIizjqIsC+SKPnKpoJhZg642YV9nmOyHyR6Mx6SvOujUv1Yxr6y\nte7raHUVD7eg0uUCAwEAAaNNMEswCwYDVR0PBAQDAgeAMB0GA1UdJQQWMBQGCCsG\nAQUFBwMCBggrBgEFBQcDATAdBgNVHQ4EFgQUJmu/VWQ5lKO3/ppKhtQhrM2ZgtEw\nDQYJKoZIhvcNAQELBQADggEBAEqn2+a6Lf16QKRhYSTgJiELoUN5YPqWg52o4BOS\n5ACZX/Bj91wwVUjgqUUdxiwv3g3yjEJCgHRHptiOVARGMOV3VTsy1SLdDNPtJkTJ\nT0iiMWta9dmC6ijIf2b86q7pQaKagji90vv+HgMWBvWZ9YfLOPYF6XhPSRj1LEk4\n8hrewPVUuQ5Fu0g5WHLoncO1QmcWe1as0rbuUNGLKdh+fSyhxsbEZh3bffUxkBse\n/ez3YV3MGIDDaoaSxFvmA9aJ2u3wezHQX6PoSt+JA8HMLR2EXXTKds0jYyqTYDbs\nRRnvnOqWnKAjFriiwRDqHQ8cvwXWypt5JCvsypSPRlSGH80=\n-----END CERTIFICATE-----"
+              }
+        f05110b8-f3ca-434a-91e6-06fb081a826e:
+          properties:
+            transport.grpc: >
+              { 
+                "endpoint": "dns:///localhost:19003",
+                "issuers": "-----BEGIN CERTIFICATE-----\nMIID3zCCAsegAwIBAgIUPoSmsJK6uAZJye8sT9As/z7JopIwDQYJKoZIhvcNAQEL\nBQAwgYExCzAJBgNVBAYTAlVTMQ4wDAYDVQQIDAVTdGF0ZTENMAsGA1UEBwwEQ2l0\neTEVMBMGA1UECgwMT3JnYW5pemF0aW9uMQ0wCwYDVQQLDARVbml0MS0wKwYDVQQD\nDCRmMDUxMTBiOC1mM2NhLTQzNGEtOTFlNi0wNmZiMDgxYTgyNmUwHhcNMjQxMDE0\nMTYzMDI1WhcNMjUxMDE0MTYzMDI1WjCBgTELMAkGA1UEBhMCVVMxDjAMBgNVBAgM\nBVN0YXRlMQ0wCwYDVQQHDARDaXR5MRUwEwYDVQQKDAxPcmdhbml6YXRpb24xDTAL\nBgNVBAsMBFVuaXQxLTArBgNVBAMMJGYwNTExMGI4LWYzY2EtNDM0YS05MWU2LTA2\nZmIwODFhODI2ZTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBALdNMuoN\nP+SVNHhXZmtwVzlwc8bpShHRs2UoYi3TdZaVd68eeZxwnJDl9U25nPJ0gcM0j1Av\nahQhmsVKjkEZjTTpjVlcP3fUXSLDVQeHewJHB67FKuE+vW615p2uwPEZ0qSWQc8A\nGg9iFtLDVgrZ7LwHRICoFfZy3eaNW+E5007fe6thzzQZ9S7uxwbDWgiVk+pBVnyE\nNA861HOBZmnGWfu1tLAIbRdlrG0X+Tk1Z4e9BAIKzByQ958oPsZn2t6CgWDpgv+n\nFdfhr7+a4FPEs7Q5pWJhS/M4kCOL+sN6v18qEIUZPdxTKF3Dpde5GCcyQLyOqkIj\nGITwQMGP8RDsWy8CAwEAAaNNMEswCwYDVR0PBAQDAgeAMB0GA1UdJQQWMBQGCCsG\nAQUFBwMCBggrBgEFBQcDATAdBgNVHQ4EFgQURrdRdOTSS5Lu5E1Wj5ReV+Q2D2Ew\nDQYJKoZIhvcNAQELBQADggEBAH51m+VJGbllpprlXNJaHIzSWbWUvpN259bNN8tl\nItpBbCRZ8me7y68EOjvJ2BuoM2AIXgrp9lAQxA7CPP66yudRca50yxZZPPqqA6Ei\nKzrw6NlAgaL/52eRBC84M+HCYmrWnxM1895GnVhniKPkvIuITnu7v8Pe8rkRR/qq\nEeTCJoaUMmDjvOnFbj33CsRtgkEtrCgnoOdC1ct6EF83Jtjev0SouQsx2z/Y0Ngc\nY/n+55zIc/82nX5/JRX89904ZKPWdw97QwSXwqYAnqH/wwSJe+PaT+s3jeHZlCtx\n3P6mtEN0Vz/mNBn8Vwr/Uyj/iWkW6F1VK4YfBZ4JwElmxJk=\n-----END CERTIFICATE-----"
               }
 transports:
   grpc:
