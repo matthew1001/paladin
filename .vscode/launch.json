@@ -13,6 +13,39 @@
                 "--node-name", "alice",
                 "--conf", "${workspaceFolder}/hacks/manual-testing/config/alice.yaml"
             ]
+        },
+        {
+            "name": "Bob node",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/hacks/manual-testing/core-harness/main.go",
+            "args": [
+                "start",
+                "--node-id", "427cd8e2-ff68-4fbf-8b02-d016c2cf2525",
+                "--node-name", "bob",
+                "--conf", "${workspaceFolder}/hacks/manual-testing/config/bob.yaml"
+            ]
+        },
+        {
+            "name": "Notary node",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/hacks/manual-testing/core-harness/main.go",
+            "args": [
+                "start",
+                "--node-id", "f05110b8-f3ca-434a-91e6-06fb081a826e",
+                "--node-name", "bob",
+                "--conf", "${workspaceFolder}/hacks/manual-testing/config/notary.yaml"
+            ]
+        }
+        
+    ],
+    "compounds": [
+        {
+            "name": "Start All Nodes",
+            "configurations": ["Alice node", "Bob node", "Notary node"]
         }
     ]
 }
