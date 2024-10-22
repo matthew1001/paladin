@@ -12,11 +12,11 @@
         <link rel="prev" href="../../../guides/upgrading/">
       
       
-        <link rel="next" href="../../types/indexedevent/">
+        <link rel="next" href="../transport/">
       
       
       <link rel="icon" href="../../../assets/project-icon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.41">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.42">
     
     
       
@@ -1016,6 +1016,8 @@
       
         
       
+        
+      
     
     
       
@@ -1129,13 +1131,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ptx_gettransactionfull" class="md-nav__link">
+  <a href="#ptx_gettransactionbyidempotencykey" class="md-nav__link">
     <span class="md-ellipsis">
-      ptx_getTransactionFull
+      ptx_getTransactionByIdempotencyKey
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ptx_getTransactionFull">
+    <nav class="md-nav" aria-label="ptx_getTransactionByIdempotencyKey">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1162,13 +1164,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ptx_gettransactionreceipt" class="md-nav__link">
+  <a href="#ptx_gettransactionfull" class="md-nav__link">
     <span class="md-ellipsis">
-      ptx_getTransactionReceipt
+      ptx_getTransactionFull
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ptx_getTransactionReceipt">
+    <nav class="md-nav" aria-label="ptx_getTransactionFull">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1195,13 +1197,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ptx_querytransactionreceipts" class="md-nav__link">
+  <a href="#ptx_gettransactionreceipt" class="md-nav__link">
     <span class="md-ellipsis">
-      ptx_queryTransactionReceipts
+      ptx_getTransactionReceipt
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ptx_queryTransactionReceipts">
+    <nav class="md-nav" aria-label="ptx_getTransactionReceipt">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1228,13 +1230,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ptx_querytransactions" class="md-nav__link">
+  <a href="#ptx_querytransactionreceipts" class="md-nav__link">
     <span class="md-ellipsis">
-      ptx_queryTransactions
+      ptx_queryTransactionReceipts
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ptx_queryTransactions">
+    <nav class="md-nav" aria-label="ptx_queryTransactionReceipts">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1261,13 +1263,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ptx_querytransactionsfull" class="md-nav__link">
+  <a href="#ptx_querytransactions" class="md-nav__link">
     <span class="md-ellipsis">
-      ptx_queryTransactionsFull
+      ptx_queryTransactions
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ptx_queryTransactionsFull">
+    <nav class="md-nav" aria-label="ptx_queryTransactions">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1293,10 +1295,163 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#ptx_querytransactionsfull" class="md-nav__link">
+    <span class="md-ellipsis">
+      ptx_queryTransactionsFull
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ptx_queryTransactionsFull">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#parameters_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      Parameters
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#returns_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      Returns
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ptx_resoleverifier" class="md-nav__link">
+    <span class="md-ellipsis">
+      ptx_resoleVerifier
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ptx_resoleVerifier">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#parameters_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      Parameters
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#returns_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      Returns
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ptx_sendtransaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      ptx_sendTransaction
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ptx_sendTransaction">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#parameters_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      Parameters
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#returns_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      Returns
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ptx_sendtransactions" class="md-nav__link">
+    <span class="md-ellipsis">
+      ptx_sendTransactions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ptx_sendTransactions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#parameters_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      Parameters
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#returns_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      Returns
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../transport/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    API transport
+  </span>
+  
+
+      </a>
     </li>
   
 
@@ -1830,13 +1985,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ptx_gettransactionfull" class="md-nav__link">
+  <a href="#ptx_gettransactionbyidempotencykey" class="md-nav__link">
     <span class="md-ellipsis">
-      ptx_getTransactionFull
+      ptx_getTransactionByIdempotencyKey
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ptx_getTransactionFull">
+    <nav class="md-nav" aria-label="ptx_getTransactionByIdempotencyKey">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1863,13 +2018,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ptx_gettransactionreceipt" class="md-nav__link">
+  <a href="#ptx_gettransactionfull" class="md-nav__link">
     <span class="md-ellipsis">
-      ptx_getTransactionReceipt
+      ptx_getTransactionFull
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ptx_getTransactionReceipt">
+    <nav class="md-nav" aria-label="ptx_getTransactionFull">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1896,13 +2051,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ptx_querytransactionreceipts" class="md-nav__link">
+  <a href="#ptx_gettransactionreceipt" class="md-nav__link">
     <span class="md-ellipsis">
-      ptx_queryTransactionReceipts
+      ptx_getTransactionReceipt
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ptx_queryTransactionReceipts">
+    <nav class="md-nav" aria-label="ptx_getTransactionReceipt">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1929,13 +2084,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ptx_querytransactions" class="md-nav__link">
+  <a href="#ptx_querytransactionreceipts" class="md-nav__link">
     <span class="md-ellipsis">
-      ptx_queryTransactions
+      ptx_queryTransactionReceipts
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ptx_queryTransactions">
+    <nav class="md-nav" aria-label="ptx_queryTransactionReceipts">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1962,13 +2117,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ptx_querytransactionsfull" class="md-nav__link">
+  <a href="#ptx_querytransactions" class="md-nav__link">
     <span class="md-ellipsis">
-      ptx_queryTransactionsFull
+      ptx_queryTransactions
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ptx_queryTransactionsFull">
+    <nav class="md-nav" aria-label="ptx_queryTransactions">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1982,6 +2137,138 @@
         
           <li class="md-nav__item">
   <a href="#returns_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      Returns
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ptx_querytransactionsfull" class="md-nav__link">
+    <span class="md-ellipsis">
+      ptx_queryTransactionsFull
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ptx_queryTransactionsFull">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#parameters_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      Parameters
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#returns_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      Returns
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ptx_resoleverifier" class="md-nav__link">
+    <span class="md-ellipsis">
+      ptx_resoleVerifier
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ptx_resoleVerifier">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#parameters_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      Parameters
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#returns_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      Returns
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ptx_sendtransaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      ptx_sendTransaction
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ptx_sendTransaction">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#parameters_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      Parameters
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#returns_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      Returns
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ptx_sendtransactions" class="md-nav__link">
+    <span class="md-ellipsis">
+      ptx_sendTransactions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ptx_sendTransactions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#parameters_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      Parameters
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#returns_9" class="md-nav__link">
     <span class="md-ellipsis">
       Returns
     </span>
@@ -2015,10 +2302,6 @@
   <h1>API ptx</h1>
 
 <h2 id="ptx_gettransaction">ptx_getTransaction<a class="headerlink" href="#ptx_gettransaction" title="Permanent link">&para;</a></h2>
-<!-- BEGIN INCLUDE ./_includes/gettransaction_description.md -->
-
-<!-- END INCLUDE -->
-
 <h3 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">&para;</a></h3>
 <ul>
 <li><a href="../../types/simpletypes/#uuid">UUID</a></li>
@@ -2027,70 +2310,88 @@
 <ul>
 <li><a href="../../types/transaction/#transaction">Transaction</a></li>
 </ul>
-<h2 id="ptx_gettransactionfull">ptx_getTransactionFull<a class="headerlink" href="#ptx_gettransactionfull" title="Permanent link">&para;</a></h2>
-<!-- BEGIN INCLUDE ./_includes/gettransactionfull_description.md -->
-
-<!-- END INCLUDE -->
-
+<h2 id="ptx_gettransactionbyidempotencykey">ptx_getTransactionByIdempotencyKey<a class="headerlink" href="#ptx_gettransactionbyidempotencykey" title="Permanent link">&para;</a></h2>
 <h3 id="parameters_1">Parameters<a class="headerlink" href="#parameters_1" title="Permanent link">&para;</a></h3>
 <ul>
-<li><a href="../../types/simpletypes/#uuid">UUID</a></li>
+<li>string</li>
 </ul>
 <h3 id="returns_1">Returns<a class="headerlink" href="#returns_1" title="Permanent link">&para;</a></h3>
 <ul>
-<li>TransactionFull</li>
+<li><a href="../../types/transaction/#transaction">Transaction</a></li>
 </ul>
-<h2 id="ptx_gettransactionreceipt">ptx_getTransactionReceipt<a class="headerlink" href="#ptx_gettransactionreceipt" title="Permanent link">&para;</a></h2>
-<!-- BEGIN INCLUDE ./_includes/gettransactionreceipt_description.md -->
-
-<!-- END INCLUDE -->
-
+<h2 id="ptx_gettransactionfull">ptx_getTransactionFull<a class="headerlink" href="#ptx_gettransactionfull" title="Permanent link">&para;</a></h2>
 <h3 id="parameters_2">Parameters<a class="headerlink" href="#parameters_2" title="Permanent link">&para;</a></h3>
 <ul>
 <li><a href="../../types/simpletypes/#uuid">UUID</a></li>
 </ul>
 <h3 id="returns_2">Returns<a class="headerlink" href="#returns_2" title="Permanent link">&para;</a></h3>
 <ul>
-<li>TransactionReceipt</li>
+<li>TransactionFull</li>
 </ul>
-<h2 id="ptx_querytransactionreceipts">ptx_queryTransactionReceipts<a class="headerlink" href="#ptx_querytransactionreceipts" title="Permanent link">&para;</a></h2>
-<!-- BEGIN INCLUDE ./_includes/querytransactionreceipts_description.md -->
-
-<!-- END INCLUDE -->
-
+<h2 id="ptx_gettransactionreceipt">ptx_getTransactionReceipt<a class="headerlink" href="#ptx_gettransactionreceipt" title="Permanent link">&para;</a></h2>
 <h3 id="parameters_3">Parameters<a class="headerlink" href="#parameters_3" title="Permanent link">&para;</a></h3>
 <ul>
-<li><a href="../../types/queryjson/#queryjson">QueryJSON</a></li>
+<li><a href="../../types/simpletypes/#uuid">UUID</a></li>
 </ul>
 <h3 id="returns_3">Returns<a class="headerlink" href="#returns_3" title="Permanent link">&para;</a></h3>
 <ul>
-<li>TransactionReceipt[]</li>
+<li>TransactionReceipt</li>
 </ul>
-<h2 id="ptx_querytransactions">ptx_queryTransactions<a class="headerlink" href="#ptx_querytransactions" title="Permanent link">&para;</a></h2>
-<!-- BEGIN INCLUDE ./_includes/querytransactions_description.md -->
-
-<!-- END INCLUDE -->
-
+<h2 id="ptx_querytransactionreceipts">ptx_queryTransactionReceipts<a class="headerlink" href="#ptx_querytransactionreceipts" title="Permanent link">&para;</a></h2>
 <h3 id="parameters_4">Parameters<a class="headerlink" href="#parameters_4" title="Permanent link">&para;</a></h3>
 <ul>
 <li><a href="../../types/queryjson/#queryjson">QueryJSON</a></li>
 </ul>
 <h3 id="returns_4">Returns<a class="headerlink" href="#returns_4" title="Permanent link">&para;</a></h3>
 <ul>
-<li><a href="../../types/transaction/#transaction">Transaction[]</a></li>
+<li>TransactionReceipt[]</li>
 </ul>
-<h2 id="ptx_querytransactionsfull">ptx_queryTransactionsFull<a class="headerlink" href="#ptx_querytransactionsfull" title="Permanent link">&para;</a></h2>
-<!-- BEGIN INCLUDE ./_includes/querytransactionsfull_description.md -->
-
-<!-- END INCLUDE -->
-
+<h2 id="ptx_querytransactions">ptx_queryTransactions<a class="headerlink" href="#ptx_querytransactions" title="Permanent link">&para;</a></h2>
 <h3 id="parameters_5">Parameters<a class="headerlink" href="#parameters_5" title="Permanent link">&para;</a></h3>
 <ul>
 <li><a href="../../types/queryjson/#queryjson">QueryJSON</a></li>
 </ul>
 <h3 id="returns_5">Returns<a class="headerlink" href="#returns_5" title="Permanent link">&para;</a></h3>
 <ul>
+<li><a href="../../types/transaction/#transaction">Transaction[]</a></li>
+</ul>
+<h2 id="ptx_querytransactionsfull">ptx_queryTransactionsFull<a class="headerlink" href="#ptx_querytransactionsfull" title="Permanent link">&para;</a></h2>
+<h3 id="parameters_6">Parameters<a class="headerlink" href="#parameters_6" title="Permanent link">&para;</a></h3>
+<ul>
+<li><a href="../../types/queryjson/#queryjson">QueryJSON</a></li>
+</ul>
+<h3 id="returns_6">Returns<a class="headerlink" href="#returns_6" title="Permanent link">&para;</a></h3>
+<ul>
 <li>TransactionFull[]</li>
+</ul>
+<h2 id="ptx_resoleverifier">ptx_resoleVerifier<a class="headerlink" href="#ptx_resoleverifier" title="Permanent link">&para;</a></h2>
+<h3 id="parameters_7">Parameters<a class="headerlink" href="#parameters_7" title="Permanent link">&para;</a></h3>
+<ul>
+<li>string</li>
+<li>string</li>
+<li>string</li>
+</ul>
+<h3 id="returns_7">Returns<a class="headerlink" href="#returns_7" title="Permanent link">&para;</a></h3>
+<ul>
+<li>string</li>
+</ul>
+<h2 id="ptx_sendtransaction">ptx_sendTransaction<a class="headerlink" href="#ptx_sendtransaction" title="Permanent link">&para;</a></h2>
+<h3 id="parameters_8">Parameters<a class="headerlink" href="#parameters_8" title="Permanent link">&para;</a></h3>
+<ul>
+<li><a href="../../types/transactioninput/#transactioninput">TransactionInput</a></li>
+</ul>
+<h3 id="returns_8">Returns<a class="headerlink" href="#returns_8" title="Permanent link">&para;</a></h3>
+<ul>
+<li><a href="../../types/simpletypes/#uuid">UUID</a></li>
+</ul>
+<h2 id="ptx_sendtransactions">ptx_sendTransactions<a class="headerlink" href="#ptx_sendtransactions" title="Permanent link">&para;</a></h2>
+<h3 id="parameters_9">Parameters<a class="headerlink" href="#parameters_9" title="Permanent link">&para;</a></h3>
+<ul>
+<li><a href="../../types/transactioninput/#transactioninput">TransactionInput[]</a></li>
+</ul>
+<h3 id="returns_9">Returns<a class="headerlink" href="#returns_9" title="Permanent link">&para;</a></h3>
+<ul>
+<li><a href="../../types/simpletypes/#uuid">UUID[]</a></li>
 </ul>
 
 
@@ -2143,13 +2444,13 @@
         
         
           
-          <a href="../../types/indexedevent/" class="md-footer__link md-footer__link--next" aria-label="Next: IndexedEvent">
+          <a href="../transport/" class="md-footer__link md-footer__link--next" aria-label="Next: API transport">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                IndexedEvent
+                API transport
               </div>
             </div>
             <div class="md-footer__button md-icon">
