@@ -9,18 +9,18 @@
       
       
       
-        <link rel="prev" href="../../../guides/upgrading/">
+        <link rel="prev" href="../pstate/">
       
       
-        <link rel="next" href="../transport/">
+        <link rel="next" href="../reg/">
       
       
-      <link rel="icon" href="../../../assets/project-icon.png">
+      <link rel="icon" href="../../../assets/paladin-icon-light.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.42">
     
     
       
-        <title>API ptx - Paladin</title>
+        <title>ptx_* - Paladin</title>
       
     
     
@@ -46,7 +46,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../stylesheets/extra.css">
+      <link rel="stylesheet" href="../../../stylesheets/paladin.css">
     
     <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
@@ -75,7 +75,7 @@
     
     
     
-    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+    <body dir="ltr" data-md-color-scheme="paladin" data-md-color-primary="indigo" data-md-color-accent="indigo">
   
     
     <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
@@ -84,7 +84,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#ptx_gettransaction" class="md-skip">
+        <a href="#ptx_call" class="md-skip">
           Skip to content
         </a>
       
@@ -110,106 +110,165 @@
       </div>
     
     
-      
+      <!--
+  Copyright (c) 2016-2022 Martin Donath <martin.donath@squidfunk.com>
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to
+  deal in the Software without restriction, including without limitation the
+  rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+  sell copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in
+  all copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+  IN THE SOFTWARE.
+-->
+
+<!-- Determine class according to configuration -->
+
 
   
 
-<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
-  <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../../.." title="Paladin" class="md-header__button md-logo" aria-label="Paladin" data-md-component="logo">
-      
-  <img src="../../../assets/project-logo.png" alt="logo">
 
+<!-- Header -->
+<header class="md-header md-header--lifted" data-md-component="header">
+  <nav
+    class="md-header__inner md-grid"
+    aria-label="header.title"
+  >
+
+    <!-- Link to home -->
+    <a
+      href="../../.."
+      title="Paladin"
+      class="md-header__button md-logo"
+      aria-label="Paladin"
+      data-md-component="logo"
+    >
+      <!--
+  Copyright (c) 2016-2024 Martin Donath <martin.donath@squidfunk.com>
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to
+  deal in the Software without restriction, including without limitation the
+  rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+  sell copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in
+  all copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+  IN THE SOFTWARE.
+-->
+
+<!-- Logo -->
+<img src="../../../assets/paladin-logo-dark.svg#only-dark" alt="Paladin" />
+<img src="../../../assets/paladin-logo-light.svg#only-light" alt="Paladin" />
     </a>
+
+    <!-- Button to open drawer -->
     <label class="md-header__button md-icon" for="__drawer">
-      
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
     </label>
+
+    <!-- Header title -->
     <div class="md-header__title" data-md-component="header-title">
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            Paladin
+            <!-- Paladin -->
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              API ptx
+              ptx_*
             
           </span>
         </div>
       </div>
     </div>
+
+    <!-- Color palette -->
     
-      
-        <form class="md-header__option" data-md-component="palette">
-  
-    
-    
-    
-    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
-    
-      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
-      </label>
-    
-  
-    
-    
-    
-    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
-    
-      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
-      </label>
-    
-  
-</form>
-      
-    
-    
-      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
-    
-    
-    
-      <label class="md-header__button md-icon" for="__search">
+      <form class="md-header__option" data-md-component="palette">
         
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
-      </label>
-      <div class="md-search" data-md-component="search" role="dialog">
-  <label class="md-search__overlay" for="__search"></label>
-  <div class="md-search__inner" role="search">
-    <form class="md-search__form" name="search">
-      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
-      <label class="md-search__icon md-icon" for="__search">
-        
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
-        
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
-      </label>
-      <nav class="md-search__options" aria-label="Search">
-        
-        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
           
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-        </button>
-      </nav>
-      
-    </form>
-    <div class="md-search__output">
-      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
-        <div class="md-search-result" data-md-component="search-result">
-          <div class="md-search-result__meta">
-            Initializing search
-          </div>
-          <ol class="md-search-result__list" role="presentation"></ol>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+          
+          <input
+            class="md-option"
+            data-md-color-media="(prefers-color-scheme: light)"
+            data-md-color-scheme="paladin"
+            data-md-color-primary=""
+            data-md-color-accent=""
+            
+              aria-label="Switch to dark mode"
+            
+            type="radio"
+            name="__palette"
+            id="__palette_1"
+          />
+          
+            <label
+              class="md-header__button md-icon"
+              title="Switch to dark mode"
+              for="__palette_2"
+              hidden
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+            </label>
+          
+        
+          
+          
+          <input
+            class="md-option"
+            data-md-color-media="(prefers-color-scheme: dark)"
+            data-md-color-scheme="paladin-dark"
+            data-md-color-primary=""
+            data-md-color-accent=""
+            
+              aria-label="Switch to light mode"
+            
+            type="radio"
+            name="__palette"
+            id="__palette_2"
+          />
+          
+            <label
+              class="md-header__button md-icon"
+              title="Switch to light mode"
+              for="__palette_1"
+              hidden
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+            </label>
+          
+        
+      </form>
     
+
+    <!-- Site language selector -->
+    
+
+    <!-- Button to open search modal -->
+    
+
+    <!-- Repository information -->
     
       <div class="md-header__source">
         <a href="https://github.com/kaleido-io/paladin" title="Go to repository" class="md-source" data-md-component="source">
@@ -224,6 +283,8 @@
       </div>
     
   </nav>
+
+  <!-- Navigation tabs (sticky) -->
   
     
       
@@ -345,12 +406,12 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="./" class="md-tabs__link">
+        <a href="../keymgr/" class="md-tabs__link">
           
   
     
   
-  References
+  Reference
 
         </a>
       </li>
@@ -444,9 +505,31 @@
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
     <a href="../../.." title="Paladin" class="md-nav__button md-logo" aria-label="Paladin" data-md-component="logo">
-      
-  <img src="../../../assets/project-logo.png" alt="logo">
+      <!--
+  Copyright (c) 2016-2024 Martin Donath <martin.donath@squidfunk.com>
 
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to
+  deal in the Software without restriction, including without limitation the
+  rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+  sell copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in
+  all copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+  IN THE SOFTWARE.
+-->
+
+<!-- Logo -->
+<img src="../../../assets/paladin-logo-dark.svg#only-dark" alt="Paladin" />
+<img src="../../../assets/paladin-logo-light.svg#only-light" alt="Paladin" />
     </a>
     Paladin
   </label>
@@ -989,7 +1072,7 @@
             
   
   <span class="md-ellipsis">
-    References
+    Reference
   </span>
   
 
@@ -999,7 +1082,7 @@
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
-            References
+            Reference
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
@@ -1013,6 +1096,12 @@
   
     
     
+      
+        
+      
+        
+      
+        
       
         
       
@@ -1053,6 +1142,48 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../keymgr/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    keymgr_*
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../pstate/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    pstate_*
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -1067,7 +1198,7 @@
           
   
   <span class="md-ellipsis">
-    API ptx
+    ptx_*
   </span>
   
 
@@ -1078,7 +1209,7 @@
         
   
   <span class="md-ellipsis">
-    API ptx
+    ptx_*
   </span>
   
 
@@ -1098,13 +1229,13 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#ptx_gettransaction" class="md-nav__link">
+  <a href="#ptx_call" class="md-nav__link">
     <span class="md-ellipsis">
-      ptx_getTransaction
+      ptx_call
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ptx_getTransaction">
+    <nav class="md-nav" aria-label="ptx_call">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1131,13 +1262,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ptx_gettransactionbyidempotencykey" class="md-nav__link">
+  <a href="#ptx_gettransaction" class="md-nav__link">
     <span class="md-ellipsis">
-      ptx_getTransactionByIdempotencyKey
+      ptx_getTransaction
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ptx_getTransactionByIdempotencyKey">
+    <nav class="md-nav" aria-label="ptx_getTransaction">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1164,13 +1295,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ptx_gettransactionfull" class="md-nav__link">
+  <a href="#ptx_gettransactionbyidempotencykey" class="md-nav__link">
     <span class="md-ellipsis">
-      ptx_getTransactionFull
+      ptx_getTransactionByIdempotencyKey
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ptx_getTransactionFull">
+    <nav class="md-nav" aria-label="ptx_getTransactionByIdempotencyKey">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1197,13 +1328,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ptx_gettransactionreceipt" class="md-nav__link">
+  <a href="#ptx_gettransactionfull" class="md-nav__link">
     <span class="md-ellipsis">
-      ptx_getTransactionReceipt
+      ptx_getTransactionFull
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ptx_getTransactionReceipt">
+    <nav class="md-nav" aria-label="ptx_getTransactionFull">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1230,13 +1361,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ptx_querytransactionreceipts" class="md-nav__link">
+  <a href="#ptx_gettransactionreceipt" class="md-nav__link">
     <span class="md-ellipsis">
-      ptx_queryTransactionReceipts
+      ptx_getTransactionReceipt
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ptx_queryTransactionReceipts">
+    <nav class="md-nav" aria-label="ptx_getTransactionReceipt">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1263,13 +1394,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ptx_querytransactions" class="md-nav__link">
+  <a href="#ptx_querytransactionreceipts" class="md-nav__link">
     <span class="md-ellipsis">
-      ptx_queryTransactions
+      ptx_queryTransactionReceipts
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ptx_queryTransactions">
+    <nav class="md-nav" aria-label="ptx_queryTransactionReceipts">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1296,13 +1427,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ptx_querytransactionsfull" class="md-nav__link">
+  <a href="#ptx_querytransactions" class="md-nav__link">
     <span class="md-ellipsis">
-      ptx_queryTransactionsFull
+      ptx_queryTransactions
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ptx_queryTransactionsFull">
+    <nav class="md-nav" aria-label="ptx_queryTransactions">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1329,13 +1460,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ptx_resoleverifier" class="md-nav__link">
+  <a href="#ptx_querytransactionsfull" class="md-nav__link">
     <span class="md-ellipsis">
-      ptx_resoleVerifier
+      ptx_queryTransactionsFull
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ptx_resoleVerifier">
+    <nav class="md-nav" aria-label="ptx_queryTransactionsFull">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1362,13 +1493,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ptx_sendtransaction" class="md-nav__link">
+  <a href="#ptx_resolveverifier" class="md-nav__link">
     <span class="md-ellipsis">
-      ptx_sendTransaction
+      ptx_resolveVerifier
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ptx_sendTransaction">
+    <nav class="md-nav" aria-label="ptx_resolveVerifier">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1395,13 +1526,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ptx_sendtransactions" class="md-nav__link">
+  <a href="#ptx_sendtransaction" class="md-nav__link">
     <span class="md-ellipsis">
-      ptx_sendTransactions
+      ptx_sendTransaction
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ptx_sendTransactions">
+    <nav class="md-nav" aria-label="ptx_sendTransaction">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1415,6 +1546,39 @@
         
           <li class="md-nav__item">
   <a href="#returns_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      Returns
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ptx_sendtransactions" class="md-nav__link">
+    <span class="md-ellipsis">
+      ptx_sendTransactions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ptx_sendTransactions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#parameters_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      Parameters
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#returns_10" class="md-nav__link">
     <span class="md-ellipsis">
       Returns
     </span>
@@ -1443,11 +1607,32 @@
   
   
     <li class="md-nav__item">
+      <a href="../reg/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    reg_*
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../transport/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
-    API transport
+    transport_*
   </span>
   
 
@@ -1473,6 +1658,32 @@
   
     
     
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
       
         
       
@@ -1549,6 +1760,48 @@
   
   
     <li class="md-nav__item">
+      <a href="../../types/jsonformatoptions/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    JSONFormatOptions
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../types/onchainlocation/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    OnChainLocation
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../types/publictx/" class="md-nav__link">
         
   
@@ -1591,11 +1844,179 @@
   
   
     <li class="md-nav__item">
+      <a href="../../types/registryentry/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    RegistryEntry
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../types/registryentrywithproperties/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    RegistryEntryWithProperties
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../types/registryproperty/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    RegistryProperty
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../types/schema/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Schema
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../types/simpletypes/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
     Simple Types
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../types/state/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    State
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../types/stateconfirm/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    StateConfirm
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../types/statelock/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    StateLock
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../types/statespend/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    StateSpend
   </span>
   
 
@@ -1654,11 +2075,74 @@
   
   
     <li class="md-nav__item">
+      <a href="../../types/transactioncall/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    TransactionCall
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../types/transactionfull/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    TransactionFull
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../types/transactioninput/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
     TransactionInput
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../types/transactionreceipt/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    TransactionReceipt
   </span>
   
 
@@ -1952,13 +2436,13 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#ptx_gettransaction" class="md-nav__link">
+  <a href="#ptx_call" class="md-nav__link">
     <span class="md-ellipsis">
-      ptx_getTransaction
+      ptx_call
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ptx_getTransaction">
+    <nav class="md-nav" aria-label="ptx_call">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1985,13 +2469,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ptx_gettransactionbyidempotencykey" class="md-nav__link">
+  <a href="#ptx_gettransaction" class="md-nav__link">
     <span class="md-ellipsis">
-      ptx_getTransactionByIdempotencyKey
+      ptx_getTransaction
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ptx_getTransactionByIdempotencyKey">
+    <nav class="md-nav" aria-label="ptx_getTransaction">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2018,13 +2502,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ptx_gettransactionfull" class="md-nav__link">
+  <a href="#ptx_gettransactionbyidempotencykey" class="md-nav__link">
     <span class="md-ellipsis">
-      ptx_getTransactionFull
+      ptx_getTransactionByIdempotencyKey
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ptx_getTransactionFull">
+    <nav class="md-nav" aria-label="ptx_getTransactionByIdempotencyKey">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2051,13 +2535,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ptx_gettransactionreceipt" class="md-nav__link">
+  <a href="#ptx_gettransactionfull" class="md-nav__link">
     <span class="md-ellipsis">
-      ptx_getTransactionReceipt
+      ptx_getTransactionFull
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ptx_getTransactionReceipt">
+    <nav class="md-nav" aria-label="ptx_getTransactionFull">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2084,13 +2568,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ptx_querytransactionreceipts" class="md-nav__link">
+  <a href="#ptx_gettransactionreceipt" class="md-nav__link">
     <span class="md-ellipsis">
-      ptx_queryTransactionReceipts
+      ptx_getTransactionReceipt
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ptx_queryTransactionReceipts">
+    <nav class="md-nav" aria-label="ptx_getTransactionReceipt">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2117,13 +2601,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ptx_querytransactions" class="md-nav__link">
+  <a href="#ptx_querytransactionreceipts" class="md-nav__link">
     <span class="md-ellipsis">
-      ptx_queryTransactions
+      ptx_queryTransactionReceipts
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ptx_queryTransactions">
+    <nav class="md-nav" aria-label="ptx_queryTransactionReceipts">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2150,13 +2634,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ptx_querytransactionsfull" class="md-nav__link">
+  <a href="#ptx_querytransactions" class="md-nav__link">
     <span class="md-ellipsis">
-      ptx_queryTransactionsFull
+      ptx_queryTransactions
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ptx_queryTransactionsFull">
+    <nav class="md-nav" aria-label="ptx_queryTransactions">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2183,13 +2667,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ptx_resoleverifier" class="md-nav__link">
+  <a href="#ptx_querytransactionsfull" class="md-nav__link">
     <span class="md-ellipsis">
-      ptx_resoleVerifier
+      ptx_queryTransactionsFull
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ptx_resoleVerifier">
+    <nav class="md-nav" aria-label="ptx_queryTransactionsFull">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2216,13 +2700,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ptx_sendtransaction" class="md-nav__link">
+  <a href="#ptx_resolveverifier" class="md-nav__link">
     <span class="md-ellipsis">
-      ptx_sendTransaction
+      ptx_resolveVerifier
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ptx_sendTransaction">
+    <nav class="md-nav" aria-label="ptx_resolveVerifier">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2249,13 +2733,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ptx_sendtransactions" class="md-nav__link">
+  <a href="#ptx_sendtransaction" class="md-nav__link">
     <span class="md-ellipsis">
-      ptx_sendTransactions
+      ptx_sendTransaction
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ptx_sendTransactions">
+    <nav class="md-nav" aria-label="ptx_sendTransaction">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2269,6 +2753,39 @@
         
           <li class="md-nav__item">
   <a href="#returns_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      Returns
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ptx_sendtransactions" class="md-nav__link">
+    <span class="md-ellipsis">
+      ptx_sendTransactions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ptx_sendTransactions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#parameters_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      Parameters
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#returns_10" class="md-nav__link">
     <span class="md-ellipsis">
       Returns
     </span>
@@ -2299,100 +2816,109 @@
   
 
 
-  <h1>API ptx</h1>
+  <h1>ptx_*</h1>
 
-<h2 id="ptx_gettransaction">ptx_getTransaction<a class="headerlink" href="#ptx_gettransaction" title="Permanent link">&para;</a></h2>
+<h2 id="ptx_call"><code>ptx_call</code><a class="headerlink" href="#ptx_call" title="Permanent link">&para;</a></h2>
 <h3 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="../../types/simpletypes/#uuid">UUID</a></li>
-</ul>
+<ol>
+<li><code>transaction</code>: <a href="../../types/transactioncall/#transactioncall"><code>TransactionCall</code></a></li>
+</ol>
 <h3 id="returns">Returns<a class="headerlink" href="#returns" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="../../types/transaction/#transaction">Transaction</a></li>
-</ul>
-<h2 id="ptx_gettransactionbyidempotencykey">ptx_getTransactionByIdempotencyKey<a class="headerlink" href="#ptx_gettransactionbyidempotencykey" title="Permanent link">&para;</a></h2>
+<ol>
+<li><code>result</code>: <a href="../../types/simpletypes/#rawjson"><code>RawJSON</code></a></li>
+</ol>
+<h2 id="ptx_gettransaction"><code>ptx_getTransaction</code><a class="headerlink" href="#ptx_gettransaction" title="Permanent link">&para;</a></h2>
 <h3 id="parameters_1">Parameters<a class="headerlink" href="#parameters_1" title="Permanent link">&para;</a></h3>
-<ul>
-<li>string</li>
-</ul>
+<ol>
+<li><code>transactionId</code>: <a href="../../types/simpletypes/#uuid"><code>UUID</code></a></li>
+</ol>
 <h3 id="returns_1">Returns<a class="headerlink" href="#returns_1" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="../../types/transaction/#transaction">Transaction</a></li>
-</ul>
-<h2 id="ptx_gettransactionfull">ptx_getTransactionFull<a class="headerlink" href="#ptx_gettransactionfull" title="Permanent link">&para;</a></h2>
+<ol>
+<li><code>transaction</code>: <a href="../../types/transaction/#transaction"><code>Transaction</code></a></li>
+</ol>
+<h2 id="ptx_gettransactionbyidempotencykey"><code>ptx_getTransactionByIdempotencyKey</code><a class="headerlink" href="#ptx_gettransactionbyidempotencykey" title="Permanent link">&para;</a></h2>
 <h3 id="parameters_2">Parameters<a class="headerlink" href="#parameters_2" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="../../types/simpletypes/#uuid">UUID</a></li>
-</ul>
+<ol>
+<li><code>idempotencyKey</code>: <code>string</code></li>
+</ol>
 <h3 id="returns_2">Returns<a class="headerlink" href="#returns_2" title="Permanent link">&para;</a></h3>
-<ul>
-<li>TransactionFull</li>
-</ul>
-<h2 id="ptx_gettransactionreceipt">ptx_getTransactionReceipt<a class="headerlink" href="#ptx_gettransactionreceipt" title="Permanent link">&para;</a></h2>
+<ol>
+<li><code>transaction</code>: <a href="../../types/transaction/#transaction"><code>Transaction</code></a></li>
+</ol>
+<h2 id="ptx_gettransactionfull"><code>ptx_getTransactionFull</code><a class="headerlink" href="#ptx_gettransactionfull" title="Permanent link">&para;</a></h2>
 <h3 id="parameters_3">Parameters<a class="headerlink" href="#parameters_3" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="../../types/simpletypes/#uuid">UUID</a></li>
-</ul>
+<ol>
+<li><code>transactionId</code>: <a href="../../types/simpletypes/#uuid"><code>UUID</code></a></li>
+</ol>
 <h3 id="returns_3">Returns<a class="headerlink" href="#returns_3" title="Permanent link">&para;</a></h3>
-<ul>
-<li>TransactionReceipt</li>
-</ul>
-<h2 id="ptx_querytransactionreceipts">ptx_queryTransactionReceipts<a class="headerlink" href="#ptx_querytransactionreceipts" title="Permanent link">&para;</a></h2>
+<ol>
+<li><code>transaction</code>: <a href="../../types/transactionfull/#transactionfull"><code>TransactionFull</code></a></li>
+</ol>
+<h2 id="ptx_gettransactionreceipt"><code>ptx_getTransactionReceipt</code><a class="headerlink" href="#ptx_gettransactionreceipt" title="Permanent link">&para;</a></h2>
 <h3 id="parameters_4">Parameters<a class="headerlink" href="#parameters_4" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="../../types/queryjson/#queryjson">QueryJSON</a></li>
-</ul>
+<ol>
+<li><code>transactionId</code>: <a href="../../types/simpletypes/#uuid"><code>UUID</code></a></li>
+</ol>
 <h3 id="returns_4">Returns<a class="headerlink" href="#returns_4" title="Permanent link">&para;</a></h3>
-<ul>
-<li>TransactionReceipt[]</li>
-</ul>
-<h2 id="ptx_querytransactions">ptx_queryTransactions<a class="headerlink" href="#ptx_querytransactions" title="Permanent link">&para;</a></h2>
+<ol>
+<li><code>receipt</code>: <a href="../../types/transactionreceipt/#transactionreceipt"><code>TransactionReceipt</code></a></li>
+</ol>
+<h2 id="ptx_querytransactionreceipts"><code>ptx_queryTransactionReceipts</code><a class="headerlink" href="#ptx_querytransactionreceipts" title="Permanent link">&para;</a></h2>
 <h3 id="parameters_5">Parameters<a class="headerlink" href="#parameters_5" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="../../types/queryjson/#queryjson">QueryJSON</a></li>
-</ul>
+<ol>
+<li><code>query</code>: <a href="../../types/queryjson/#queryjson"><code>QueryJSON</code></a></li>
+</ol>
 <h3 id="returns_5">Returns<a class="headerlink" href="#returns_5" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="../../types/transaction/#transaction">Transaction[]</a></li>
-</ul>
-<h2 id="ptx_querytransactionsfull">ptx_queryTransactionsFull<a class="headerlink" href="#ptx_querytransactionsfull" title="Permanent link">&para;</a></h2>
+<ol>
+<li><code>receipts</code>: <a href="../../types/transactionreceipt/#transactionreceipt"><code>TransactionReceipt[]</code></a></li>
+</ol>
+<h2 id="ptx_querytransactions"><code>ptx_queryTransactions</code><a class="headerlink" href="#ptx_querytransactions" title="Permanent link">&para;</a></h2>
 <h3 id="parameters_6">Parameters<a class="headerlink" href="#parameters_6" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="../../types/queryjson/#queryjson">QueryJSON</a></li>
-</ul>
+<ol>
+<li><code>query</code>: <a href="../../types/queryjson/#queryjson"><code>QueryJSON</code></a></li>
+</ol>
 <h3 id="returns_6">Returns<a class="headerlink" href="#returns_6" title="Permanent link">&para;</a></h3>
-<ul>
-<li>TransactionFull[]</li>
-</ul>
-<h2 id="ptx_resoleverifier">ptx_resoleVerifier<a class="headerlink" href="#ptx_resoleverifier" title="Permanent link">&para;</a></h2>
+<ol>
+<li><code>transactions</code>: <a href="../../types/transaction/#transaction"><code>Transaction[]</code></a></li>
+</ol>
+<h2 id="ptx_querytransactionsfull"><code>ptx_queryTransactionsFull</code><a class="headerlink" href="#ptx_querytransactionsfull" title="Permanent link">&para;</a></h2>
 <h3 id="parameters_7">Parameters<a class="headerlink" href="#parameters_7" title="Permanent link">&para;</a></h3>
-<ul>
-<li>string</li>
-<li>string</li>
-<li>string</li>
-</ul>
+<ol>
+<li><code>query</code>: <a href="../../types/queryjson/#queryjson"><code>QueryJSON</code></a></li>
+</ol>
 <h3 id="returns_7">Returns<a class="headerlink" href="#returns_7" title="Permanent link">&para;</a></h3>
-<ul>
-<li>string</li>
-</ul>
-<h2 id="ptx_sendtransaction">ptx_sendTransaction<a class="headerlink" href="#ptx_sendtransaction" title="Permanent link">&para;</a></h2>
+<ol>
+<li><code>transactions</code>: <a href="../../types/transactionfull/#transactionfull"><code>TransactionFull[]</code></a></li>
+</ol>
+<h2 id="ptx_resolveverifier"><code>ptx_resolveVerifier</code><a class="headerlink" href="#ptx_resolveverifier" title="Permanent link">&para;</a></h2>
 <h3 id="parameters_8">Parameters<a class="headerlink" href="#parameters_8" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="../../types/transactioninput/#transactioninput">TransactionInput</a></li>
-</ul>
+<ol>
+<li><code>keyIdentifier</code>: <code>string</code></li>
+<li><code>algorithm</code>: <code>string</code></li>
+<li><code>verifierType</code>: <code>string</code></li>
+</ol>
 <h3 id="returns_8">Returns<a class="headerlink" href="#returns_8" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="../../types/simpletypes/#uuid">UUID</a></li>
-</ul>
-<h2 id="ptx_sendtransactions">ptx_sendTransactions<a class="headerlink" href="#ptx_sendtransactions" title="Permanent link">&para;</a></h2>
+<ol>
+<li><code>receipts</code>: <code>string</code></li>
+</ol>
+<h2 id="ptx_sendtransaction"><code>ptx_sendTransaction</code><a class="headerlink" href="#ptx_sendtransaction" title="Permanent link">&para;</a></h2>
 <h3 id="parameters_9">Parameters<a class="headerlink" href="#parameters_9" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="../../types/transactioninput/#transactioninput">TransactionInput[]</a></li>
-</ul>
+<ol>
+<li><code>transaction</code>: <a href="../../types/transactioninput/#transactioninput"><code>TransactionInput</code></a></li>
+</ol>
 <h3 id="returns_9">Returns<a class="headerlink" href="#returns_9" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="../../types/simpletypes/#uuid">UUID[]</a></li>
-</ul>
+<ol>
+<li><code>transactionId</code>: <a href="../../types/simpletypes/#uuid"><code>UUID</code></a></li>
+</ol>
+<h2 id="ptx_sendtransactions"><code>ptx_sendTransactions</code><a class="headerlink" href="#ptx_sendtransactions" title="Permanent link">&para;</a></h2>
+<h3 id="parameters_10">Parameters<a class="headerlink" href="#parameters_10" title="Permanent link">&para;</a></h3>
+<ol>
+<li><code>transactions</code>: <a href="../../types/transactioninput/#transactioninput"><code>TransactionInput[]</code></a></li>
+</ol>
+<h3 id="returns_10">Returns<a class="headerlink" href="#returns_10" title="Permanent link">&para;</a></h3>
+<ol>
+<li><code>transactionIds</code>: <a href="../../types/simpletypes/#uuid"><code>UUID[]</code></a></li>
+</ol>
 
 
 
@@ -2427,7 +2953,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../../../guides/upgrading/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Upgrading">
+          <a href="../pstate/" class="md-footer__link md-footer__link--prev" aria-label="Previous: pstate_*">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -2437,20 +2963,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                Upgrading
+                pstate_*
               </div>
             </div>
           </a>
         
         
           
-          <a href="../transport/" class="md-footer__link md-footer__link--next" aria-label="Next: API transport">
+          <a href="../reg/" class="md-footer__link md-footer__link--next" aria-label="Next: reg_*">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                API transport
+                reg_*
               </div>
             </div>
             <div class="md-footer__button md-icon">
