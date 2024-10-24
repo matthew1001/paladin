@@ -16,6 +16,7 @@
 package signerapi
 
 import (
+	"github.com/hyperledger/firefly-signer/pkg/ethsigner"
 	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
 )
 
@@ -56,10 +57,21 @@ type SignRequest struct {
 
 	// the input payload to process according to the algorithm
 	Payload tktypes.HexBytes `json:"payload,omitempty"`
+
+	// the original transaction data to be signed
+	Transaction *TransactionPayload `json:"transaction,omitempty"`
+}
+
+type TransactionPayload struct {
+	// the chain id of the network
+	ChainID int64 `json:"chainID,omitempty"`
+
+	// the raw transaction object
+	Transaction ethsigner.Transaction `json:"transaction,omitempty"`
 }
 
 type SignResponse struct {
-	// an set of bytes appropriate to the Paladin signing algorithm spec used
+	// a set of bytes appropriate to the Paladin signing algorithm spec used
 	Payload tktypes.HexBytes `json:"payload,omitempty"`
 }
 

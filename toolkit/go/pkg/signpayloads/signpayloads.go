@@ -23,3 +23,12 @@ package signpayloads
 // according to the Bitcoin/Eth standard of 27+recid (27 or 28)
 // denoting an uncompressed public key.
 const OPAQUE_TO_RSV = "opaque:rsv"
+
+// Input:
+// Additionally to the opaque payload, the underlying ethereum transaction (including
+// the chainID) is included in the input to the signing module.
+// Output:
+// A compact 65 byte encoded R,S,V byte string (R=32b, S=32b, V=1b) with the V value
+// according to the Bitcoin/Eth standard of 27+recid (27 or 28)
+// denoting an uncompressed public key.
+const ETH_TXN_TO_RSV = "eth_txn:rsv"
