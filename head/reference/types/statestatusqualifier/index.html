@@ -9,10 +9,10 @@
       
       
       
-        <link rel="prev" href="../transaction/">
+        <link rel="prev" href="../statespend/">
       
       
-        <link rel="next" href="../transactionfull/">
+        <link rel="next" href="../storedabi/">
       
       
       <link rel="icon" href="../../../assets/paladin-icon-light.png">
@@ -20,7 +20,7 @@
     
     
       
-        <title>TransactionCall - Paladin</title>
+        <title>StateStatusQualifier - Paladin</title>
       
     
     
@@ -196,7 +196,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              TransactionCall
+              StateStatusQualifier
             
           </span>
         </div>
@@ -1633,10 +1633,28 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../statestatusqualifier/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    StateStatusQualifier
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   <span class="md-ellipsis">
@@ -1645,6 +1663,33 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#example" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1696,28 +1741,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    TransactionCall
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../transactioncall/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1726,42 +1753,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#example" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#field-descriptions" class="md-nav__link">
-    <span class="md-ellipsis">
-      Field Descriptions
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -2122,15 +2113,6 @@
   
 </li>
       
-        <li class="md-nav__item">
-  <a href="#field-descriptions" class="md-nav__link">
-    <span class="md-ellipsis">
-      Field Descriptions
-    </span>
-  </a>
-  
-</li>
-      
     </ul>
   
 </nav>
@@ -2149,125 +2131,20 @@
   
 
 
-  <h1>TransactionCall</h1>
+  <h1>StateStatusQualifier</h1>
 
+<p>The following qualifiers can be used in queries to the state store:</p>
+<ul>
+<li><code>available</code> - states that have been confirmed by a blockchain transaction, and not yet been spent in a subsequent transaction</li>
+<li><code>unconfirmed</code> - states where no transaction has yet been processed from the blockchain to confirm the state</li>
+<li><code>confirmed</code> - states that have not been marked spent as a result of indexing a blockchain transaction</li>
+<li><code>spent</code> - states that have not been marked spent as a result of indexing a blockchain transaction</li>
+<li><code>all</code> - all states stored in this node, regardless of status</li>
+<li><code>[uuid]</code> - any other value is parsed as the UUID, and if there is an in-memory domain context active for that UUID the query is executed within that domain context</li>
+</ul>
 <h3 id="example">Example<a class="headerlink" href="#example" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="nt">&quot;dataFormat&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&quot;</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="s2">&quot;&quot;</span>
 </code></pre></div>
-<h3 id="field-descriptions">Field Descriptions<a class="headerlink" href="#field-descriptions" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Field Name</th>
-<th>Description</th>
-<th>Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>id</code></td>
-<td>Server-generated UUID for this transaction (query only)</td>
-<td><a href="../simpletypes/#uuid"><code>UUID</code></a></td>
-</tr>
-<tr>
-<td><code>created</code></td>
-<td>Server-generated creation timestamp for this transaction (query only)</td>
-<td><a href="../simpletypes/#timestamp"><code>Timestamp</code></a></td>
-</tr>
-<tr>
-<td><code>idempotencyKey</code></td>
-<td>Externally supplied unique identifier for this transaction. 409 Conflict will be returned on attempt to re-submit</td>
-<td><code>string</code></td>
-</tr>
-<tr>
-<td><code>type</code></td>
-<td>Type of transaction (public or private)</td>
-<td><code>"private", "public"</code></td>
-</tr>
-<tr>
-<td><code>domain</code></td>
-<td>Name of a domain - only required on input for private deploy transactions</td>
-<td><code>string</code></td>
-</tr>
-<tr>
-<td><code>function</code></td>
-<td>Function signature - inferred from definition if not supplied</td>
-<td><code>string</code></td>
-</tr>
-<tr>
-<td><code>abiReference</code></td>
-<td>Calculated ABI reference - required with ABI on input if not constructor</td>
-<td><a href="../simpletypes/#bytes32"><code>Bytes32</code></a></td>
-</tr>
-<tr>
-<td><code>from</code></td>
-<td>Locator for a local signing identity to use for submission of this transaction</td>
-<td><code>string</code></td>
-</tr>
-<tr>
-<td><code>to</code></td>
-<td>Target contract address, or null for a deploy</td>
-<td><a href="../simpletypes/#ethaddress"><code>EthAddress</code></a></td>
-</tr>
-<tr>
-<td><code>data</code></td>
-<td>Pre-encoded array with/without function selector, array, or object input</td>
-<td><a href="../simpletypes/#rawjson"><code>RawJSON</code></a></td>
-</tr>
-<tr>
-<td><code>gas</code></td>
-<td>The gas limit for the transaction (optional)</td>
-<td><a href="../simpletypes/#hexuint64"><code>HexUint64</code></a></td>
-</tr>
-<tr>
-<td><code>value</code></td>
-<td>The value transferred in the transaction (optional)</td>
-<td><a href="../simpletypes/#hexuint256"><code>HexUint256</code></a></td>
-</tr>
-<tr>
-<td><code>maxPriorityFeePerGas</code></td>
-<td>The maximum priority fee per gas (optional)</td>
-<td><a href="../simpletypes/#hexuint256"><code>HexUint256</code></a></td>
-</tr>
-<tr>
-<td><code>maxFeePerGas</code></td>
-<td>The maximum fee per gas (optional)</td>
-<td><a href="../simpletypes/#hexuint256"><code>HexUint256</code></a></td>
-</tr>
-<tr>
-<td><code>gasPrice</code></td>
-<td>The gas price (optional)</td>
-<td><a href="../simpletypes/#hexuint256"><code>HexUint256</code></a></td>
-</tr>
-<tr>
-<td><code>dependsOn</code></td>
-<td>Transactions that must be mined on the blockchain successfully before this transaction submits</td>
-<td><a href="../simpletypes/#uuid"><code>UUID[]</code></a></td>
-</tr>
-<tr>
-<td><code>abi</code></td>
-<td>Application Binary Interface (ABI) definition - required if abiReference not supplied</td>
-<td><a href="../transactioninput/#entry"><code>Entry[]</code></a></td>
-</tr>
-<tr>
-<td><code>bytecode</code></td>
-<td>Bytecode prepended to encoded data inputs for deploy transactions</td>
-<td><a href="../simpletypes/#hexbytes"><code>HexBytes</code></a></td>
-</tr>
-<tr>
-<td><code>block</code></td>
-<td>The block number or 'latest' when calling a public smart contract (optional)</td>
-<td><a href="../simpletypes/#hexuint64orstring"><code>HexUint64OrString</code></a></td>
-</tr>
-<tr>
-<td><code>dataFormat</code></td>
-<td>How call data should be serialized into JSON once decoded using the ABI function definition</td>
-<td><a href="../jsonformatoptions/#jsonformatoptions"><code>JSONFormatOptions</code></a></td>
-</tr>
-</tbody>
-</table>
 
 
 
@@ -2302,7 +2179,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../transaction/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Transaction">
+          <a href="../statespend/" class="md-footer__link md-footer__link--prev" aria-label="Previous: StateSpend">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -2312,20 +2189,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                Transaction
+                StateSpend
               </div>
             </div>
           </a>
         
         
           
-          <a href="../transactionfull/" class="md-footer__link md-footer__link--next" aria-label="Next: TransactionFull">
+          <a href="../storedabi/" class="md-footer__link md-footer__link--next" aria-label="Next: StoredABI">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                TransactionFull
+                StoredABI
               </div>
             </div>
             <div class="md-footer__button md-icon">
