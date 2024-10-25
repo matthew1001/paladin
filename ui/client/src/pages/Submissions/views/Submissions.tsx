@@ -14,22 +14,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import { constants } from "@/components/config";
 import { PendingTransaction } from "@/components/PaladinTransaction";
-import { ApplicationContext } from "@/contexts/ApplicationContext";
-import { fetchSubmissions } from "@/queries/transactions";
+import { usePtxQueries } from "@/queries/ptx";
 import { Box, Fade, Paper, Tab, Tabs } from "@mui/material";
-import { useQuery } from "@tanstack/react-query";
 import { t } from "i18next";
-import { useContext, useState } from "react";
+import { useState } from "react";
 
 export const Submissions: React.FC = () => {
-  const { lastBlockWithTransactions } = useContext(ApplicationContext);
   const [tab, setTab] = useState(0);
+  const { useFetchSubmissions } = usePtxQueries();
 
-  const { data: pendingTransactions, isLoading } = useQuery({
-    queryKey: ["pendingTransactions", tab, lastBlockWithTransactions],
-    queryFn: () => fetchSubmissions(tab === 0 ? "all" : "pending"),
-  });
+  const { data: pendingTransactions, isLoading } = useFetchSubmissions(
+    tab === 0 ? "all" : "pending",
+    {
+      limit: constants.PENDING_TRANSACTIONS_QUERY_LIMIT,
+      sort: ["created DESC"],
+    }
+  );
 
   if (isLoading) {
     return <></>;

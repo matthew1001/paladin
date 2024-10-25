@@ -14,36 +14,43 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import { useBidxQueries } from "@/queries/bidx";
+import { usePtxQueries } from "@/queries/ptx";
 import { Box, Typography } from "@mui/material";
-import { useQuery } from "@tanstack/react-query";
 import { t } from "i18next";
-import { useContext } from "react";
-import { ApplicationContext } from "../contexts/ApplicationContext";
-import {
-  fetchIndexedTransactions,
-  fetchPaladinTransactions,
-  fetchTransactionReceipts,
-} from "../queries/transactions";
 import { Transaction } from "./Transaction";
+import { constants } from "./config";
 
 export const Transactions: React.FC = () => {
-  const { lastBlockWithTransactions } = useContext(ApplicationContext);
+  const { useQueryIndexedTransactions } = useBidxQueries();
+  const { useQueryTransactionReceipts, useQueryTransactionsFull } =
+    usePtxQueries();
 
-  const { data: transactions } = useQuery({
-    queryKey: ["transactions", lastBlockWithTransactions],
-    queryFn: () => fetchIndexedTransactions(),
+  const { data: transactions } = useQueryIndexedTransactions({
+    limit: constants.TRANSACTION_QUERY_LIMIT,
+    sort: ["blockNumber DESC", "transactionIndex DESC"],
   });
 
-  const { data: transactionReceipts } = useQuery({
-    queryKey: ["transactionReceipts", transactions],
-    queryFn: () => fetchTransactionReceipts(transactions ?? []),
-    enabled: transactions !== undefined,
+  const { data: transactionReceipts } = useQueryTransactionReceipts({
+    limit: constants.TRANSACTION_QUERY_LIMIT,
+    in: [
+      {
+        field: "transactionHash",
+        values:
+          transactions?.map((transaction) => transaction.hash.substring(2)) ??
+          [],
+      },
+    ],
   });
 
-  const { data: paladinTransactions } = useQuery({
-    queryKey: ["paladinTransactions", transactionReceipts],
-    queryFn: () => fetchPaladinTransactions(transactionReceipts ?? []),
-    enabled: transactionReceipts !== undefined,
+  const { data: paladinTransactions } = useQueryTransactionsFull({
+    limit: constants.TRANSACTION_QUERY_LIMIT,
+    in: [
+      {
+        field: "id",
+        values: transactionReceipts?.map((transaction) => transaction.id) ?? [],
+      },
+    ],
   });
 
   if (paladinTransactions === undefined) {

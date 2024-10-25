@@ -15,20 +15,14 @@
 // limitations under the License.
 
 import { Registry } from "@/components/Registry";
-import { ApplicationContext } from "@/contexts/ApplicationContext";
-import { fetchRegistries } from "@/queries/registry";
+import { useRegQueries } from "@/queries/reg";
 import { Box, Fade, Paper, Typography } from "@mui/material";
-import { useQuery } from "@tanstack/react-query";
 import { t } from "i18next";
-import { useContext } from "react";
 
 export const Registries: React.FC = () => {
-  const { lastBlockWithTransactions } = useContext(ApplicationContext);
-
-  const { data: registries, isLoading: loadingRegistries } = useQuery({
-    queryKey: ["registries", lastBlockWithTransactions],
-    queryFn: () => fetchRegistries(),
-  });
+  const { useListRegistries } = useRegQueries();
+  const { data: registries, isLoading: loadingRegistries } =
+    useListRegistries();
 
   if (loadingRegistries) {
     return <></>;

@@ -14,26 +14,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import { useRegQueries } from "@/queries/reg";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import { Box, Grid2, TextField, Typography } from "@mui/material";
-import { useQuery } from "@tanstack/react-query";
 import { t } from "i18next";
-import { fetchRegistryEntries } from "../queries/registry";
 import { Hash } from "./Hash";
+import { constants } from "./config";
 
 type Props = {
   registryName: string;
 };
 
 export const Registry: React.FC<Props> = ({ registryName }) => {
-  const { data: registryEntries } = useQuery({
-    queryKey: ["registryEntries", registryName],
-    queryFn: () =>
-      fetchRegistryEntries(registryName).then((entries) =>
-        entries.sort((a, b) => (a.name < b.name ? -1 : 0))
-      ),
-  });
+  const { useQueryEntriesWithProps } = useRegQueries();
+  const { data: registryEntries } = useQueryEntriesWithProps(
+    registryName,
+    { limit: constants.REGISTRY_ENTRIES_QUERY_LIMIT },
+    "any"
+  );
 
   const processValue = (value: string) => {
     try {

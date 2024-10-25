@@ -14,19 +14,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import { useBidxQueries } from "@/queries/bidx";
 import { Box, Typography } from "@mui/material";
-import { useQuery } from "@tanstack/react-query";
 import { t } from "i18next";
-import { fetchEvents } from "../queries/events";
+import { constants } from "./config";
 import { Event } from "./Event";
-import { useContext } from "react";
-import { ApplicationContext } from "../contexts/ApplicationContext";
 
 export const Events: React.FC = () => {
-  const { lastBlockWithTransactions } = useContext(ApplicationContext);
-  const { data: events } = useQuery({
-    queryKey: ["events", lastBlockWithTransactions],
-    queryFn: () => fetchEvents(),
+  const { useQueryIndexedEvents } = useBidxQueries();
+
+  const { data: events } = useQueryIndexedEvents({
+    limit: constants.EVENT_QUERY_LIMIT,
+    sort: ["blockNumber DESC", "transactionIndex DESC", "logIndex DESC"],
   });
 
   return (

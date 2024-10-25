@@ -14,11 +14,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import { IPaladinTransaction } from "@/interfaces/transactions";
 import { Box, ButtonBase, Grid2, TextField, Typography } from "@mui/material";
 import { t } from "i18next";
 import { useState } from "react";
 import { PaladinTransactionDialog } from "../dialogs/PaladinTransaction";
-import { IPaladinTransaction } from "../interfaces";
 import { Hash } from "./Hash";
 import { Timestamp } from "./Timestamp";
 

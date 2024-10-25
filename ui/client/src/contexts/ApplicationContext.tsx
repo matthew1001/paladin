@@ -1,8 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
+import { useBidxQueries } from "@/queries/bidx";
 import { createContext } from "react";
-import { constants } from "../components/config";
 import { ErrorDialog } from "../dialogs/Error";
-import { fetchLatestBlockWithTxs } from "../queries/blocks";
+import { constants } from "@/components/config";
+import { useTransportQueries } from "@/queries/transport";
 
 interface IApplicationContext {
   colorMode: {
@@ -21,24 +21,28 @@ interface Props {
 }
 
 export const ApplicationContextProvider = ({ children, colorMode }: Props) => {
-  const { data: lastBlockWithTransactions, error } = useQuery({
-    queryKey: ["lastBlockWithTransactions"],
-    queryFn: () =>
-      fetchLatestBlockWithTxs().then((res) => {
-        if (res.length > 0) {
-          return res[0].blockNumber;
-        }
-        return 0;
-      }),
-    refetchInterval: constants.UPDATE_FREQUENCY_MILLISECONDS,
-    retry: (failureCount) => {
-      return failureCount < 1;
-    },
-  });
+  const { useQueryIndexedTransactions } = useBidxQueries();
+  const { useNodeName } = useTransportQueries();
+  const { data: nodeName } = useNodeName();
+  console.log(nodeName);
+  const { data: lastBlockWithTransactions, error } =
+    useQueryIndexedTransactions(
+      {
+        limit: 1,
+        sort: ["blockNumber DESC", "transactionIndex DESC"],
+      },
+      constants.UPDATE_FREQUENCY_MILLISECONDS
+    );
 
   return (
     <ApplicationContext.Provider
-      value={{ lastBlockWithTransactions: lastBlockWithTransactions ?? 0, colorMode }}
+      value={{
+        lastBlockWithTransactions:
+          lastBlockWithTransactions && lastBlockWithTransactions.length > 0
+            ? lastBlockWithTransactions[0].blockNumber
+            : 0,
+        colorMode,
+      }}
     >
       {children}
       <ErrorDialog dialogOpen={!!error} message={error?.message ?? ""} />

@@ -14,49 +14,68 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import { IEvent } from "@/interfaces/events";
 import { Box, Grid2, Typography } from "@mui/material";
-import { IEvent } from "../interfaces";
 import { t } from "i18next";
 import { Hash } from "./Hash";
 
 type Props = {
-  event: IEvent
-}
+  event: IEvent;
+};
 
 export const Event: React.FC<Props> = ({ event }) => {
-
   return (
-    <Box sx={{
-      backgroundColor: theme => theme.palette.background.paper,
-      marginBottom: '20px', padding: '10px', borderRadius: '6px', boxShadow: '0px 0px 8px 3px rgba(0,0,0,0.26)'
-    }}>
+    <Box
+      sx={{
+        backgroundColor: (theme) => theme.palette.background.paper,
+        marginBottom: "20px",
+        padding: "10px",
+        borderRadius: "6px",
+        boxShadow: "0px 0px 8px 3px rgba(0,0,0,0.26)",
+      }}
+    >
       <Grid2 container direction="column" spacing={2}>
         <Grid2 container justifyContent="space-evenly">
           <Grid2>
-            <Typography align="center" variant="h6" color="textPrimary">{event.blockNumber.toLocaleString()}</Typography>
-            <Typography align="center" variant="body2" color="textSecondary">{t('block')}</Typography>
+            <Typography align="center" variant="h6" color="textPrimary">
+              {event.blockNumber.toLocaleString()}
+            </Typography>
+            <Typography align="center" variant="body2" color="textSecondary">
+              {t("block")}
+            </Typography>
           </Grid2>
           <Grid2>
-            <Typography align="center" variant="h6" color="textPrimary">{event.transactionIndex}</Typography>
-            <Typography align="center" variant="body2" color="textSecondary">{t('transactionIndex')}</Typography>
+            <Typography align="center" variant="h6" color="textPrimary">
+              {event.transactionIndex}
+            </Typography>
+            <Typography align="center" variant="body2" color="textSecondary">
+              {t("transactionIndex")}
+            </Typography>
           </Grid2>
           <Grid2>
-            <Typography align="center" variant="h6" color="textPrimary">{event.logIndex}</Typography>
-            <Typography align="center" variant="body2" color="textSecondary">{t('logIndex')}</Typography>
+            <Typography align="center" variant="h6" color="textPrimary">
+              {event.logIndex}
+            </Typography>
+            <Typography align="center" variant="body2" color="textSecondary">
+              {t("logIndex")}
+            </Typography>
           </Grid2>
         </Grid2>
         <Grid2 container justifyContent="space-evenly">
           <Grid2>
-            <Hash title={t('transactionHash')} hash={event.transactionHash} />
-            <Typography align="center" variant="body2" color="textSecondary">{t('transactionHash')}</Typography>
+            <Hash title={t("transactionHash")} hash={event.transactionHash} />
+            <Typography align="center" variant="body2" color="textSecondary">
+              {t("transactionHash")}
+            </Typography>
           </Grid2>
           <Grid2>
-            <Hash title={t('signature')} hash={event.signature} />
-            <Typography align="center" variant="body2" color="textSecondary">{t('signature')}</Typography>
+            <Hash title={t("signature")} hash={event.signature} />
+            <Typography align="center" variant="body2" color="textSecondary">
+              {t("signature")}
+            </Typography>
           </Grid2>
         </Grid2>
       </Grid2>
     </Box>
   );
-
 };

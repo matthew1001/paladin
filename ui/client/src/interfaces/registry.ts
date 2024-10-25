@@ -14,51 +14,36 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-export interface ITransaction {
-  hash: string;
-  blockNumber: number;
-  transactionIndex: number;
-  from: string;
-  nonce: number;
-  contractAddress?: string;
-  result: string;
-}
-
-export interface IEvent {
+export interface IOnChainLocation {
   blockNumber: number;
   transactionIndex: number;
   logIndex: number;
-  transactionHash: string;
-  signature: string;
+}
+
+export interface IActiveFlag {
+  active: boolean;
 }
 
 export interface IRegistryEntry {
   registry: string;
   id: string;
   name: string;
-  active: boolean;
-  properties: {
-    [key: string]: string;
-  };
+  parentId?: string;
+  onChainLocation?: IOnChainLocation;
+  active?: IActiveFlag;
 }
 
-export interface IPaladinTransaction {
-  id: string;
-  created: string;
-  type: string;
-  domain: string;
-  function: string;
-  to?: string;
-  from: string;
-  abiReference: string;
-  data: {
-    [key: string]: string;
-  };
+export type ActiveFilter = "active" | "inactive" | "any";
+
+export interface IRegistryEntryWithProperties extends IRegistryEntry {
+  properties: Record<string, string>;
 }
 
-export interface ITransactionReceipt {
-  blockNumber: number;
-  id: string;
-  success: boolean;
-  transactionHash: string;
+export interface IRegistryProperty {
+  registry: string;
+  entryId: string;
+  name: string;
+  value: string;
+  onChainLocation?: IOnChainLocation;
+  activeFlag?: IActiveFlag;
 }
