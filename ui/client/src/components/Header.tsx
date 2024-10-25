@@ -30,6 +30,7 @@ import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 import Brightness4Icon from "@mui/icons-material/Brightness4";
 import { ApplicationContext } from "../contexts/ApplicationContext";
+import { AppLinks } from "@/navigation/AppLinks";
 
 export const Header: React.FC = () => {
   const { colorMode } = useContext(ApplicationContext);
@@ -38,11 +39,11 @@ export const Header: React.FC = () => {
   const pathname = useLocation().pathname.toLowerCase();
 
   const getTabFromPath = (path: string) => {
-    if (path.startsWith("/indexer")) {
+    if (path.startsWith(AppLinks.Indexers)) {
       return 0;
-    } else if (path.startsWith("/submissions")) {
+    } else if (path.startsWith(AppLinks.Submissions)) {
       return 1;
-    } else if (path.startsWith("/registries")) {
+    } else if (path.startsWith(AppLinks.Registries)) {
       return 2;
     }
     return 0;
@@ -54,13 +55,13 @@ export const Header: React.FC = () => {
     setTab(tab);
     switch (tab) {
       case 0:
-        navigate("/indexer");
+        navigate(AppLinks.Indexers);
         break;
       case 1:
-        navigate("/submissions");
+        navigate(AppLinks.Submissions);
         break;
       case 2:
-        navigate("/registries");
+        navigate(AppLinks.Registries);
         break;
     }
   };

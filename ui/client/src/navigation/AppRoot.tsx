@@ -14,7 +14,7 @@ const AppRoot = () => {
 
   useEffect(() => {
     if (location.pathname === "/") {
-      navigate(AppLinks.Home);
+      navigate(AppLinks.Indexers);
     }
   }, [location, navigate]);
 

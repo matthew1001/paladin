@@ -32,7 +32,7 @@ import { Config } from "./config";
 import { ApplicationContextProvider } from "./contexts/ApplicationContext";
 import { AppLinks } from "./navigation/AppLinks";
 import AppRoot from "./navigation/AppRoot";
-import { HomeRoute } from "./pages/Home/Routes";
+import { IndexersRoute } from "./pages/Indexers/Routes";
 import { RegistriesRoute } from "./pages/Registries/Routes";
 import { SubmissionsRoute } from "./pages/Submissions/Routes";
 import { darkThemeOptions, lightThemeOptions } from "./themes/default";
@@ -93,12 +93,12 @@ function App() {
       path: "/",
       element: <AppRoot />,
       children: [
-        HomeRoute,
+        IndexersRoute,
         RegistriesRoute,
         SubmissionsRoute,
         {
           path: "*",
-          element: <Navigate to={AppLinks.Home} />,
+          element: <Navigate to={AppLinks.Indexers} />,
         },
       ],
     },

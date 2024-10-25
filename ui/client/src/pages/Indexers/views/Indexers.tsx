@@ -18,7 +18,7 @@ import { Events } from "@/components/Events";
 import { Transactions } from "@/components/Transactions";
 import { Box, Fade, Grid2, Paper } from "@mui/material";
 
-export const Home: React.FC = () => {
+export const Indexers: React.FC = () => {
   return (
     <Fade timeout={800} in={true}>
       <Box
