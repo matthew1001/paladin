@@ -1,5 +1,5 @@
-export const constants = {
-  COLOR_MODE_STORAGE_KEY: 'color-mode',
+export const Config = {
+  COLOR_MODE_STORAGE_KEY: "color-mode",
   EVENT_QUERY_LIMIT: 100,
   PENDING_TRANSACTIONS_QUERY_LIMIT: 100,
   REGISTRY_ENTRIES_QUERY_LIMIT: 100,

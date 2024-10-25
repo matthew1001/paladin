@@ -19,7 +19,7 @@ import { usePtxQueries } from "@/queries/ptx";
 import { Box, Typography } from "@mui/material";
 import { t } from "i18next";
 import { Transaction } from "./Transaction";
-import { constants } from "./config";
+import { Config } from "@/config";
 
 export const Transactions: React.FC = () => {
   const { useQueryIndexedTransactions } = useBidxQueries();
@@ -27,12 +27,12 @@ export const Transactions: React.FC = () => {
     usePtxQueries();
 
   const { data: transactions } = useQueryIndexedTransactions({
-    limit: constants.TRANSACTION_QUERY_LIMIT,
+    limit: Config.TRANSACTION_QUERY_LIMIT,
     sort: ["blockNumber DESC", "transactionIndex DESC"],
   });
 
   const { data: transactionReceipts } = useQueryTransactionReceipts({
-    limit: constants.TRANSACTION_QUERY_LIMIT,
+    limit: Config.TRANSACTION_QUERY_LIMIT,
     in: [
       {
         field: "transactionHash",
@@ -44,7 +44,7 @@ export const Transactions: React.FC = () => {
   });
 
   const { data: paladinTransactions } = useQueryTransactionsFull({
-    limit: constants.TRANSACTION_QUERY_LIMIT,
+    limit: Config.TRANSACTION_QUERY_LIMIT,
     in: [
       {
         field: "id",

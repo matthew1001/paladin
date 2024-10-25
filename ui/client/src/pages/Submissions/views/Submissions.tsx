@@ -14,8 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { constants } from "@/components/config";
 import { PendingTransaction } from "@/components/PaladinTransaction";
+import { Config } from "@/config";
 import { usePtxQueries } from "@/queries/ptx";
 import { Box, Fade, Paper, Tab, Tabs } from "@mui/material";
 import { t } from "i18next";
@@ -28,7 +28,7 @@ export const Submissions: React.FC = () => {
   const { data: pendingTransactions, isLoading } = useFetchSubmissions(
     tab === 0 ? "all" : "pending",
     {
-      limit: constants.PENDING_TRANSACTIONS_QUERY_LIMIT,
+      limit: Config.PENDING_TRANSACTIONS_QUERY_LIMIT,
       sort: ["created DESC"],
     }
   );

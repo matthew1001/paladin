@@ -20,7 +20,7 @@ import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import { Box, Grid2, TextField, Typography } from "@mui/material";
 import { t } from "i18next";
 import { Hash } from "./Hash";
-import { constants } from "./config";
+import { Config } from "@/config";
 
 type Props = {
   registryName: string;
@@ -30,7 +30,7 @@ export const Registry: React.FC<Props> = ({ registryName }) => {
   const { useQueryEntriesWithProps } = useRegQueries();
   const { data: registryEntries } = useQueryEntriesWithProps(
     registryName,
-    { limit: constants.REGISTRY_ENTRIES_QUERY_LIMIT },
+    { limit: Config.REGISTRY_ENTRIES_QUERY_LIMIT },
     "any"
   );
 

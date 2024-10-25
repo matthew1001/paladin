@@ -1,7 +1,7 @@
 import { useBidxQueries } from "@/queries/bidx";
 import { createContext } from "react";
 import { ErrorDialog } from "../dialogs/Error";
-import { constants } from "@/components/config";
+import { Config } from "@/config";
 import { useTransportQueries } from "@/queries/transport";
 
 interface IApplicationContext {
@@ -31,7 +31,7 @@ export const ApplicationContextProvider = ({ children, colorMode }: Props) => {
         limit: 1,
         sort: ["blockNumber DESC", "transactionIndex DESC"],
       },
-      constants.UPDATE_FREQUENCY_MILLISECONDS
+      Config.UPDATE_FREQUENCY_MILLISECONDS
     );
 
   return (

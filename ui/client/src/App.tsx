@@ -28,7 +28,7 @@ import {
   Navigate,
   RouterProvider,
 } from "react-router-dom";
-import { constants } from "./components/config";
+import { Config } from "./config";
 import { ApplicationContextProvider } from "./contexts/ApplicationContext";
 import { AppLinks } from "./navigation/AppLinks";
 import AppRoot from "./navigation/AppRoot";
@@ -61,9 +61,7 @@ function App() {
   }, []);
 
   const theme = useMemo(() => {
-    const modeFromStorage = localStorage.getItem(
-      constants.COLOR_MODE_STORAGE_KEY
-    );
+    const modeFromStorage = localStorage.getItem(Config.COLOR_MODE_STORAGE_KEY);
     if (modeFromStorage === null) {
       // If color mode not previously set
       return createTheme(
@@ -81,9 +79,9 @@ function App() {
     () => ({
       toggleColorMode: () => {
         const currentMode =
-          localStorage.getItem(constants.COLOR_MODE_STORAGE_KEY) ?? systemTheme;
+          localStorage.getItem(Config.COLOR_MODE_STORAGE_KEY) ?? systemTheme;
         const newMode = currentMode === "light" ? "dark" : "light";
-        localStorage.setItem(constants.COLOR_MODE_STORAGE_KEY, newMode);
+        localStorage.setItem(Config.COLOR_MODE_STORAGE_KEY, newMode);
         setStoredTheme(newMode);
       },
     }),

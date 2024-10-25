@@ -14,17 +14,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import { Config } from "@/config";
 import { useBidxQueries } from "@/queries/bidx";
 import { Box, Typography } from "@mui/material";
 import { t } from "i18next";
-import { constants } from "./config";
 import { Event } from "./Event";
 
 export const Events: React.FC = () => {
   const { useQueryIndexedEvents } = useBidxQueries();
 
   const { data: events } = useQueryIndexedEvents({
-    limit: constants.EVENT_QUERY_LIMIT,
+    limit: Config.EVENT_QUERY_LIMIT,
     sort: ["blockNumber DESC", "transactionIndex DESC", "logIndex DESC"],
   });
 
