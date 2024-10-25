@@ -22,15 +22,20 @@ import {
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import { Header } from "./components/Header";
-import { ApplicationContextProvider } from "./contexts/ApplicationContext";
-import { darkThemeOptions, lightThemeOptions } from "./themes/default";
-import { Indexer } from "./views/indexer";
-import { Registries } from "./views/Registries";
-import { Submissions } from "./views/Submissions";
 import { useEffect, useMemo, useState } from "react";
+import {
+  createBrowserRouter,
+  Navigate,
+  RouterProvider,
+} from "react-router-dom";
 import { constants } from "./components/config";
+import { ApplicationContextProvider } from "./contexts/ApplicationContext";
+import { AppLinks } from "./navigation/AppLinks";
+import AppRoot from "./navigation/AppRoot";
+import { HomeRoute } from "./pages/Home/Routes";
+import { RegistriesRoute } from "./pages/Registries/Routes";
+import { SubmissionsRoute } from "./pages/Submissions/Routes";
+import { darkThemeOptions, lightThemeOptions } from "./themes/default";
 
 const queryClient = new QueryClient({
   queryCache: new QueryCache({}),
@@ -38,36 +43,36 @@ const queryClient = new QueryClient({
 });
 
 function App() {
-
   const [systemTheme, setSystemTheme] = useState(
     window.matchMedia &&
-      window.matchMedia('(prefers-color-scheme: dark)').matches
-      ? 'dark'
-      : 'light'
+      window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light"
   );
 
   const [storedTheme, setStoredTheme] = useState<PaletteMode>();
 
   useEffect(() => {
     window
-      .matchMedia('(prefers-color-scheme: dark)')
-      .addEventListener('change', (event) => {
-        setSystemTheme(event.matches ? 'dark' : 'light');
+      .matchMedia("(prefers-color-scheme: dark)")
+      .addEventListener("change", (event) => {
+        setSystemTheme(event.matches ? "dark" : "light");
       });
   }, []);
 
-
   const theme = useMemo(() => {
-    const modeFromStorage = localStorage.getItem(constants.COLOR_MODE_STORAGE_KEY);
+    const modeFromStorage = localStorage.getItem(
+      constants.COLOR_MODE_STORAGE_KEY
+    );
     if (modeFromStorage === null) {
       // If color mode not previously set
       return createTheme(
-        systemTheme === 'dark' ? darkThemeOptions : lightThemeOptions
+        systemTheme === "dark" ? darkThemeOptions : lightThemeOptions
       );
     } else {
       // Create color mode based on local storage
       return createTheme(
-        modeFromStorage === 'dark' ? darkThemeOptions : lightThemeOptions
+        modeFromStorage === "dark" ? darkThemeOptions : lightThemeOptions
       );
     }
   }, [systemTheme, storedTheme]);
@@ -77,13 +82,29 @@ function App() {
       toggleColorMode: () => {
         const currentMode =
           localStorage.getItem(constants.COLOR_MODE_STORAGE_KEY) ?? systemTheme;
-        const newMode = currentMode === 'light' ? 'dark' : 'light';
+        const newMode = currentMode === "light" ? "dark" : "light";
         localStorage.setItem(constants.COLOR_MODE_STORAGE_KEY, newMode);
         setStoredTheme(newMode);
       },
     }),
     []
   );
+
+  const router = createBrowserRouter([
+    {
+      path: "/",
+      element: <AppRoot />,
+      children: [
+        HomeRoute,
+        RegistriesRoute,
+        SubmissionsRoute,
+        {
+          path: "*",
+          element: <Navigate to={AppLinks.Home} />,
+        },
+      ],
+    },
+  ]);
 
   return (
     <>
@@ -104,15 +125,7 @@ function App() {
                 backgroundAttachment: "fixed",
               }}
             />
-            <BrowserRouter>
-              <Header />
-              <Routes>
-                <Route path="/indexer" element={<Indexer />} />
-                <Route path="/submissions" element={<Submissions />} />\
-                <Route path="/registry" element={<Registries />} />
-                <Route path="*" element={<Navigate to="/indexer" replace />} />
-              </Routes>
-            </BrowserRouter>
+            <RouterProvider {...{ router }} />
           </ThemeProvider>
         </ApplicationContextProvider>
       </QueryClientProvider>

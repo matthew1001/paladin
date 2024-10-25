@@ -14,11 +14,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import { Events } from "@/components/Events";
+import { Transactions } from "@/components/Transactions";
 import { Box, Fade, Grid2, Paper } from "@mui/material";
-import { Transactions } from "../components/Transactions";
-import { Events } from "../components/Events";
 
-export const Indexer: React.FC = () => {
+export const Home: React.FC = () => {
   return (
     <Fade timeout={800} in={true}>
       <Box
