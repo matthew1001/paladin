@@ -24,6 +24,7 @@ import {
   Toolbar,
   Tooltip,
   Typography,
+  useTheme,
 } from "@mui/material";
 import { useContext, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -37,6 +38,7 @@ export const Header: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const pathname = useLocation().pathname.toLowerCase();
+  const theme = useTheme();
 
   const getTabFromPath = (path: string) => {
     if (path.startsWith(AppLinks.Indexers)) {
@@ -77,7 +79,12 @@ export const Header: React.FC = () => {
             size={{ xs: 12 }}
           >
             <Grid2>
-              <Typography variant="h6">{t("paladin")}</Typography>
+              <Typography
+                variant="h6"
+                color={theme.palette.mode === "dark" ? "primary" : "inherit"}
+              >
+                {t("paladin")}
+              </Typography>
             </Grid2>
             <Grid2>
               <Tabs

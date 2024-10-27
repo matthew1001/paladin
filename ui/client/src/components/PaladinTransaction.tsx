@@ -15,24 +15,47 @@
 // limitations under the License.
 
 import { IPaladinTransaction } from "@/interfaces/transactions";
-import { Box, ButtonBase, Grid2, TextField, Typography } from "@mui/material";
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import {
+  Box,
+  Button,
+  Collapse,
+  Grid2,
+  TextField,
+  Typography,
+} from "@mui/material";
+import daysjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
 import { t } from "i18next";
 import { useState } from "react";
-import { PaladinTransactionDialog } from "../dialogs/PaladinTransaction";
+import { ViewDetailsDialog } from "../dialogs/ViewDetails";
+import { EllapsedTime } from "./EllapsedTime";
 import { Hash } from "./Hash";
 import { Timestamp } from "./Timestamp";
+
+daysjs.extend(relativeTime);
 
 type Props = {
   paladinTransaction: IPaladinTransaction;
 };
 
 export const PendingTransaction: React.FC<Props> = ({ paladinTransaction }) => {
-  const [paladinTransactionDialogOpen, setPaladinTransactionDialogOpen] =
-    useState(false);
+  const [viewDetailsDialogOpen, setViewDetailsDialogOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   if (paladinTransaction === undefined) {
     return <></>;
   }
+
+  const formatProperty = (value: any) => {
+    try {
+      const parsed = JSON.stringify(value);
+      return parsed.substring(1, parsed.length - 1);
+    } catch (err) {}
+    return value;
+  };
 
   return (
     <>
@@ -48,11 +71,9 @@ export const PendingTransaction: React.FC<Props> = ({ paladinTransaction }) => {
         <Grid2 container direction="column" spacing={2}>
           <Grid2 container justifyContent="space-evenly">
             <Grid2>
-              <ButtonBase onClick={() => setPaladinTransactionDialogOpen(true)}>
-                <Typography align="center" variant="h6" color="primary">
-                  {t(paladinTransaction.type)}
-                </Typography>
-              </ButtonBase>
+              <Typography align="center" variant="h6">
+                {t(paladinTransaction.type)}
+              </Typography>
               <Typography align="center" variant="body2" color="textSecondary">
                 {t("type")}
               </Typography>
@@ -71,7 +92,7 @@ export const PendingTransaction: React.FC<Props> = ({ paladinTransaction }) => {
             </Grid2>
             <Grid2>
               <Typography align="center" variant="h6" color="textPrimary">
-                {paladinTransaction.domain}
+                {paladinTransaction.domain ?? "--"}
               </Typography>
               <Typography align="center" variant="body2" color="textSecondary">
                 {t("domain")}
@@ -93,27 +114,61 @@ export const PendingTransaction: React.FC<Props> = ({ paladinTransaction }) => {
                 {t("type")}
               </Typography>
             </Grid2>
-            {Object.keys(paladinTransaction.data)
-              .filter((property) => property !== "$owner")
-              .map((property) => (
-                <TextField
-                  key={property}
-                  label={property}
-                  disabled
-                  maxRows={8}
-                  multiline
-                  fullWidth
+          </Grid2>
+          <Grid2>
+            <Box
+              sx={{
+                display: "flex",
+                padding: "4px",
+                justifyContent: "space-between",
+              }}
+            >
+              <EllapsedTime timestamp={paladinTransaction?.created} />
+              <Box>
+                <Button
                   size="small"
-                  value={JSON.stringify(paladinTransaction.data[property])}
-                />
-              ))}
+                  startIcon={<VisibilityIcon />}
+                  sx={{ marginRight: "40px" }}
+                  onClick={() => setViewDetailsDialogOpen(true)}
+                >
+                  {t("viewDetails")}
+                </Button>
+                <Button
+                  size="small"
+                  endIcon={isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                  onClick={() => setIsExpanded(!isExpanded)}
+                >
+                  {t(isExpanded ? "hideProperties" : "showProperties")}
+                </Button>
+              </Box>
+            </Box>
+            <Collapse in={isExpanded}>
+              {Object.keys(paladinTransaction.data)
+                .filter((property) => property !== "$owner")
+                .map((property) => (
+                  <TextField
+                    key={property}
+                    label={property}
+                    maxRows={8}
+                    multiline
+                    fullWidth
+                    size="small"
+                    sx={{ marginTop: "12px" }}
+                    value={formatProperty(paladinTransaction.data[property])}
+                  />
+                ))}
+              {Object.keys(paladinTransaction.data).length === 0 && (
+                <Typography align="center">{t("noProperties")}</Typography>
+              )}
+            </Collapse>
           </Grid2>
         </Grid2>
       </Box>
-      <PaladinTransactionDialog
-        paladinTransaction={paladinTransaction}
-        dialogOpen={paladinTransactionDialogOpen}
-        setDialogOpen={setPaladinTransactionDialogOpen}
+      <ViewDetailsDialog
+        title={t("transaction")}
+        details={paladinTransaction}
+        dialogOpen={viewDetailsDialogOpen}
+        setDialogOpen={setViewDetailsDialogOpen}
       />
     </>
   );

@@ -21,10 +21,14 @@ import {
 } from "@/interfaces/transactions";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
-import { Box, ButtonBase, Grid2, Typography } from "@mui/material";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import { Box, Button, Grid2, Typography } from "@mui/material";
+import daysjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
 import { t } from "i18next";
 import { useState } from "react";
-import { PaladinTransactionDialog } from "../dialogs/PaladinTransaction";
+import { ViewDetailsDialog } from "../dialogs/ViewDetails";
+import { EllapsedTime } from "./EllapsedTime";
 import { Hash } from "./Hash";
 
 type Props = {
@@ -33,13 +37,13 @@ type Props = {
   paladinTransaction?: IPaladinTransaction;
 };
 
+daysjs.extend(relativeTime);
+
 export const Transaction: React.FC<Props> = ({
   transaction,
-  transactionReceipt,
   paladinTransaction,
 }) => {
-  const [paladinTransactionDialogOpen, setPaladinTransactionDialogOpen] =
-    useState(false);
+  const [viewDetailsDialogOpen, setViewDetailsDialogOpen] = useState(false);
 
   return (
     <>
@@ -56,21 +60,21 @@ export const Transaction: React.FC<Props> = ({
         {paladinTransaction !== undefined && (
           <img
             src="/paladin-icon-light.svg"
-            width="45"
-            style={{ position: "absolute", left: "4px", bottom: "0px" }}
+            width="38"
+            style={{
+              position: "absolute",
+              left: "calc(50% - 19px)",
+              bottom: "0px",
+            }}
           />
         )}
         <Grid2 container direction="column" spacing={2}>
           <Grid2 container justifyContent="space-evenly">
             {paladinTransaction !== undefined && (
               <Grid2>
-                <ButtonBase
-                  onClick={() => setPaladinTransactionDialogOpen(true)}
-                >
-                  <Typography align="center" variant="h6" color="primary">
-                    {t(paladinTransaction.type)}
-                  </Typography>
-                </ButtonBase>
+                <Typography align="center" variant="h6" color="textPrimary">
+                  {t(paladinTransaction.type)}
+                </Typography>
                 <Typography
                   align="center"
                   variant="body2"
@@ -144,15 +148,32 @@ export const Transaction: React.FC<Props> = ({
               </Grid2>
             )}
           </Grid2>
+          <Grid2>
+            <Box
+              sx={{
+                display: "flex",
+                padding: "4px",
+                justifyContent: "space-between",
+              }}
+            >
+              <EllapsedTime timestamp={transaction.block.timestamp} />
+              <Button
+                size="small"
+                startIcon={<VisibilityIcon />}
+                onClick={() => setViewDetailsDialogOpen(true)}
+              >
+                {t("viewDetails")}
+              </Button>
+            </Box>
+          </Grid2>
         </Grid2>
       </Box>
-      {transactionReceipt !== undefined && paladinTransaction !== undefined && (
-        <PaladinTransactionDialog
-          paladinTransaction={paladinTransaction}
-          dialogOpen={paladinTransactionDialogOpen}
-          setDialogOpen={setPaladinTransactionDialogOpen}
-        />
-      )}
+      <ViewDetailsDialog
+        title={t("transaction")}
+        details={paladinTransaction ?? transaction}
+        dialogOpen={viewDetailsDialogOpen}
+        setDialogOpen={setViewDetailsDialogOpen}
+      />
     </>
   );
 };

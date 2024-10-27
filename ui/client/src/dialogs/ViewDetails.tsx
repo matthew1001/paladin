@@ -14,7 +14,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { IPaladinTransaction } from "@/interfaces/transactions";
 import {
   Button,
   Dialog,
@@ -27,13 +26,15 @@ import { useTranslation } from "react-i18next";
 import JSONPretty from "react-json-pretty";
 
 type Props = {
-  paladinTransaction: IPaladinTransaction;
+  title: string;
+  details: object;
   dialogOpen: boolean;
   setDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
-export const PaladinTransactionDialog: React.FC<Props> = ({
-  paladinTransaction,
+export const ViewDetailsDialog: React.FC<Props> = ({
+  title,
+  details,
   dialogOpen,
   setDialogOpen,
 }) => {
@@ -63,11 +64,11 @@ export const PaladinTransactionDialog: React.FC<Props> = ({
       open={dialogOpen}
       maxWidth="lg"
     >
-      <DialogTitle sx={{ textAlign: "center" }}>{t("transaction")}</DialogTitle>
+      <DialogTitle sx={{ textAlign: "center" }}>{title}</DialogTitle>
       <DialogContent>
         <JSONPretty
           style={{ fontSize: "14px" }}
-          data={paladinTransaction}
+          data={details}
           theme={colors}
         />
       </DialogContent>

@@ -17,7 +17,7 @@
 import { PendingTransaction } from "@/components/PaladinTransaction";
 import { Config } from "@/config";
 import { usePtxQueries } from "@/queries/ptx";
-import { Box, Fade, Paper, Tab, Tabs } from "@mui/material";
+import { Box, Fade, Paper, Tab, Tabs, Typography } from "@mui/material";
 import { t } from "i18next";
 import { useState } from "react";
 
@@ -70,7 +70,7 @@ export const Submissions: React.FC = () => {
             sx={{
               padding: "20px",
               overflow: "scroll",
-              height: "calc(100vh - 162px)",
+              height: "calc(100vh - 178px)",
             }}
           >
             {pendingTransactions?.map((pendingTransaction) => (
@@ -79,6 +79,15 @@ export const Submissions: React.FC = () => {
                 paladinTransaction={pendingTransaction}
               />
             ))}
+            {pendingTransactions?.length === 0 && (
+              <Typography
+                align="center"
+                variant="h6"
+                sx={{ marginTop: "20px" }}
+              >
+                {t("noPendingTransactions")}
+              </Typography>
+            )}
           </Box>
         </Paper>
       </Box>
