@@ -16,6 +16,7 @@
 package signerapi
 
 import (
+	"github.com/hyperledger/firefly-signer/pkg/eip712"
 	"github.com/hyperledger/firefly-signer/pkg/ethsigner"
 	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
 )
@@ -60,6 +61,9 @@ type SignRequest struct {
 
 	// the original transaction data to be signed
 	Transaction *TransactionPayload `json:"transaction,omitempty"`
+
+	// the original typed structured data to be signed
+	TypedData *eip712.TypedData `json:"typedData,omitempty"`
 }
 
 type TransactionPayload struct {

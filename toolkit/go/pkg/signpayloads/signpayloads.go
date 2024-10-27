@@ -32,3 +32,12 @@ const OPAQUE_TO_RSV = "opaque:rsv"
 // according to the Bitcoin/Eth standard of 27+recid (27 or 28)
 // denoting an uncompressed public key.
 const ETH_TXN_TO_RSV = "eth_txn:rsv"
+
+// Input:
+// Additionally to the opaque payload, the underlying the eip-712
+// typed structured data is included in the input to the signing module.
+// Output:
+// A compact 65 byte encoded R,S,V byte string (R=32b, S=32b, V=1b) with the V value
+// according to the Bitcoin/Eth standard of 27+recid (27 or 28)
+// denoting an uncompressed public key.
+const TYPED_EIP_712_TO_RSV = "typed_eip_712:rsv"
