@@ -127,6 +127,7 @@ export const useRegQueries = (QueryKey = "reg") => {
         RegQueries.queryEntries(registryName, query, activeFilter).then(
           (registries) => registries.sort((a, b) => (a.name < b.name ? -1 : 0))
         ),
+      enabled: !!registryName,
     });
   };
 
@@ -145,6 +146,7 @@ export const useRegQueries = (QueryKey = "reg") => {
       ],
       queryFn: () =>
         RegQueries.queryEntriesWithProps(registryName, query, activeFilter),
+      enabled: !!registryName,
     });
   };
 
@@ -163,6 +165,7 @@ export const useRegQueries = (QueryKey = "reg") => {
       ],
       queryFn: () =>
         RegQueries.getEntryProperties(registryName, entryID, activeFilter),
+      enabled: !!registryName && !!entryID,
     });
   };
 

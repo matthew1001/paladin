@@ -14,15 +14,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { Box, CssBaseline } from "@mui/material";
-import { createTheme, PaletteMode, ThemeProvider } from "@mui/material/styles";
 import {
   MutationCache,
   QueryCache,
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
 import {
   createBrowserRouter,
   Navigate,
@@ -30,12 +27,13 @@ import {
 } from "react-router-dom";
 import { Config } from "./config";
 import { ApplicationContextProvider } from "./contexts/ApplicationContext";
+import { ThemeContextProvider } from "./contexts/ThemeContext";
 import { AppLinks } from "./navigation/AppLinks";
 import AppRoot from "./navigation/AppRoot";
 import { IndexersRoute } from "./pages/Indexers/Routes";
+import { QueryBuilderRoute } from "./pages/Queries/Routes";
 import { RegistriesRoute } from "./pages/Registries/Routes";
 import { SubmissionsRoute } from "./pages/Submissions/Routes";
-import { darkThemeOptions, lightThemeOptions } from "./themes/default";
 
 const queryClient = new QueryClient({
   queryCache: new QueryCache({}),
@@ -43,51 +41,6 @@ const queryClient = new QueryClient({
 });
 
 function App() {
-  const [systemTheme, setSystemTheme] = useState(
-    window.matchMedia &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light"
-  );
-
-  const [storedTheme, setStoredTheme] = useState<PaletteMode>();
-
-  useEffect(() => {
-    window
-      .matchMedia("(prefers-color-scheme: dark)")
-      .addEventListener("change", (event) => {
-        setSystemTheme(event.matches ? "dark" : "light");
-      });
-  }, []);
-
-  const theme = useMemo(() => {
-    const modeFromStorage = localStorage.getItem(Config.COLOR_MODE_STORAGE_KEY);
-    if (modeFromStorage === null) {
-      // If color mode not previously set
-      return createTheme(
-        systemTheme === "dark" ? darkThemeOptions : lightThemeOptions
-      );
-    } else {
-      // Create color mode based on local storage
-      return createTheme(
-        modeFromStorage === "dark" ? darkThemeOptions : lightThemeOptions
-      );
-    }
-  }, [systemTheme, storedTheme]);
-
-  const colorMode = useMemo(
-    () => ({
-      toggleColorMode: () => {
-        const currentMode =
-          localStorage.getItem(Config.COLOR_MODE_STORAGE_KEY) ?? systemTheme;
-        const newMode = currentMode === "light" ? "dark" : "light";
-        localStorage.setItem(Config.COLOR_MODE_STORAGE_KEY, newMode);
-        setStoredTheme(newMode);
-      },
-    }),
-    []
-  );
-
   const router = createBrowserRouter([
     {
       path: "/",
@@ -96,6 +49,7 @@ function App() {
         IndexersRoute,
         RegistriesRoute,
         SubmissionsRoute,
+        QueryBuilderRoute,
         {
           path: "*",
           element: <Navigate to={AppLinks.Indexers} />,
@@ -107,25 +61,14 @@ function App() {
   return (
     <>
       <QueryClientProvider client={queryClient}>
-        <ApplicationContextProvider colorMode={colorMode}>
-          <ThemeProvider theme={theme}>
-            <CssBaseline />
-            <Box
-              sx={{
-                position: "fixed",
-                height: "100vh",
-                width: "100vw",
-                zIndex: -1,
-                backgroundImage: 'url("paladin-icon-light.svg")',
-                backgroundRepeat: "no-repeat",
-                backgroundSize: "88vh",
-                backgroundPosition: "center bottom",
-                backgroundAttachment: "fixed",
-              }}
-            />
+        <ThemeContextProvider
+          defaultTheme="light"
+          storageKey={Config.COLOR_MODE_STORAGE_KEY}
+        >
+          <ApplicationContextProvider>
             <RouterProvider {...{ router }} />
-          </ThemeProvider>
-        </ApplicationContextProvider>
+          </ApplicationContextProvider>
+        </ThemeContextProvider>
       </QueryClientProvider>
     </>
   );

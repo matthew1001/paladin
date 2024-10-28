@@ -14,56 +14,80 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import { RegistryDetails } from "@/components/Accordions/RegistryDetails";
+import { RegistryCard } from "@/components/Cards/RegistryCard";
+import PageLayout from "@/components/Layouts/PageLayout";
 import { Registry } from "@/components/Registry";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { IRegistryEntryWithProperties } from "@/interfaces/registry";
 import { useRegQueries } from "@/queries/reg";
-import { Box, Fade, Paper, Typography } from "@mui/material";
-import { t } from "i18next";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 export const Registries: React.FC = () => {
+  const { t } = useTranslation();
+  const [selectedRegistry, setSelectedRegistry] = useState<
+    IRegistryEntryWithProperties | undefined
+  >(undefined);
+
   const { useListRegistries } = useRegQueries();
   const { data: registries, isLoading: loadingRegistries } =
     useListRegistries();
 
-  if (loadingRegistries) {
-    return <></>;
-  }
-
   return (
-    <Fade timeout={800} in={true}>
-      <Box
-        sx={{
-          padding: "20px",
-          maxWidth: "1200px",
-          marginLeft: "auto",
-          marginRight: "auto",
-        }}
-      >
-        <Paper
-          sx={{
-            padding: "10px",
-            paddingTop: "12px",
-            backgroundColor: (theme) =>
-              theme.palette.mode === "light"
-                ? "rgba(255, 255, 255, .65)"
-                : "rgba(60, 60, 60, .65)",
-          }}
-        >
-          <Typography align="center" sx={{ fontSize: "24px", fontWeight: 500 }}>
-            {t("entries")}
-          </Typography>
-          <Box
-            sx={{
-              padding: "20px",
-              overflow: "scroll",
-              height: "calc(100vh - 162px)",
-            }}
-          >
-            {registries?.map((registry) => (
-              <Registry key={registry} registryName={registry} />
-            ))}
-          </Box>
-        </Paper>
-      </Box>
-    </Fade>
+    <PageLayout breadcrumbs={[{ title: t("registries") }]} noPadding>
+      <div className="grid grid-cols-3">
+        <div className="border-r col-span-1">
+          <ScrollArea className=" h-[calc(100vh-64px)] ">
+            <div className="flex flex-col">
+              {loadingRegistries &&
+                Array.from(Array(10)).map((_, idx) => {
+                  return (
+                    <Registry
+                      key={`registry-loader-${idx}`}
+                      registryName={""}
+                      isLoading={loadingRegistries}
+                      onClick={() => {}}
+                    />
+                  );
+                })}
+              {registries?.map((registry) => (
+                <Registry
+                  key={registry}
+                  registryName={registry}
+                  isLoading={loadingRegistries}
+                  onClick={(registry) => {
+                    setSelectedRegistry(registry);
+                  }}
+                />
+              ))}
+              {!loadingRegistries && registries?.length === 0 && (
+                <div className="p-10 flex justify-center items-center">
+                  <p className="text-muted-foreground">{t("noRegistries")}</p>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </div>
+        {selectedRegistry && (
+          <div className="p-4 space-y-4 h-[calc(100vh-64px-64px)] w-full col-span-2">
+            <div className="space-y-4">
+              <RegistryCard
+                registryEntry={selectedRegistry}
+                isLoading={false}
+              />
+              <RegistryDetails
+                mode="properties"
+                registryEntry={selectedRegistry}
+              />
+              <RegistryDetails
+                mode="details"
+                registryEntry={selectedRegistry}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    </PageLayout>
   );
 };

@@ -31,25 +31,6 @@ export interface ITransaction {
   block: IBlock;
 }
 
-export interface IEvent {
-  blockNumber: number;
-  transactionIndex: number;
-  logIndex: number;
-  transactionHash: string;
-  signature: string;
-  block: IBlock;
-}
-
-export interface IRegistryEntry {
-  registry: string;
-  id: string;
-  name: string;
-  active: boolean;
-  properties: {
-    [key: string]: string;
-  };
-}
-
 export interface IPaladinTransaction {
   id: string;
   created: string;

@@ -14,36 +14,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { ThemeOptions } from '@mui/material';
+import PageLayout from "@/components/Layouts/PageLayout";
+import { useTranslation } from "react-i18next";
 
-export const darkThemeOptions: ThemeOptions = {
+export const QueryBuilder: React.FC = () => {
+  const { t } = useTranslation();
 
-  palette: {
-    mode: 'dark',
-    primary: {
-      main: '#20dfdf',
-      dark: '#6D6D6D'
-    },
-    background: {
-      default: 'black',
-      paper: 'black',
-    }
-  }
-
-};
-
-export const lightThemeOptions: ThemeOptions = {
-
-  palette: {
-    mode: 'light',
-    primary: {
-      main: '#107070',
-      dark: '#6D6D6D'
-    },
-    background: {
-      default: '#F0F0F0',
-      paper: '#FFFFFF',
-    }
-  }
-
+  return (
+    <PageLayout breadcrumbs={[{ title: t("queryBuilder") }]}>
+      <div className="grid grid-cols-2 gap-4"></div>
+    </PageLayout>
+  );
 };

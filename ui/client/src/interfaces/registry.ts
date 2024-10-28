@@ -28,9 +28,10 @@ export interface IRegistryEntry {
   registry: string;
   id: string;
   name: string;
-  parentId?: string;
-  onChainLocation?: IOnChainLocation;
-  active?: IActiveFlag;
+  blockNumber: number;
+  transactionIndex: number;
+  logIndex: number;
+  active: boolean;
 }
 
 export type ActiveFilter = "active" | "inactive" | "any";

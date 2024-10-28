@@ -1,4 +1,5 @@
-import { Header } from "@/components/Header";
+import { AppSidebar } from "@/components/Navigation/AppSidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { useEffect } from "react";
 import {
   Outlet,
@@ -21,8 +22,10 @@ const AppRoot = () => {
   return (
     <div>
       <ScrollRestoration />
-      <Header />
-      <Outlet />
+      <SidebarProvider>
+        <AppSidebar />
+        <Outlet />
+      </SidebarProvider>
     </div>
   );
 };

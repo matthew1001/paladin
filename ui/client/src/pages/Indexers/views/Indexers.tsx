@@ -14,52 +14,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { Events } from "@/components/Events";
-import { Transactions } from "@/components/Transactions";
-import { Box, Fade, Grid2, Paper } from "@mui/material";
+import { RecentEvents } from "@/components/Cards/RecentEvents";
+import { RecentTransactions } from "@/components/Cards/RecentTransactions";
+import PageLayout from "@/components/Layouts/PageLayout";
+import { useTranslation } from "react-i18next";
 
 export const Indexers: React.FC = () => {
+  const { t } = useTranslation();
+
   return (
-    <Fade timeout={800} in={true}>
-      <Box
-        sx={{
-          padding: "20px",
-          maxWidth: "1200px",
-          marginLeft: "auto",
-          marginRight: "auto",
-        }}
-      >
-        <Grid2 container spacing={2}>
-          <Grid2 size={{ md: 6, sm: 12, xs: 12 }}>
-            <Paper
-              sx={{
-                padding: "10px",
-                paddingTop: "12px",
-                backgroundColor: (theme) =>
-                  theme.palette.mode === "light"
-                    ? "rgba(255, 255, 255, .65)"
-                    : "rgba(60, 60, 60, .65)",
-              }}
-            >
-              <Transactions />
-            </Paper>
-          </Grid2>
-          <Grid2 size={{ md: 6, sm: 12, xs: 12 }}>
-            <Paper
-              sx={{
-                padding: "10px",
-                paddingTop: "12px",
-                backgroundColor: (theme) =>
-                  theme.palette.mode === "light"
-                    ? "rgba(255, 255, 255, .65)"
-                    : "rgba(60, 60, 60, .65)",
-              }}
-            >
-              <Events />
-            </Paper>
-          </Grid2>
-        </Grid2>
-      </Box>
-    </Fade>
+    <PageLayout breadcrumbs={[{ title: t("indexers") }]}>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <RecentTransactions />
+        </div>
+        <div>
+          <RecentEvents />
+        </div>
+      </div>
+    </PageLayout>
   );
 };

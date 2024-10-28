@@ -14,83 +14,126 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { PendingTransaction } from "@/components/PaladinTransaction";
+import { SubmissionDetails } from "@/components/Accordions/SubmissionDetails";
+import { SubmissionCard } from "@/components/Cards/SubmissionCard";
+import PageLayout from "@/components/Layouts/PageLayout";
+import { PaladinTransactionListItem } from "@/components/Lists/PaladinTransactionListItem";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Config } from "@/config";
+import { IPaladinTransaction } from "@/interfaces/transactions";
 import { usePtxQueries } from "@/queries/ptx";
-import { Box, Fade, Paper, Tab, Tabs, Typography } from "@mui/material";
-import { t } from "i18next";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 
 export const Submissions: React.FC = () => {
-  const [tab, setTab] = useState(0);
-  const { useFetchSubmissions } = usePtxQueries();
+  const { t } = useTranslation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentTab = (searchParams.get("tab") as "all" | "pending") || "all";
+  const [selectedSubmission, setSelectedSubmission] = useState<
+    IPaladinTransaction | undefined
+  >(undefined);
 
-  const { data: pendingTransactions, isLoading } = useFetchSubmissions(
-    tab === 0 ? "all" : "pending",
-    {
+  const { useFetchSubmissions } = usePtxQueries();
+  const { data: transactions, isLoading: isLoadingTransactions } =
+    useFetchSubmissions(currentTab === "pending" ? "pending" : "all", {
       limit: Config.PENDING_TRANSACTIONS_QUERY_LIMIT,
       sort: ["created DESC"],
-    }
-  );
+    });
 
-  if (isLoading) {
-    return <></>;
-  }
+  useEffect(() => {
+    let submissionId = searchParams.get("submissionId");
+    if (submissionId === null) {
+      submissionId = transactions?.[0]?.id ?? null;
+    }
+    const submission = transactions?.find((tx) => tx.id === submissionId);
+    setSelectedSubmission(submission);
+  }, [searchParams, transactions]);
 
   return (
-    <Fade timeout={800} in={true}>
-      <Box
-        sx={{
-          padding: "20px",
-          maxWidth: "1200px",
-          marginLeft: "auto",
-          marginRight: "auto",
-        }}
-      >
-        <Paper
-          sx={{
-            padding: "10px",
-            paddingTop: "12px",
-            backgroundColor: (theme) =>
-              theme.palette.mode === "light"
-                ? "rgba(255, 255, 255, .65)"
-                : "rgba(60, 60, 60, .65)",
-          }}
-        >
-          <Tabs
-            value={tab}
-            onChange={(_event, value) => setTab(value)}
-            centered
-          >
-            <Tab label={t("all")} />
-            <Tab label={t("pending")} />
-          </Tabs>
-
-          <Box
-            sx={{
-              padding: "20px",
-              overflow: "scroll",
-              height: "calc(100vh - 178px)",
-            }}
-          >
-            {pendingTransactions?.map((pendingTransaction) => (
-              <PendingTransaction
-                key={pendingTransaction.id}
-                paladinTransaction={pendingTransaction}
+    <PageLayout breadcrumbs={[{ title: t("submissions") }]} noPadding>
+      <div className="grid grid-cols-3">
+        <div className="border-r col-span-1">
+          <div className="p-2 border-b border-border">
+            <Tabs
+              className="w-full border rounded"
+              defaultValue="all"
+              value={currentTab}
+              onValueChange={(value) => {
+                setSearchParams(
+                  (prev) => {
+                    prev.set("tab", value);
+                    return prev;
+                  },
+                  { replace: true }
+                );
+              }}
+            >
+              <TabsList className="w-full">
+                <TabsTrigger className="w-1/2" value="all">
+                  {t("all")}
+                </TabsTrigger>
+                <TabsTrigger className="w-1/2" value="pending">
+                  {t("pending")}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+          <ScrollArea className=" h-[calc(100vh-64px-55px)] ">
+            <div className="flex flex-col">
+              {isLoadingTransactions &&
+                Array.from(Array(10)).map((_, idx) => {
+                  return (
+                    <PaladinTransactionListItem
+                      key={`pending-tx-loader-${idx}`}
+                      paladinTransaction={undefined}
+                      isLoading={isLoadingTransactions}
+                      onClick={() => {}}
+                      isSelected={false}
+                    />
+                  );
+                })}
+              {transactions?.map((transaction) => (
+                <PaladinTransactionListItem
+                  key={transaction.id}
+                  paladinTransaction={transaction}
+                  isLoading={isLoadingTransactions}
+                  onClick={() =>
+                    setSearchParams({ submissionId: transaction.id })
+                  }
+                  isSelected={selectedSubmission?.id === transaction.id}
+                />
+              ))}
+              {!isLoadingTransactions && transactions?.length === 0 && (
+                <div className="p-10 flex justify-center items-center">
+                  <p className="text-muted-foreground">
+                    {t("noPendingSubmissions")}
+                  </p>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </div>
+        {selectedSubmission && (
+          <div className="p-4 space-y-4 h-[calc(100vh-64px-64px)] w-full col-span-2">
+            <div className="space-y-4">
+              <SubmissionCard
+                paladinTransaction={selectedSubmission}
+                isLoading={isLoadingTransactions}
               />
-            ))}
-            {pendingTransactions?.length === 0 && (
-              <Typography
-                align="center"
-                variant="h6"
-                sx={{ marginTop: "20px" }}
-              >
-                {t("noPendingTransactions")}
-              </Typography>
-            )}
-          </Box>
-        </Paper>
-      </Box>
-    </Fade>
+              <SubmissionDetails
+                mode="properties"
+                paladinTransaction={selectedSubmission}
+              />
+              <SubmissionDetails
+                mode="details"
+                paladinTransaction={selectedSubmission}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    </PageLayout>
   );
 };

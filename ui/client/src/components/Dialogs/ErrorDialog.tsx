@@ -14,26 +14,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { ButtonBase, Typography } from "@mui/material";
-import { useState } from "react";
-import { HashDialog } from "../dialogs/Hash";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useTranslation } from "react-i18next";
 
 type Props = {
-  title: string
-  hash: string
-}
+  message: string;
+  dialogOpen: boolean;
+};
 
-export const Hash: React.FC<Props> = ({ title, hash }) => {
-
-  const [hashDialogOpen, setHashDialogOpen] = useState(false);
+export const ErrorDialog: React.FC<Props> = ({ message, dialogOpen }) => {
+  const { t } = useTranslation();
 
   return (
-    <>
-      <ButtonBase onClick={() => setHashDialogOpen(true)}>
-        <Typography variant="h6" color="primary">{`${hash.substring(0, 5)}...${hash.substring(hash.length - 3)}`}</Typography>
-      </ButtonBase>
-      <HashDialog dialogOpen={hashDialogOpen} setDialogOpen={setHashDialogOpen} title={title} hash={hash} />
-    </>
+    <Dialog open={dialogOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t("errorConnectingToPaladinNode")}</DialogTitle>
+          <DialogDescription>{message}</DialogDescription>
+        </DialogHeader>
+      </DialogContent>
+    </Dialog>
   );
-
 };

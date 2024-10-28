@@ -1,30 +1,24 @@
-import { useBidxQueries } from "@/queries/bidx";
-import { createContext } from "react";
-import { ErrorDialog } from "../dialogs/Error";
 import { Config } from "@/config";
+import { useBidxQueries } from "@/queries/bidx";
 import { useTransportQueries } from "@/queries/transport";
+import { createContext } from "react";
+import { ErrorDialog } from "../components/Dialogs/ErrorDialog";
 
 interface IApplicationContext {
-  colorMode: {
-    toggleColorMode: () => void;
-  };
   lastBlockWithTransactions: number;
+  nodeName: string;
 }
 
 export const ApplicationContext = createContext({} as IApplicationContext);
 
 interface Props {
-  colorMode: {
-    toggleColorMode: () => void;
-  };
   children: JSX.Element;
 }
 
-export const ApplicationContextProvider = ({ children, colorMode }: Props) => {
+export const ApplicationContextProvider = ({ children }: Props) => {
   const { useQueryIndexedTransactions } = useBidxQueries();
   const { useNodeName } = useTransportQueries();
   const { data: nodeName } = useNodeName();
-  console.log(nodeName);
   const { data: lastBlockWithTransactions, error } =
     useQueryIndexedTransactions(
       {
@@ -41,7 +35,7 @@ export const ApplicationContextProvider = ({ children, colorMode }: Props) => {
           lastBlockWithTransactions && lastBlockWithTransactions.length > 0
             ? lastBlockWithTransactions[0].blockNumber
             : 0,
-        colorMode,
+        nodeName: nodeName ?? "",
       }}
     >
       {children}

@@ -15,30 +15,58 @@
 // limitations under the License.
 
 import { Config } from "@/config";
+import { IRegistryEntryWithProperties } from "@/interfaces/registry";
 import { useRegQueries } from "@/queries/reg";
-import { Box } from "@mui/material";
-import { RegistryEntry } from "./RegistryEntry";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { RegistryListItem } from "./Lists/RegistryListItem";
 
 type Props = {
   registryName: string;
+  isLoading?: boolean;
+  onClick: (registry: IRegistryEntryWithProperties) => void;
 };
 
-export const Registry: React.FC<Props> = ({ registryName }) => {
-  const { useQueryEntries } = useRegQueries();
+export const Registry: React.FC<Props> = ({
+  registryName,
+  isLoading,
+  onClick,
+}) => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [selectedRegistry, setSelectedRegistry] = useState<string | undefined>(
+    undefined
+  );
 
-  const { data: registryEntries } = useQueryEntries(
+  const { useQueryEntriesWithProps } = useRegQueries();
+
+  const { data: registryEntries } = useQueryEntriesWithProps(
     registryName,
     { limit: Config.REGISTRY_ENTRIES_QUERY_LIMIT },
     "any"
   );
 
+  useEffect(() => {
+    const registryName = searchParams.get("registryName");
+    const registry = registryEntries?.find((reg) => reg.name === registryName);
+    setSelectedRegistry(registry?.name);
+  }, [searchParams, registryEntries]);
+
   return (
-    <Box>
+    <div>
       {registryEntries
         ?.filter((registryEntry) => registryEntry.name !== "root")
         .map((registryEntry) => (
-          <RegistryEntry key={registryEntry.id} registryEntry={registryEntry} />
+          <RegistryListItem
+            key={registryEntry.id}
+            registryEntry={registryEntry}
+            isLoading={isLoading}
+            onClick={() => {
+              setSearchParams({ registryName: registryEntry.name });
+              onClick(registryEntry);
+            }}
+            isSelected={selectedRegistry === registryEntry.name}
+          />
         ))}
-    </Box>
+    </div>
   );
 };
