@@ -17,16 +17,21 @@ package signer
 
 import (
 	"context"
+	"fmt"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/btcsuite/btcd/btcutil/hdkeychain"
 	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/hyperledger/firefly-common/pkg/i18n"
 	"github.com/hyperledger/firefly-signer/pkg/secp256k1"
 	"github.com/kaleido-io/paladin/config/pkg/confutil"
 	"github.com/kaleido-io/paladin/config/pkg/pldconf"
 	"github.com/kaleido-io/paladin/toolkit/pkg/algorithms"
 	"github.com/kaleido-io/paladin/toolkit/pkg/signerapi"
 	"github.com/kaleido-io/paladin/toolkit/pkg/signpayloads"
+	"github.com/kaleido-io/paladin/toolkit/pkg/tkmsgs"
 	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
 	"github.com/kaleido-io/paladin/toolkit/pkg/verifiers"
 	"github.com/stretchr/testify/assert"
@@ -337,4 +342,50 @@ func TestHDInitGenSeed(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, generatedSeed, 32)
 	assert.NotEqual(t, make([]byte, 32), generatedSeed) // not zero
+}
+
+func TestHDStuff(t *testing.T) {
+
+	seed, err := bip39.NewSeedWithErrorChecking("six arena boil plastic enjoy people boring roof tag stock virus lunch educate conduct embody dinner diagram shop spatial beach portion traffic someone various", "")
+	require.NoError(t, err)
+
+	hdKeyChain, err := hdkeychain.NewMaster(seed, &chaincfg.MainNetParams)
+	require.NoError(t, err)
+
+	loadHDWalletPrivateKey := func(keyHandle string) (privateKey []byte, err error) {
+		ctx := context.Background()
+		segments := strings.Split(keyHandle, "/")
+		if len(segments) < 2 || segments[0] != "m" {
+			return nil, i18n.NewError(ctx, tkmsgs.MsgSignerBIP44DerivationInvalid, keyHandle)
+		}
+		pos := hdKeyChain
+		for _, s := range segments[1:] {
+			number, isHardened := strings.CutSuffix(s, "'")
+			derivation, err := strconv.ParseUint(number, 10, 64) // we use 64bits up until the logic below
+			if err == nil {
+				if derivation >= 0x80000000 {
+					return nil, i18n.WrapError(ctx, err, tkmsgs.MsgSignerBIP32DerivationTooLarge, derivation)
+				}
+				if isHardened {
+					derivation += 0x80000000
+				}
+				pos, err = pos.Derive(uint32(derivation))
+			}
+			if err != nil {
+				return nil, i18n.WrapError(ctx, err, tkmsgs.MsgSignerBIP44DerivationInvalid, s)
+			}
+		}
+		ecPrivKey, err := pos.ECPrivKey()
+		if err == nil {
+			pkBytes := ecPrivKey.Key.Bytes()
+			privateKey = pkBytes[:]
+		}
+		return privateKey, err
+	}
+
+	privateKey, err := loadHDWalletPrivateKey("m/44'/60'/0'/0/0")
+	require.NoError(t, err)
+
+	fmt.Println(secp256k1.KeyPairFromBytes(privateKey).Address.String())
+
 }
