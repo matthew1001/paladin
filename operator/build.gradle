@@ -248,7 +248,7 @@ task clean {
 }
 
 // Existing 'make' task
-task make(type: Exec, dependsOn: [ copySolidity, ":toolkit:go:protoc"]) {
+task make(type: Exec, dependsOn: [copySolidity, ":toolkit:go:protoc"]) {
     inputs.files(configurations.zetoGoSource)
     executable 'make'
 }
