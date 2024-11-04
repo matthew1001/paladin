@@ -23,6 +23,10 @@ configurations {
         canBeConsumed = false
         canBeResolved = true
     }
+    zetoGoSource {
+        canBeConsumed = false
+        canBeResolved = true
+    }
     poseidonArtifacts {
         canBeConsumed = false
         canBeResolved = true
@@ -32,6 +36,7 @@ configurations {
 dependencies {
     contractCompile project(path: ":solidity", configuration: "compiledContracts")
     zetoArtifacts project(path: ":domains:zeto", configuration: "zetoArtifacts")
+    zetoGoSource project(path: ":domains:zeto", configuration: "goSource")
     poseidonArtifacts project(path: ":domains:zeto", configuration: "poseidonArtifacts")
 }
 
@@ -243,7 +248,8 @@ task clean {
 }
 
 // Existing 'make' task
-task make(type: Exec, dependsOn: [copySolidity, copyZetoSolidity, ":toolkit:go:protoc"]) {
+task make(type: Exec, dependsOn: [ copySolidity, ":toolkit:go:protoc"]) {
+    inputs.files(configurations.zetoGoSource)
     executable 'make'
 }
 
