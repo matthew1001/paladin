@@ -213,10 +213,10 @@ task createNode(type: Exec, dependsOn: verifyOperator) {
 //     }
 // }
 
-// The 'deplay' runs the whole flow
+// The 'deploy' runs the whole flow
 task deploy(dependsOn: [copySolidity, copyZetoSolidity, createNode]) {
     doLast {
-        println 'Deplopy setup completed. Operator is running in the paladin namespace.'
+        println 'Deploy setup completed. Operator is running in the paladin namespace.'
     }
 }
 
@@ -243,7 +243,7 @@ task clean {
 }
 
 // Existing 'make' task
-task make(type: Exec, dependsOn: [copySolidity,":toolkit:go:protoc"]) {
+task make(type: Exec, dependsOn: [copySolidity, copyZetoSolidity, ":toolkit:go:protoc"]) {
     executable 'make'
 }
 
