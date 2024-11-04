@@ -280,7 +280,7 @@ task assemble {
 }
 
 dependencies {
-    goSource files(goFiles, copySolidity)
+    goSource files(goFiles, copySolidity, protoc)
     zetoArtifacts files(extractZetoArtifacts)
     poseidonArtifacts files(generatePoseidonArtifacts)
 }
