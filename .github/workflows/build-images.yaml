@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - build_ghcr_images
     paths:
     # run only on changes of code files
       - '**.go'
@@ -24,9 +25,6 @@ jobs:
     #       username: ${{ secrets.DOCKERHUB_USERNAME }}
     #       password: ${{ secrets.DOCKERHUB_TOKEN }}
     core:
-        permissions:
-          contents: read
-          packages: write # Need this to push image to ghcr.io
         uses: ./.github/workflows/build-image-job.yaml
         with:
           dockerfile: ./Dockerfile
@@ -35,10 +33,10 @@ jobs:
           image_tag: ${{ github.ref_name }}
           push: true
           platforms: "linux/amd64,linux/arm64"
+        secrets:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
     operator:
-        permissions:
-          contents: read
-          packages: write # Need this to push image to ghcr.io
         uses: ./.github/workflows/build-image-job.yaml
         with:
           dockerfile: ./operator/Dockerfile
@@ -47,3 +45,6 @@ jobs:
           image_tag: ${{ github.ref_name }}
           push: true
           platforms: "linux/amd64,linux/arm64"
+        secrets:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
