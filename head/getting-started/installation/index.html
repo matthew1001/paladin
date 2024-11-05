@@ -16,7 +16,7 @@
       
       
       <link rel="icon" href="../../assets/paladin-icon-light.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.43">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.44">
     
     
       
@@ -1045,8 +1045,6 @@
       
         
       
-        
-      
     
     
       
@@ -1224,27 +1222,6 @@
   
 </nav>
       
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../running.md" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Running
-  </span>
-  
-
-      </a>
     </li>
   
 
@@ -2732,7 +2709,7 @@ documentation for any issues with these tools.</p>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>--install<span class="w"> </span>paladin-crds<span class="w"> </span>paladin/paladin-operator-crd
 </code></pre></div>
 <h3 id="step-2-install-cert-manager-crds">Step 2: Install cert-manager CRDs<a class="headerlink" href="#step-2-install-cert-manager-crds" title="Permanent link">&para;</a></h3>
-<p><a href="https://artifacthub.io/packages/helm/cert-manager/cert-manager">Install the cert-manager CRDs</a>:</p>
+<p>Install the <a href="https://artifacthub.io/packages/helm/cert-manager/cert-manager">cert-manager</a> CRDs:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>https://github.com/cert-manager/cert-manager/releases/download/v1.16.1/cert-manager.crds.yaml
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>helm<span class="w"> </span>repo<span class="w"> </span>add<span class="w"> </span>jetstack<span class="w"> </span>https://charts.jetstack.io<span class="w"> </span>--force-update
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>helm<span class="w"> </span>install<span class="w"> </span>cert-manager<span class="w"> </span>--namespace<span class="w"> </span>cert-manager<span class="w"> </span>--version<span class="w"> </span>v1.16.1<span class="w"> </span>jetstack/cert-manager<span class="w"> </span>--create-namespace
