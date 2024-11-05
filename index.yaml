@@ -1,0 +1,70 @@
+apiVersion: v1
+entries:
+  cert-manager-namespace:
+  - apiVersion: v2
+    appVersion: 0.0.0
+    created: "2024-11-05T04:24:45.764971978Z"
+    description: A chart that pre-creates the cert-manager namespace for the Paladin
+      Operator dependencies
+    digest: 2d31ee618f93bf44fb4eb66b945391f50b5e81c2929b77cad12d3115560454e0
+    name: cert-manager-namespace
+    type: application
+    urls:
+    - https://github.com/LF-Decentralized-Trust-labs/paladin/releases/download/cert-manager-namespace-0.0.0/cert-manager-namespace-0.0.0.tgz
+    version: 0.0.0
+  paladin-operator:
+  - apiVersion: v2
+    appVersion: 0.0.0
+    created: "2024-11-05T04:24:45.878318016Z"
+    dependencies:
+    - condition: installCRDs
+      name: paladin-operator-crd
+      repository: file://../paladin-operator-crd/
+      version: 0.0.0
+    - condition: cert-manager.enabled
+      name: cert-manager-namespace
+      repository: file://../cert-manager-namespace/
+      version: 0.0.0
+    - condition: cert-manager.enabled
+      name: cert-manager
+      repository: https://charts.jetstack.io
+      version: v1.16.1
+    - condition: prometheus.enabled
+      name: prometheus-namespace
+      repository: file://../prometheus-namespace/
+      version: 0.0.0
+    - condition: prometheus.enabled
+      name: prometheus
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 15.8.0
+    description: A Helm chart for Kubernetes
+    digest: b005704bd61715c39c1bbddd6030cf6c74e77bd097f07618264a9b1ec3644cf5
+    name: paladin-operator
+    type: application
+    urls:
+    - https://github.com/LF-Decentralized-Trust-labs/paladin/releases/download/paladin-operator-0.0.0/paladin-operator-0.0.0.tgz
+    version: 0.0.0
+  paladin-operator-crd:
+  - apiVersion: v2
+    appVersion: 0.0.0
+    created: "2024-11-05T04:24:45.975289084Z"
+    description: A Helm chart for Kubernetes
+    digest: a28285defc1907dd89ccdc8427e300da2e9d432dacbc714296ad89e31afb8121
+    name: paladin-operator-crd
+    type: application
+    urls:
+    - https://github.com/LF-Decentralized-Trust-labs/paladin/releases/download/paladin-operator-crd-0.0.0/paladin-operator-crd-0.0.0.tgz
+    version: 0.0.0
+  prometheus-namespace:
+  - apiVersion: v2
+    appVersion: 0.0.0
+    created: "2024-11-05T04:24:46.092849658Z"
+    description: A chart that pre-creates the prometheus namespace for the Paladin
+      Operator dependencies
+    digest: 672e059f8ebf0f5453ceffda0c2d861e9dda46b481ff2c7a743ecc90bfffd393
+    name: prometheus-namespace
+    type: application
+    urls:
+    - https://github.com/LF-Decentralized-Trust-labs/paladin/releases/download/prometheus-namespace-0.0.0/prometheus-namespace-0.0.0.tgz
+    version: 0.0.0
+generated: "2024-11-05T04:24:46.0928557Z"
