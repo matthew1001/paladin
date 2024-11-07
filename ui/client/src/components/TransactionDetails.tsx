@@ -22,45 +22,45 @@ import {
 } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import JSONPretty from 'react-json-pretty';
-import { IPaladinTransaction } from '../interfaces';
+import { IPaladinTransaction, ITransactionReceipt } from '../interfaces';
 import { fetchDomainReceipt } from '../queries/domains';
 import { fetchStateReceipt } from '../queries/states';
-import { fetchTransactionReceipt } from '../queries/transactions';
-import { JSONBox } from './JSONBox';
 import { EVMPrivateDetails } from './EVMPrivateDetails';
+import { JSONBox } from './JSONBox';
 
 type Props = {
-  paladinTransaction: IPaladinTransaction
+  transactionReceipt?: ITransactionReceipt
+  paladinTransaction?: IPaladinTransaction
 }
 
 export const PaladinTransactionsDetails: React.FC<Props> = ({
+  transactionReceipt,
   paladinTransaction
 }) => {
 
   const { t } = useTranslation();
 
-  const { data: transactionReceipt } = useQuery({
-    queryKey: ["ptx_getTransactionReceipt", paladinTransaction],
-    queryFn: () => fetchTransactionReceipt(paladinTransaction.id),
-    retry: false
-  });
+  const transactionId = transactionReceipt?.id || paladinTransaction?.id || '';
+  const domain = transactionReceipt?.domain || paladinTransaction?.domain || '';
 
   const { data: stateReceipt } = useQuery({
-    queryKey: ["stateReceipt", paladinTransaction],
-    queryFn: () => fetchStateReceipt(paladinTransaction.id),
-    retry: false
+    enabled: !!transactionId,
+    queryKey: ["stateReceipt", transactionId],
+    queryFn: () => fetchStateReceipt(transactionId),
+    retry: true
   });
 
   const { data: domainReceipt } = useQuery({
-    queryKey: ["domainReceipt", paladinTransaction],
-    queryFn: () => fetchDomainReceipt(paladinTransaction.domain, paladinTransaction.id),
-    retry: false
+    enabled: !!domain && !!transactionId,
+    queryKey: ["domainReceipt", domain, transactionId],
+    queryFn: () => fetchDomainReceipt(domain, transactionId),
+    retry: true
   });
 
   return (
     <>
-      <Accordion>
+      {paladinTransaction ?
+      <Accordion elevation={0} disableGutters>
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
           {t('details')}
         </AccordionSummary>
@@ -68,7 +68,8 @@ export const PaladinTransactionsDetails: React.FC<Props> = ({
           <JSONBox data={paladinTransaction} />
         </AccordionDetails>
       </Accordion>
-      <Accordion>
+      :undefined}
+      <Accordion elevation={0} disableGutters>
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
           {t('receipt')}
         </AccordionSummary>
@@ -77,8 +78,8 @@ export const PaladinTransactionsDetails: React.FC<Props> = ({
         </AccordionDetails>
       </Accordion>
       {domainReceipt !== undefined && <>
-        <EVMPrivateDetails transactionId={paladinTransaction.id} domainReceipt={domainReceipt}/>
-        <Accordion>
+        <EVMPrivateDetails transactionId={transactionId} domainReceipt={domainReceipt}/>
+        <Accordion elevation={0} disableGutters>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
             {t('domainReceipt')}
           </AccordionSummary>
@@ -88,7 +89,7 @@ export const PaladinTransactionsDetails: React.FC<Props> = ({
         </Accordion>
       </>}
       {!(stateReceipt?.none === true) &&
-        <Accordion>
+        <Accordion elevation={0} disableGutters>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
             {t('stateReceipt')}
           </AccordionSummary>

@@ -104,6 +104,7 @@ func TestPreparedTransactionRealDB(t *testing.T) {
 	// Create the parent TX
 	parentTx, err := txm.resolveNewTransaction(ctx, txm.p.DB(), &pldapi.TransactionInput{
 		TransactionBase: pldapi.TransactionBase{
+			From:           "me",
 			IdempotencyKey: "parent_txn",
 			Type:           pldapi.TransactionTypePrivate.Enum(),
 			Domain:         "domain1",
@@ -130,6 +131,7 @@ func TestPreparedTransactionRealDB(t *testing.T) {
 		To:     &contractAddressDomain1,
 		Transaction: &pldapi.TransactionInput{
 			TransactionBase: pldapi.TransactionBase{
+				From:           "me@node1",
 				IdempotencyKey: "child_txn",
 				Type:           pldapi.TransactionTypePrivate.Enum(),
 				Domain:         "domain2",
@@ -144,7 +146,7 @@ func TestPreparedTransactionRealDB(t *testing.T) {
 			Confirmed: confirmIDs,
 			Info:      infoIDs,
 		},
-		ExtraData: tktypes.RawJSON(`{"some":"data"}`),
+		Metadata: tktypes.RawJSON(`{"some":"data"}`),
 	}
 
 	storedABI, err := txm.UpsertABI(ctx, txm.p.DB(), childFnABI)
@@ -163,6 +165,7 @@ func TestPreparedTransactionRealDB(t *testing.T) {
 		To:     &contractAddressDomain1,
 		Transaction: pldapi.TransactionInput{
 			TransactionBase: pldapi.TransactionBase{
+				From:           "me@node1",
 				IdempotencyKey: "child_txn",
 				Type:           pldapi.TransactionTypePrivate.Enum(),
 				Domain:         "domain2",
@@ -177,7 +180,7 @@ func TestPreparedTransactionRealDB(t *testing.T) {
 			Confirmed: confirm,
 			Info:      info,
 		},
-		ExtraData: tktypes.RawJSON(`{"some":"data"}`),
+		Metadata: tktypes.RawJSON(`{"some":"data"}`),
 	}, pt)
 
 }

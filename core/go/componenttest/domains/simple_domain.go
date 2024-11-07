@@ -751,9 +751,14 @@ func SimpleTokenDomain(t *testing.T, ctx context.Context) plugintk.PluginBase {
 					}
 					newCoins = append(newCoins, &coin)
 
+					distroList := []string{req.Transaction.From}
+					if config.NotaryLocator != "" {
+						distroList = append(distroList, config.NotaryLocator)
+					}
 					newStates = append(newStates, &prototk.NewState{
-						SchemaId:      simpleTokenSchemaID,
-						StateDataJson: toJSONString(t, &coin),
+						SchemaId:         simpleTokenSchemaID,
+						StateDataJson:    toJSONString(t, &coin),
+						DistributionList: distroList,
 					})
 				}
 				if toAddr != nil && amount.Sign() > 0 {
@@ -764,10 +769,14 @@ func SimpleTokenDomain(t *testing.T, ctx context.Context) plugintk.PluginBase {
 						Amount: (*ethtypes.HexInteger)(amount),
 					}
 					newCoins = append(newCoins, &coin)
+					distroList := []string{req.Transaction.From, txInputs.To}
+					if config.NotaryLocator != "" {
+						distroList = append(distroList, config.NotaryLocator)
+					}
 					newStates = append(newStates, &prototk.NewState{
 						SchemaId:         simpleTokenSchemaID,
 						StateDataJson:    toJSONString(t, &coin),
-						DistributionList: []string{txInputs.To},
+						DistributionList: distroList,
 					})
 				}
 				eip712Payload, err := typedDataV4TransferWithSalts(contractAddr, coinsToSpend, newCoins)
@@ -918,6 +927,7 @@ func SimpleTokenDomain(t *testing.T, ctx context.Context) plugintk.PluginBase {
 
 				// There would need to be minting/spending rules here - we just check the signature
 				assert.Equal(t, signerAddr.String(), signerVerification.Verifier.Verifier)
+				assert.Equal(t, signerAddr.String(), senderAddr.String(), "signer and sender should match")
 
 				// Check the math
 				if fromAddr != nil && toAddr != nil {

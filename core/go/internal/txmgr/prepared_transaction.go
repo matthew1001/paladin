@@ -27,6 +27,7 @@ import (
 	"github.com/kaleido-io/paladin/toolkit/pkg/query"
 	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // DB persisted record for a prepared transaction
@@ -36,7 +37,7 @@ type preparedTransaction struct {
 	To          *tktypes.EthAddress `gorm:"column:to"`
 	Created     tktypes.Timestamp   `gorm:"column:created"`
 	Transaction tktypes.RawJSON     `gorm:"column:transaction"`
-	ExtraData   tktypes.RawJSON     `gorm:"column:extra_data"`
+	Metadata    tktypes.RawJSON     `gorm:"column:metadata"`
 }
 
 func (preparedTransaction) TableName() string {
@@ -76,14 +77,13 @@ func (tm *txManager) WritePreparedTransactions(ctx context.Context, dbTX *gorm.D
 	var preparedTxStateInserts []*preparedTransactionState
 	for _, p := range prepared {
 		dbPreparedTx := &preparedTransaction{
-			ID:        p.ID,
-			Domain:    p.Domain,
-			To:        p.To,
-			ExtraData: p.ExtraData,
+			ID:       p.ID,
+			Domain:   p.Domain,
+			To:       p.To,
+			Metadata: p.Metadata,
 		}
 		// We do the work for the ABI validation etc. before we insert the TX
-		resolved, err := tm.resolveNewTransaction(ctx, dbTX, p.Transaction,
-			pldapi.SubmitModeAuto /* seems counter intuitive here, but this is the _result_ of a prepare (not the input for a prepare) */)
+		resolved, err := tm.resolveNewTransaction(ctx, dbTX, p.Transaction, pldapi.SubmitModePrepare)
 		if err == nil {
 			p.Transaction.ABI = nil // move to the reference
 			p.Transaction.ABIReference = resolved.Function.ABIReference
@@ -136,6 +136,10 @@ func (tm *txManager) WritePreparedTransactions(ctx context.Context, dbTX *gorm.D
 
 	if len(preparedTxInserts) > 0 {
 		err = dbTX.WithContext(ctx).
+			Clauses(clause.OnConflict{
+				Columns:   []clause.Column{{Name: "id"}},
+				DoNothing: true, // immutable
+			}).
 			Create(preparedTxInserts).
 			Error
 	}
@@ -160,10 +164,10 @@ func (tm *txManager) QueryPreparedTransactions(ctx context.Context, dbTX *gorm.D
 		query:       jq,
 		mapResult: func(pt *preparedTransaction) (*pldapi.PreparedTransaction, error) {
 			preparedTx := &pldapi.PreparedTransaction{
-				ID:        pt.ID,
-				Domain:    pt.Domain,
-				To:        pt.To,
-				ExtraData: pt.ExtraData,
+				ID:       pt.ID,
+				Domain:   pt.Domain,
+				To:       pt.To,
+				Metadata: pt.Metadata,
 			}
 			return preparedTx, json.Unmarshal(pt.Transaction, &preparedTx.Transaction)
 		},

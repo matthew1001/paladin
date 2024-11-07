@@ -46,7 +46,7 @@ export const EVMPrivateDetails: React.FC<Props> = ({
 
   return (
     (hasTransaction || hasReceipt) ? 
-      <Accordion>
+      <Accordion elevation={0} disableGutters>
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
           {t('evmPrivateTransaction')}
         </AccordionSummary>
@@ -77,14 +77,16 @@ const EVMPrivateTransaction: React.FC<EVMTxnProps> = ({
     enabled: !!dataString,
     queryKey: ["decodeEVMCall", transactionId],
     queryFn: () => fetchDecodedCallData(dataString),
-    retry: false
+    retry: true
   });
 
   return (
     <>
       <JSONBox data={evmTransaction} />
       {decodedCall?.data ? <>
-        <Typography variant='caption'>{t('decoded')}</Typography>
+        <Typography variant='caption' component='span'>{t('decodedFunction')}</Typography>
+        {" "}
+        <Typography variant='caption' component='span'><code>{decodedCall.signature}</code></Typography>
         <JSONBox data={decodedCall.data} />
       </> : undefined}
     </>
@@ -134,7 +136,7 @@ const EVMPrivateLog: React.FC<EVMLogProps> = ({
     enabled: !!log.topics && !!log.data,
     queryKey: ["decodeEVMLog", transactionId, logIndex],
     queryFn: () => fetchDecodedEvent(log.topics!, log.data!),
-    retry: false
+    retry: true
   });
 
   return (
@@ -142,7 +144,9 @@ const EVMPrivateLog: React.FC<EVMLogProps> = ({
       <Typography variant='caption'>{t('evmPrivateLog', {logIndex})}</Typography>
       <JSONBox data={log} />
       {decodedEvent?.data ? <>
-        <Typography variant='caption'>{t('decoded')}</Typography>
+        <Typography variant='caption' component='span'>{t('decodedEvent')}</Typography>
+        {" "}
+        <Typography variant='caption' component='span'><code>{decodedEvent.signature}</code></Typography>
         <JSONBox data={decodedEvent.data} />
       </> : undefined}
     </>
