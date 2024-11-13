@@ -17,6 +17,7 @@ package plugins
 import (
 	"context"
 	"fmt"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -85,6 +86,8 @@ type pluginHandler[M any] struct {
 	// Plugin gets bound late after the stream is started
 	pluginInfo      atomic.Pointer[pluginInfo]
 	pluginToManager pluginToManager[M]
+
+	lock sync.Mutex
 }
 
 type pluginInfo struct {
@@ -269,6 +272,8 @@ func (ph *pluginHandler[M]) handleRequestFromPlugin(ctx context.Context, pi *plu
 }
 
 func (ph *pluginHandler[M]) RequestReply(ctx context.Context, reqFn func(plugintk.PluginMessage[M]), resFn func(plugintk.PluginMessage[M]) (ok bool)) error {
+	ph.lock.Lock()
+	defer ph.lock.Unlock()
 	// Log under our context so we get the plugin ID
 	reqID := uuid.New()
 	l := log.L(ph.ctx)

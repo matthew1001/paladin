@@ -16,6 +16,7 @@ package plugintk
 
 import (
 	"context"
+	"sync"
 
 	"github.com/hyperledger/firefly-common/pkg/i18n"
 	"github.com/kaleido-io/paladin/toolkit/pkg/prototk"
@@ -124,9 +125,12 @@ type domainHandler struct {
 	*domainPlugin
 	api   DomainAPI
 	proxy PluginProxy[prototk.DomainMessage]
+	lock  sync.Mutex
 }
 
 func (dp *domainHandler) RequestToPlugin(ctx context.Context, iReq PluginMessage[prototk.DomainMessage]) (PluginMessage[prototk.DomainMessage], error) {
+	dp.lock.Lock()
+	defer dp.lock.Unlock()
 	req := iReq.Message()
 	res := &prototk.DomainMessage{}
 	var err error
