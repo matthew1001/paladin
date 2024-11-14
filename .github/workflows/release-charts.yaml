@@ -76,11 +76,11 @@ jobs:
           updates: |
             operator:
               image:
-                repository: docker.io/${{ env.LOWER_REPOSITORY_OWNER }}/paladin-operator
+                repository: ghcr.io/${{ env.LOWER_REPOSITORY_OWNER }}/paladin-operator
                 tag: ${{ inputs.images_tag }}
             paladin:
               image:
-                repository: docker.io/${{ env.LOWER_REPOSITORY_OWNER }}/paladin
+                repository: ghcr.io/${{ env.LOWER_REPOSITORY_OWNER }}/paladin
                 tag: ${{ inputs.images_tag }}
       
       # Remove 'v' prefix from the tag
