@@ -62,16 +62,16 @@ jobs:
 
           echo "tags=${TAGS}" >> $GITHUB_OUTPUT
 
-  push-to-dockerhub:
-    needs: image-tags
-    uses: ./.github/workflows/cross-build-images.yaml
-    with:
-      registry: docker.io
-      repository: ${{ github.repository_owner }}
-      image_tags: ${{ needs.image-tags.outputs.tags }}
-    secrets:
-      username: ${{ secrets.DOCKERHUB_USERNAME }}
-      password: ${{ secrets.DOCKERHUB_TOKEN }}
+  # push-to-dockerhub:
+  #   needs: image-tags
+  #   uses: ./.github/workflows/cross-build-images.yaml
+  #   with:
+  #     registry: docker.io
+  #     repository: ${{ github.repository_owner }}
+  #     image_tags: ${{ needs.image-tags.outputs.tags }}
+  #   secrets:
+  #     username: ${{ secrets.DOCKERHUB_USERNAME }}
+  #     password: ${{ secrets.DOCKERHUB_TOKEN }}
 
   push-to-ghcr:
     needs: image-tags
