@@ -2727,6 +2727,72 @@
 <li><a href="#transactioninvoke">TransactionInvoke</a></li>
 <li><a href="#transactioninvokelist">TransactionInvokeList</a></li>
 </ul>
+<h4 id="authconfig">AuthConfig<a class="headerlink" href="#authconfig" title="Permanent link">&para;</a></h4>
+<p><em>Appears in:</em>
+- <a href="#paladinspec">PaladinSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>authMethod</code> <em><a href="#authmethod">AuthMethod</a></em></td>
+<td>auth method to use for the connection</td>
+<td></td>
+<td>Enum: [secret] <br /></td>
+</tr>
+<tr>
+<td><code>authSecret</code> <em><a href="#authsecret">AuthSecret</a></em></td>
+<td>SecretAuth is used to provide the name of the secret to use for authentication</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="authmethod">AuthMethod<a class="headerlink" href="#authmethod" title="Permanent link">&para;</a></h4>
+<p><em>Underlying type:</em> <em>string</em></p>
+<p><em>Appears in:</em>
+- <a href="#authconfig">AuthConfig</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>secret</code></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="authsecret">AuthSecret<a class="headerlink" href="#authsecret" title="Permanent link">&para;</a></h4>
+<p><em>Appears in:</em>
+- <a href="#authconfig">AuthConfig</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code> <em>string</em></td>
+<td>The name of the secret to use for authentication</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
 <h4 id="besu">Besu<a class="headerlink" href="#besu" title="Permanent link">&para;</a></h4>
 <p>Besu is the Schema for the besus API</p>
 <p><em>Appears in:</em>
@@ -3613,6 +3679,12 @@ Most common to use a simple one-reference-per-domain approach.</p>
 <tr>
 <td><code>besuNode</code> <em>string</em></td>
 <td>Optionally bind to a local besu node deployed with this operator<br />(vs. configuring a connection to a production blockchain network)</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>authConfig</code> <em><a href="#authconfig">AuthConfig</a></em></td>
+<td>AuthConfig is used to provide authentication details for blockchain connections<br />If this is set, it will override the auth details in the config</td>
 <td></td>
 <td></td>
 </tr>
