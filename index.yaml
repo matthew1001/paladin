@@ -161,6 +161,16 @@ entries:
     version: 0.0.0
   paladin-operator-crd:
   - apiVersion: v2
+    appVersion: 0.0.3
+    created: "2024-11-26T18:59:43.036297229Z"
+    description: A Helm chart for Kubernetes
+    digest: 38776fe59ec91949b517c08af8e99b4625e1e339489c3537e5458fbe0c2ad96d
+    name: paladin-operator-crd
+    type: application
+    urls:
+    - https://github.com/LF-Decentralized-Trust-labs/paladin/releases/download/paladin-operator-crd-0.0.3/paladin-operator-crd-0.0.3.tgz
+    version: 0.0.3
+  - apiVersion: v2
     appVersion: 0.0.2
     created: "2024-11-26T16:20:33.123387237Z"
     description: A Helm chart for Kubernetes
@@ -202,4 +212,4 @@ entries:
     urls:
     - https://github.com/LF-Decentralized-Trust-labs/paladin/releases/download/prometheus-namespace-0.0.0/prometheus-namespace-0.0.0.tgz
     version: 0.0.0
-generated: "2024-11-26T16:20:33.12342656Z"
+generated: "2024-11-26T18:59:43.036328007Z"
