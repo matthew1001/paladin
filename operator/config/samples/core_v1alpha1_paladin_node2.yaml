@@ -12,13 +12,21 @@ spec:
   config: |
     log:
       level: debug
+    blockIndexer:
+      fromBlock: latest
   database:
     mode: sidecarPostgres
     migrationMode: auto
   baseLedgerEndpoint:
-    type: local
-    local:
-      nodeName: node2
+    type: endpoint
+    endpoint:
+      jsonrpc: https://andrew.sbx.devel.eap.labs.kaleido-demos.com/endpoint/awr-gwn3/evmchain1_node1/jsonrpc
+      ws: wss://andrew.sbx.devel.eap.labs.kaleido-demos.com/endpoint/awr-gwn3/evmchain1_node1/jsonrpcws
+      auth:
+        type: inline
+        inline:
+          username: gwn
+          password: <password>
   secretBackedSigners:
     - name: signer-1
       secret: node2.keys

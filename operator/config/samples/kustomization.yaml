@@ -4,10 +4,10 @@ resources:
 - core_v1alpha1_paladin_node1.yaml
 - core_v1alpha1_paladin_node2.yaml
 - core_v1alpha1_paladin_node3.yaml
-- core_v1alpha1_besu_node1.yaml
-- core_v1alpha1_besu_node2.yaml
-- core_v1alpha1_besu_node3.yaml
-- core_v1alpha1_besugenesis.yaml
+# - core_v1alpha1_besu_node1.yaml
+# - core_v1alpha1_besu_node2.yaml
+# - core_v1alpha1_besu_node3.yaml
+# - core_v1alpha1_besugenesis.yaml
 - core_v1alpha1_paladinregistry.yaml
 - core_v1alpha1_paladindomain_noto.yaml
 - core_v1alpha1_paladindomain_pente.yaml
