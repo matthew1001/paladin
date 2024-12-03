@@ -9,13 +9,14 @@ To achieve this, it is important that we have an algorithm that allows all nodes
 The objective of this algorithm is to maximize efficiency ( reduce probably for revert leading to retry cycles of valid request) and throughput ( allow many transactions to be included in each block).  This algorithm does not attempt to provide a guarantee on final data consistency but instead relies on the base ledger contract to do so (e.g. double spend protection, attestation validation).
 
  The desired properties of that algorithm are
- - **deterministic**: all nodes can run the algorithm and eventually agree on a single coordinator at any given point in time. 
-   - this is a significant property because it means we don't want to rely on a message-based leader election process like in some algorithms such as Raft. This reduces the overhead of message exchanges among the nodes
+
+ - **deterministic**: all nodes can run the algorithm and eventually agree on a single coordinator at any given point in time. This is a significant property because it means we don't want to rely on a message-based leader election process like in some algorithms such as Raft. This reduces the overhead of message exchanges among the nodes
  - **fair**: the algorithm results in each node being selected as coordinator for a proportional number of times over a long enough time frame
  - **fault tolerant**:  Although pente already depends on all nodes being available (because of the 100% endorsement model) the desired algorithm should be future proof and be compatible with <100% endorsement model where network faults and down time of a minority of nodes can bee tolerated.
 
 ## Summary
 The basic premises of the algorithm are:
+
  - composition of committee i.e. the set of nodes who are candidates for coordinator is universally agreed (similar to BFT algorithms).
  - liveness of the coordinator node can be detected via heartbeat messages (similar to RAFT).
  - ranking of the preference for coordinator selection for any given contract address, for any given point in time ( block height) is a deterministic function that all nodes will agree on given the same awareness of make up of committee
@@ -44,6 +45,7 @@ This is a form of leader election but is achieved through deterministic calculat
 Each node is allocated positions on a hash ring.  These positions are a function of the node name.  Given that the entire committee agrees on the names of all nodes, all nodes independently arrive at the same decision about the positions of all nodes.
 
 For the current block height, a position on the ring is calculated from a deterministic function.  The node that is closest to that position on the ring is selected as the coordinator.  If that node is not available, then the next closest node is selected. If that node is not available, then the next closest again is selected, and so on.
+
 - for each Pente domain instance ( smart contract API) the coordinator is selected by choosing one of the nodes in the configured privacy group of that contract
  - the selector is a pure function where the inputs are the node names + the current block number and the output is the name of one of the nodes
  - the function will return the same output for a range of `n` consecutive blocks ( where `n` is a configuration parameter of the policy)
@@ -101,6 +103,7 @@ As soon as nodes B. C and D receive the heartbeat messages from node A they each
 
 
 TBD:
+
  - should the heartbeat message contain a list of transactions that it is coordinating for that node.  This might help reduce chattiness because the sender node would have no need then to periodically nag with a reminder or retry message.
  - should there be a threshold for missed heartbeat messages? 
  - should the coordinator role receive heartbeat acknowledgement messages? this would a) reduce the impact of missed heartbeat messages ( e.g. if the ack is not received within a given timeout, then it could re-send the heartbeat immediately rather than waiting for the next due heartbeat) and b) would help the coordinator recognize when it has found itself in a network partition and potentially reduce wasteful processing of transactions that are never going to be successful.
