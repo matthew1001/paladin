@@ -142,6 +142,7 @@ Lets consider the case where the scenario explored above continues to the point 
 
 `A-1` , `B-1`, `C-1` and `D-1` have already been submitted to base ledger and confirmed.  
 `A-2` , `B-2`, `C-2` and `D-2` have been prepared for submission, assigned a signing address and a nonce but have not yet been mined into a confirmed block.  NOTE it is irrelevant whether these transactions have been the subject of an `eth_sendTransaction` yet or not.  i.e. whether they only exist in the memory of the paladin node's transaction manager or whether they exist in the mempool of node A's blockchain node.  What is important is that
+
  - they have been persisted to node A's database as being "dispatched" and
  - are not included in block 3 or earlier
 
@@ -185,12 +186,14 @@ Eventually transactions `A-3` , `B-3`, `C-3` and `D-3` are mined to a block.
 Note that there is a brief dip in throughput as node B waits for node A to flush through the pending dispatched transactions and there is also some additional processing for the inflight transactions that haven't been dispatched yet.  So a range size of 4 is unreasonable and it would be more likely for range sizes to be much larger so that these dips in throughput become negligible.
 
 TODO
+
  - need more detail on precisely _how_  nodes B, C and D know that transactions `B-2``A-2` , `B-2`, `C-2` and `D-2` are past the point of no return and that transactions `A-3` , `B-3`, `C-3` and `D-3` do need to be re-delegated.
  - need more detail on precisely _how_ node B can continue to coordinate the assembly of transactions `A-3` , `B-3`, `C-3` and `D-3` in a domain context that is aware of the speculative states locks from transactions `B-2``A-2` , `B-2`, `C-2` and `D-2` 
  - It might be more productive for the next level of detail on these points to come in the form of a proposal in code.
 
 ### Variation in block height
 It is likely that different nodes will become aware of new block heights at different times so the algorithm must accommodate that inconsistency. 
+
  - given that different nodes index the blockchain events with varying latency, it is not assumed that all nodes have the same awareness of "current block number" at any one time. This is accommodated by the following
  - Each node delegates all transactions to which ever node it determines as the current coordinator based on its latest knowledge of "current block"
  - The delegate node will accept the delegation if its awareness of current block also results in it being chosen by the selector function.  Otherwise, the delegate node rejects the delegation and includes its view of current block number in the response
@@ -215,6 +218,7 @@ It is likely that different nodes will become aware of new block heights at diff
 The sender node for any given transaction remains ultimately responsible for ensuring that transaction is successfully confirmed on chain or finalized as failed if it is not possible to complete the processing for any reason.  While the coordination of assembly and endorsement is delegated to another node, the sender continues to monitor the progress and is responsible for initiating retries or re-delegation to other coordinator nodes as appropriate.
 
 Feedback available to the sender node that can be monitored to track the progress or otherwise of the transaction submission:
+
  - when the sender node is choosing the coordinator, it may have recently received a heartbeat message from the preferred coordinator or an alternative coordinator
  - when sending the delegation request to the coordinator, the sender node expects to receive an acknowledgement that the request has been received.  This is not a guarantee that the transaction will be completed.  At this point, the coordinator has only an in-memory record of that delegated transaction
  - coordinator heartbeat messages.  The payload of these messages contains a list of transaction IDs that the coordinator is actively coordinating
@@ -224,6 +228,7 @@ Feedback available to the sender node that can be monitored to track the progres
  - transaction reverted message.  When the submitter fails to submit the transaction, for any reason, and gives up trying , then a `TransactionReverted` message is sent to the sender of that transaction.  There are some cases where the submitter retries certain failures and does *not* send this message.
 
 Decisions and actions that need to be taken by the sender node
+
  - When a user sends a transaction intent (`ptx_sendTransaction` or `ptx_prepareTransaction`), the sender node needs to chose which coordinator to delegate to.
  - If the block height changes and there is a new preferred coordinator as per the selection algorithm then the sender node needs to decide whether to delegate the transaction to it. This will be dependent on whether the transaction has been dispatched or not.
  - If the coordinator node seems to have forgotten about the transaction, then the sender node needs to decide to re-delegate it
