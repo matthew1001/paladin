@@ -40,18 +40,19 @@ Similarly, any other future domain that opts in to the dynamic coordinator selec
 
 ### Coordinator selection
 
-This is a form of leader election but is achieved through deterministic calculation for a given point in time ( block height), given predefined members of the group, and a common (majority) awareness of the current availability of each member. 
+This is a form of leader election but is achieved through deterministic calculation for a given point in time ( block height), given predefined members of the group, and a common (majority) awareness of the current availability of each member. So there is no actual "election" term needed.
 
 Each node is allocated positions on a hash ring.  These positions are a function of the node name.  Given that the entire committee agrees on the names of all nodes, all nodes independently arrive at the same decision about the positions of all nodes.
 
 For the current block height, a position on the ring is calculated from a deterministic function.  The node that is closest to that position on the ring is selected as the coordinator.  If that node is not available, then the next closest node is selected. If that node is not available, then the next closest again is selected, and so on.
 
-- for each Pente domain instance ( smart contract API) the coordinator is selected by choosing one of the nodes in the configured privacy group of that contract
+For each Pente domain instance ( smart contract API) the coordinator is selected by choosing one of the nodes in the configured privacy group of that contract
+
  - the selector is a pure function where the inputs are the node names + the current block number and the output is the name of one of the nodes
  - the function will return the same output for a range of `n` consecutive blocks ( where `n` is a configuration parameter of the policy)
-  - for the next range of `n` blocks, the function will return a different ( or possibly the same) output
-  - over a large sample of ranges, the function will have an even distribution of outputs
-  - the function will be implemented by taking a hash of each node name, taking the hash of the output of `b/n` (where b is the block number and `n` is the range size) rounded down to the nearest integer and feeding those into a hashring function.
+ - for the next range of `n` blocks, the function will return a different ( or possibly the same) output
+ - over a large sample of ranges, the function will have an even distribution of outputs
+ - the function will be implemented by taking a hash of each node name, taking the hash of the output of `b/n` (where b is the block number and `n` is the range size) rounded down to the nearest integer and feeding those into a hashring function.
 
 ![image](../images/distributed_sequencer_hashring.svg){ width="500" }
 
@@ -101,13 +102,6 @@ As soon as nodes B. C and D receive the heartbeat messages from node A they each
 
  This universal conclusion is reached without any communication necessary between nodes B, C and D and without any knowledge of recent history.  Therefore is tolerant to any failover of nodes B, C or D in the interim and has a deterministic conclusion, that can be predicted by node A regardless of what other activity happened to occur while node A was offline (e.g. if node C had gone offline and coordinator role switched to B, or switch back to C ) 
 
-
-TBD:
-
- - should the heartbeat message contain a list of transactions that it is coordinating for that node.  This might help reduce chattiness because the sender node would have no need then to periodically nag with a reminder or retry message.
- - should there be a threshold for missed heartbeat messages? 
- - should the coordinator role receive heartbeat acknowledgement messages? this would a) reduce the impact of missed heartbeat messages ( e.g. if the ack is not received within a given timeout, then it could re-send the heartbeat immediately rather than waiting for the next due heartbeat) and b) would help the coordinator recognize when it has found itself in a network partition and potentially reduce wasteful processing of transactions that are never going to be successful.
-
 ### Network partition
 The sender node ultimately bears the responsibility of selecting a coordinator for their transactions. If a single coordinator is universally chosen, the algorithm operates accordingly with maximum efficiency and data integrity (transactions are successfully confirmed on base ledger and no state is double spent). 
 
@@ -135,6 +129,7 @@ The system reaches the desired eventual state of node A being coordinator, sendi
 ![image](../images/distributed_sequencer_partition_frame4.svg){ width="500" }
 
 TODO
+
  - might be useful to illustrate the "limp mode" in more detail where both coordinators are managing to get transactions through but the base ledger contract is providing double spend protection and the retry strategy of the coordinator means that transactions are eventually processed correctly 
  - all of the above seems to assume that the network partition affects communication between paladin nodes but not the blockchain.  Should really discuss and elaborate what happens when the block chain nodes are not able to communicate with each other ( esp. in case of public chains where long finality times are possible).  The TL;DR is - notwithstanding this algorithm, the paladin core engine and its management of domain contexts must be mindful of the difference between block receipts and finality and should have mechanisms to configure the number of confirmed blocks it considers as final and/or to reset domain contexts and redo transaction intents that ended up on blocks that got reversed.
  
@@ -204,7 +199,7 @@ It is likely that different nodes will become aware of new block heights at diff
  - If the sender node is ahead, it continues to retry the delegation until the delegate node finally catches up and accepts the delegation
  - If the sender node is behind, it waits until its block indexer catches up and then selects the coordinator for the new range
  - Coordinator node will continue to coordinate ( send endorsement requests and submit endorsed transactions to base ledger) until its block indexer has reached a block number that causes the coordinator selector to select a different node.
-- at that time, it waits until all dispatched transactions are confirmed on chain, then delegates all current inflight transactions to the new coordinator.
+ - at that time, it waits until all dispatched transactions are confirmed on chain, then delegates all current inflight transactions to the new coordinator.
  - if the new coordinator is not up to date with block indexing, then it will reject and the delegation will be retried until it catches up. 
  - while a node is the current selected coordinator, it sends endorsement requests to every other node for every transaction that it is coordinating
  -  The endorsement request includes the name of the coordinator node
@@ -241,15 +236,16 @@ Decisions and actions that need to be taken by the sender node
  - If the base ledger transaction is reverted for any reason, then the sender decides to retry
 
 To illustrate, lets consider the following scenarios
+
  - simple happy path: sender delegates transaction to a coordinator and that coordinator eventually successfully submits it to the base ledger contract
  - happy path with switchover: sender delegates transaction to a coordinator but before the transaction is ready for submission, the block height changes, a new coordinator is selected which then  eventually successfully submits it to the base ledger contract
  - realistic happy path: given that different nodes are likely to become aware of block height changes at different times, there are 6 different permutations of the order in which the 3 nodes ( sender, previous coordinator, new coordinator) become aware of the new block height but to understand the algorithm, we can reduce the analysis to 3 more general cases: When the sender is behind, when the previous coordinator is behind and when the new coordinator is behind.
  - failover cases: there is no persistence checkpoints between the transaction intent being received by the sender node and the transaction being dispatched to the base ledger submitter so if either the sender or coordinator node process restarts, then it loses all context of that delegation
-   - sender failover.  If the sender restarts, it reads all pending transactions from its database and delegates each transaction to the chosen coordinator for that point in time. This may be the same coordinator that it delegates to previously or may be a new one. The sender holds, in memory, the name of the current coordinator and will only accept a dispatch confirmation from that coordinator.  So if it happens to be the case that it had delegated to a different coordinator before it restarted, then it will reject the dispatch confirmation from that coordinator and that copy of the assembled transaction will be discarded. Noting that this would trigger a re-assembly and re-run of the endorsement flow for any other transactions, including those from other senders, that have been assembled to spend the states produced by the discarded transaction. However, in most likeliness, all other senders will switch their preference to the same new coordinator and trigger a re-do of all non dispatched transactions.
-   - coordinator failover. When the coordinator restarts, it will continue to send heartbeat messages but those messages only contain the transaction ids for the transactions that were delegated to it since restart.  For any pending transactions that were previously delegated to it, when the sender of those transactions receives the heartbeat message and realizes the that coordinator has "forgotten" about the transaction, then the sender re-delegates those transactions.
+     - sender failover.  If the sender restarts, it reads all pending transactions from its database and delegates each transaction to the chosen coordinator for that point in time. This may be the same coordinator that it delegates to previously or may be a new one. The sender holds, in memory, the name of the current coordinator and will only accept a dispatch confirmation from that coordinator.  So if it happens to be the case that it had delegated to a different coordinator before it restarted, then it will reject the dispatch confirmation from that coordinator and that copy of the assembled transaction will be discarded. Noting that this would trigger a re-assembly and re-run of the endorsement flow for any other transactions, including those from other senders, that have been assembled to spend the states produced by the discarded transaction. However, in most likeliness, all other senders will switch their preference to the same new coordinator and trigger a re-do of all non dispatched transactions.
+     - coordinator failover. When the coordinator restarts, it will continue to send heartbeat messages but those messages only contain the transaction ids for the transactions that were delegated to it since restart.  For any pending transactions that were previously delegated to it, when the sender of those transactions receives the heartbeat message and realizes the that coordinator has "forgotten" about the transaction, then the sender re-delegates those transactions.
  - coordinator becomes unavailable:  If the sender stops receiving heartbeat messages from the coordinator, then it assumes that the coordinator has become unavailable.  However it may actually be the case that the coordinator is still running and just that the network between the coordinator and the sender has a fault.  The action of the sender for each inflight transaction depends on exactly which stage of the flow the sender believes that transaction to be.  The consequence of the sender's action depend on whether the previous coordinator is still operating and where in the flow it believes the transaction to be.  Scenarios to explore are:
-   -  sender detects that the heartbeats have stopped before it has sent a response to a dispatch confirmation request (or before it has received the dispatch confirmation request)
-   -  sender detects that the heartbeats have stopped after it has received  
+     -  sender detects that the heartbeats have stopped before it has sent a response to a dispatch confirmation request (or before it has received the dispatch confirmation request)
+     -  sender detects that the heartbeats have stopped after it has received  
   
 
 #### Simple happy path
