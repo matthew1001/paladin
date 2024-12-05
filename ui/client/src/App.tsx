@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { CssBaseline } from "@mui/material";
+import { Box, CssBaseline } from "@mui/material";
 import { createTheme, PaletteMode, ThemeProvider } from "@mui/material/styles";
 import {
   MutationCache,
@@ -31,11 +31,15 @@ import { Registries } from "./views/Registries";
 import { Submissions } from "./views/Submissions";
 import { useEffect, useMemo, useState } from "react";
 import { constants } from "./components/config";
+import { ABI } from "./views/ABI";
+import { Navigation } from "./components/Navigation";
 
 const queryClient = new QueryClient({
   queryCache: new QueryCache({}),
   mutationCache: new MutationCache({}),
 });
+
+export const navigationWidth = '280px';
 
 function App() {
 
@@ -85,6 +89,9 @@ function App() {
     []
   );
 
+  const [navigationVisible, setNavigationVisible] = useState(false);
+
+
   return (
     <>
       <QueryClientProvider client={queryClient}>
@@ -92,13 +99,21 @@ function App() {
           <ThemeProvider theme={theme}>
             <CssBaseline />
             <BrowserRouter>
+              <Navigation
+                navigationVisible={navigationVisible}
+                setNavigationVisible={setNavigationVisible}
+                navigationWidth={navigationWidth} />
               <Header />
+              <Box sx={{ marginLeft: {sm: navigationWidth }}} >
+
               <Routes>
                 <Route path="/ui/indexer" element={<Indexer />} />
-                <Route path="/ui/submissions" element={<Submissions />} />\
+                <Route path="/ui/submissions" element={<Submissions />} />
                 <Route path="/ui/registry" element={<Registries />} />
+                <Route path="/ui/abi" element={<ABI />} />
                 <Route path="*" element={<Navigate to="/ui/indexer" replace />} />
               </Routes>
+              </Box>
             </BrowserRouter>
           </ThemeProvider>
         </ApplicationContextProvider>

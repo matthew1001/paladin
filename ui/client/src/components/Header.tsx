@@ -40,6 +40,8 @@ export const Header: React.FC = () => {
       return 1;
     } else if (path.startsWith('/ui/registry')) {
       return 2;
+    } else if (path.startsWith('/ui/abi')) {
+      return 3;
     }
     return 0;
   };
@@ -52,6 +54,7 @@ export const Header: React.FC = () => {
       case 0: navigate('/ui/indexer'); break;
       case 1: navigate('/ui/submissions'); break;
       case 2: navigate('/ui/registry'); break;
+      case 3: navigate('/ui/abi'); break;
     }
   };
 
@@ -80,6 +83,7 @@ export const Header: React.FC = () => {
                   <Tab sx={{ textTransform: 'none' }} label={t('indexer')} />
                   <Tab sx={{ textTransform: 'none' }} label={t('submissions')} />
                   <Tab sx={{ textTransform: 'none' }} label={t('registry')} />
+                  <Tab sx={{ textTransform: 'none' }} label={t('abi')} />
                 </Tabs>
               </Grid2>
               <Grid2 size={{ xs: 12, sm: 12, md: 4 }}>
