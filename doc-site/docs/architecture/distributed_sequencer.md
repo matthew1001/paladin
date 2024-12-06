@@ -1,4 +1,4 @@
-# Distributed Sequencer
+# Distributed Sequencer Protocol
 
 In domains (such as Pente) where the spending rules for states allow any one of a group of parties to spend the state, then we need to coordinate the assembly of transactions across multiple nodes so that we can maximize the throughput by speculative spending new states and avoid transactions being reverted due to double concurrent spending / state contention.
 
@@ -6,7 +6,7 @@ To achieve this, it is important that we have an algorithm that allows all nodes
 
 ## Objectives 
 
-The objective of this algorithm is to maximize efficiency ( reduce probably for revert leading to retry cycles of valid request) and throughput ( allow many transactions to be included in each block).  This algorithm does not attempt to provide a guarantee on final data consistency but instead relies on the base ledger contract to do so (e.g. double spend protection, attestation validation).
+The objective of this algorithm is to maximize efficiency ( reduce probably for revert leading to retry cycles of valid request) and throughput ( allow many transactions to be included in each block).  This algorithm does not attempt to provide a guarantee on final data consistency but instead relies on the base ledger contract to do so (e.g. double spend protection, attestation validation, exactly once intent fulfillment).
 
  The desired properties of that algorithm are
 
@@ -27,10 +27,8 @@ The basic premises of the algorithm are:
  - the sender node for each transaction is responsible for ensuring that the transaction always has one coordinator actively coordinating it by detecting and responding to situations where the current coordinator becomes available, a more preferred coordinator comes back online or preference changes due to new block height.  (unless the sender deems the transaction to be no longer valid in which case, it marks it as reverted).
  - The sender node continues to monitor and control the delegation of its transaction until it has received receipt of the transactions' confirmations on the base ledger. This provides an "at least once" quality of service for every transaction.
  - The handshake between the sender node and the coordinator node(s) attempts to minimize the likelihood of the same transaction intent resulting in 2 valid base ledger transactions but cannot eliminate that possibility completely so there is protection against duplicate intent fulfillment in the base ledger contract
-   -  TBD: this is a big decision and has not yet been fully discussed and agreed.  See the  _Decision points and alternatives considered_ section for more detail
 
-
-## Detail
+## Detailed Walkthrough
 To describe the algorithm in detail, we break it down to sub problems
 
 ### Composition of committee
@@ -61,9 +59,9 @@ In the example here, lets say we chose a hash function with a numeric output bet
 
 ### Node availability detection
 
-When a node calculates itself as the coordinator, then it  periodically sends a heartbeat message to the other nodes and  will accept delegation requests from any other node in the group. 
+When a node starts acting as the coordinator, then it  periodically sends a heartbeat message to all nodes that for which it has an active delegation and will accept delegation requests from any other node in the group. 
 
-All nodes keep track of the current selected coordinator ( either by reevaluating the deterministic function periodically or caching the result until block height exceeds the current range boundary).  If they fail to receive a heartbeat message from the current coordinator, then they will chose the next closest node in the hashring (e.g. by reevaluating the hashring function with the unavailable nodes removed).
+All sender nodes keep track of the current selected coordinator ( either by reevaluating the deterministic function periodically or caching the result until block height exceeds the current range boundary).  If they fail to receive a heartbeat message from the current coordinator, then they will chose the next closest node in the hashring (e.g. by reevaluating the hashring function with the unavailable nodes removed).
 
 For illustration, consider the following example where nodes B, C, and D have recognized node A as the coordinator and have delegated transactions (labelled `B-1`, `C-1` and `D-1` )to it.
 
@@ -162,8 +160,6 @@ Node A sends a `DelegationReturned` message to the respective sender nodes for e
 
 The final transmission from node A, as coordinator, is a message to node B with details of the speculative domain context predicting confirmation of transactions `A-2` , `B-2`, `C-2` and `D-2` .  This includes the state IDs for any new states created by those transactions and any states that are spent by those transaction.  This message also includes the transaction hash for the final transaction that is submitted on the sequence coordinated by node A.  Node B needs to receive this message so that it can proceed with maximum efficiency. Therefore this message is sent with an assured delivery quality of service (similar to state distribution).  
 
-<img width="337" alt="image" src="https://github.com/user-attachments/assets/d6b783e8-1bea-40d4-8622-98737781ae56">
-
 Meanwhile, all nodes delegate transactions  `A-3` , `B-3`, `C-3` and `D-3` to node B.  
 
 ![image](../images/distributed_sequencer_switchover_frame5.svg){ width="500" }
@@ -177,7 +173,6 @@ Once  transactions `A-2` , `B-2`, `C-2` and `D-2` have been confirmed in a block
 ![image](../images/distributed_sequencer_switchover_frame7.svg){ width="500" }
 
 Eventually transactions `A-3` , `B-3`, `C-3` and `D-3` are mined to a block.
-
 
 ![image](../images/distributed_sequencer_switchover_frame8.svg){ width="500" }
 
@@ -647,10 +642,739 @@ NOTE: all of the above discussion assumes that there is a timely recovery in the
 **Assured once only confirmed transaction per intent**
 The sender makes every effort to ensure that only one transaction is submitted to the base ledger for any given user request but it is impossible for the sender to guarantee that so the algorithm relies on validation on the base ledger contract that no transaction `intent` will be confirmed more than once.
 
-TODO current version of the base ledger contract does not provide this validation. Need to flesh out more detail on what the proposed change is here.
+TODO Need to flesh out more detail on how the base ledger achieves this.
 
 
-## Decision points and alternatives considered
+### Complete sequence diagram
+
+All of the above combined into a single diagram with links to the details description for each message exchange and the processing that each message triggers on the receiving node.
+
+TBD: not sure if this should be kept but it is useful as a TODO list for writing the detail protocol points
+
+```mermaid
+
+sequenceDiagram
+  %%{init: { "sequence": { "mirrorActors":false }}}%%
+  autonumber
+  actor user
+  participant S as Sender
+  participant C1 as First <br/> Coordinator
+  participant C2 as New <br/> Coordinator
+  participant E as Endorser
+  box rgba(33,66,99,0.5) blockchain 
+    participant BC1 as First Coordinators <br/> blockchain node
+    participant BC2 as New Coordinators <br/> blockchain node
+    participant BS as Senders <br/>blockchain node
+  end
+
+  user->>S: ptx_sendTransaction
+  activate S
+  S -->> user: TxID
+  deactivate S
+  S->>C1: delegateCommand
+
+  par endorsement flow
+    C1->>S: Assemble
+    S-->>C1: Assemble response
+    loop for each endorser
+      C1 -) E: endorse
+      E -) C1: endorsement
+    end
+  and heartbeats
+    loop every heartbeat cycle
+      C1 -) S: heartbeat
+    end
+  end
+  Note over S, C1: Before transaction is ready for <br/> dispatch, the block height changes
+  BC1 -) C1: new block
+  BC2 -) C2: new block
+  BS -) S: new block
+  
+  S->>C2: delegate
+  par endorsement flow
+    C2->>S: Assemble
+    S-->>C2: Assemble response
+    loop for each endorser
+      C2 -) E: endorse
+      E -) C2: endorsement
+    end
+  and heartbeats
+    loop every heartbeat cycle
+      C2 -) S: heartbeat
+    end
+  end
+  C2->>S: request dispatch confirmation
+  S->>C2: dispatch confirmation
+  create participant SB as Submitter
+  C2->>SB: dispatch
+  C2->>S: dispatched
+  
+```
+
+## Protocol points
+
+To understand the detailed specification of the responsibilities and expectations of each node in the network, we explore the detail of message formats, message exchange handshake and processing related to the handling of specific messages.  We start with an overview of some common message exchange patterns before drilling down to the detailed concrete specification of messages and their handlers.
+
+### Common message exchange patterns
+All messages contain the following fields:
+
+  - `protocolVersion` semver version number that can be used to determine whether the software version running the sender and receiver nodes are compatible with each other.
+  - `messageID` unique id for every message.
+
+Reply messages also contain
+
+  - `CorrelationID` this is a copy of the `MessageID` of the message that this reply corresponds to.
+
+These can be used by the transport layer plugins to exploit qualities of service capabilities of the chosen transport. 
+
+
+In addition to these, the distributed sequencer protocol defines some common message exchange patterns that provide delivery assurances and correlation in the context of the handshakes described in the protocol walkthrough above.
+
+<!-- TBD: `CorrelationID` is not currently used in the implementation.  Should we remove this or redefine its behavior (i.e. to be a copy of the `RequestID`) or leave it as an option for the transport plugin to use? -->
+
+#### Assured delivery
+
+In some cases, it important for one party to have some assurance that the other party has received a message and has triggered an action based on that message.  The action may be to store the message in a persistent store or may be to trigger some in memory process.  
+The approach to achieving assured delivery is to define message exchange patterns where the messages are expected to be reciprocated with some form of acknowledgment.
+
+Messages sent with an assured delivery expectation have an additional field that is unique to the intent of the message but unlike the `MessageID` is not necessarily unique for every message.  This allows the sender to idempotenty resend the message in lieu of any acknowledgment and achieve and `at least` once assurance. Each resend would be a different `MessageID` therefore allowing the transport layer to assume that `MessageID` is unique and avoid the transport layer from discarding the retry message as a duplicate.
+ 
+There are three patterns of exchange that provide assured delivery that we shall explore in detail below
+
+ - `ReliableNotification`
+ - `Command` / `CommandAccepted` / `CommandRejected`
+ - `Request` / `Response` / `Error`
+
+#### Non assured delivery
+
+In some cases, assured delivery is not necessary and simple datagram message exchange pattern is sufficient.  In those cases, typically to comminute point in time status messages ( e.g. heartbeat), if a message is lost, there is no loss in data and the correct status will be communicated via the next message that does manage to reach its destination. 
+
+#### Reliable notification 
+The `Reliable notification` message exchange pattern involves 2 parties
+
+ - notification sender
+ - notification receiver
+
+The `notification sender` sends a `Notification` message and will continue to resend periodically until it has received an `Acknowledgment` from the notification receiver.
+
+From the receiver's perspective, a reliable notification is idempotent.  The state of the receiver must not differ when it receives multiple notifications with matching notification id.  The receiver must send an acknowledgment when it successfully receives a notification, even if it has already sent an acknowledgment for a previous notification with the same notification id.
+
+From the sender's perspective, an acknowledgement to a reliable notification is idempotent. The state of the sender must not differ when it receives multiple acknowledgment with matching notification ids.  It must stop resending notifications with that notification id when it receives at least one acknowledgment and it must tolerate receiving further acknowledgements for that same notification id. 
+
+
+```mermaid
+sequenceDiagram
+  %%{init: { "sequence": { "mirrorActors":false }}}%%
+  participant S as Sender
+  participant R as Receiver
+  loop Every RetryInterval
+    S -) R: Notification
+  end
+  R --) S: Acknowledgement
+```
+
+#### Assured delivery data distribution
+
+This pattern combines the `ReliableNotification` pattern with a persistence layer on both nodes to achieve assured eventual consistency between the data stores.
+
+```mermaid
+sequenceDiagram
+  %%{init: { "sequence": { "mirrorActors":false }}}%%
+  
+  participant S as Sender
+  participant SDB as Sender's Database
+  participant R as Receiver
+  participant RDB as Receiver's Database
+  S->>SDB: InsertDistributionOperation
+  activate SDB
+  S->>SDB: Commit
+  deactivate SDB
+  loop Every RetryInterval
+    S -) R: DistributeData
+  end
+  R->>RDB: InsertDistributedData
+  activate RDB
+  R->>RDB: Commit
+  deactivate RDB
+  
+  R --) S: Acknowledgement
+
+  S->>SDB: InsertDistributionAcknowledgement
+  activate SDB
+  S->>SDB: Commit
+  deactivate SDB
+  
+```
+
+#### Command 
+The `Command` message exchange pattern involves 2 parties
+
+ - command sender
+ - command receiver
+
+The `command sender ` sends a `ReliableMessage` containing information about the command and will continue to resend periodically until it has received either a  `CommandAccepted` or `CommandRejection` message.
+
+```mermaid
+sequenceDiagram
+  %%{init: { "sequence": { "mirrorActors":false }}}%%
+  participant S as Command Sender
+  participant R as Command Receiver
+  loop Every RetryInterval
+    S -) R: Command
+  end
+  alt command valid
+    R --) S: CommandAccepted
+  else
+    R --) S: CommandRejected
+  end
+```
+
+The reliable command pattern is used to assure that the sequencer code running in the other node's memory space has received the command and does not give any assurance to the persistence of that command. Theoretically, a this pattern could be combined with database persistence to provide that assurance. However, currently there are not cases of that in the protocol.
+
+Typically, the `Reliable command` pattern is combined with `Reliable notification` pattern to feedback to the `command sender` when the command has been completed or aborted.  But this is not always the case.
+
+#### Request
+The `Request` message exchange pattern involves 2 parties
+
+ - request sender
+ - request receiver
+
+The `request sender ` sends a `Request` containing a query for some data continue to resend the request periodically until it has received either a  `RequestResponse` containing the requested data or a `RequestError` message containing the reason for the error.
+
+The sender will resend the request periodically until it receives a response or an error.
+
+From the perspective of the receiver, the request may be treated as idempotent.  If it has already sent a response to a request with the same request id, then it must send another response (or error). In this case the request receiver may sent the exact same response as previously but may alternatively send a different response.  In other words, there is no obligation on the request receiver to remember exactly what requests it has responded to and what those responses were.  It must however always send a valid response or error.  In cases where the request receiver has received  and responded to multiple copies of the same request ( matching request id), there is no guarantee which of the responses will be consumed by the request sender.
+
+From the perspective of the request sender, only one request response should be consumed and all other should be ignored.  If an error is received and the reason for the error is a transient one, there is no guarantee that sending the same request (matching request id) in future will result in a different response.  The retry protocol is intended to mitigate unreliability at the network transport layer ( i.e. when no response is received).  To retry in the case of other transient error's, a new request (i.e. a message with a different request id) must be initiated. 
+
+```mermaid
+sequenceDiagram
+  %%{init: { "sequence": { "mirrorActors":false }}}%%
+  participant S as Request Sender
+  participant R as Request Receiver
+  loop Every RetryInterval
+    S -) R: Request
+  end
+  alt request is valid
+    R --) S: Response
+  else
+    R --) S: Error
+  end
+```
+
+### Message specification and handler responsibilities
+
+The following concrete message exchanges defines the responsibilities and expectation of each node in the network.
+
+
+
+#### <a name="message-transaction-delegation-command"></a>Transaction delegation
+
+
+This is an instance of the `Command` pattern where the `command sender` is the sender node for the given transaction and the `command receiver` is the node that has been chosen, by the `sender` as the `coordinator`.  The `sender` sends a `DelegationCommand` message...
+
+```mermaid
+sequenceDiagram
+  %%{init: { "sequence": { "mirrorActors":false }}}%%
+  participant S as Sender
+  participant C as Coordinator
+  loop Every RetryInterval
+    S -) C: DelegationCommand
+  end
+  alt delegation valid
+    C --) S: DelegationAccepted
+    C -->> C: Coordinate Transaction
+    activate C
+    deactivate C
+  else
+    C --) S: DelegationRejected
+  end
+  
+```
+
+
+##### <a name="message-transaction-delegation-command"></a>Delegation Command
+```proto
+message DelegationCommand {
+    string transaction_id = 1;
+    string delegate_node_id = 2;
+    string delegation_id = 3; //this is used to correlate the acknowledgement back to the delegation. unlike the transport message id / correlation id, this is not unique across retries
+    bytes private_transaction = 4; //json serialized copy of the in-memory private transaction object
+    int64 block_height = 5; // the block height upon which this delegation was calculated (the highest delegation wins when crossing in the post)
+}
+```
+
+As a member of the coordinator committee, a node that receives a `DelegationCommand` must either respond by sending `DelegationAccepted` or `DelegationRejected` message.  
+
+Valid reasons for rejection are
+ - requesters block height is in a different block range than expected.  In this case, the `DelegationRejected` message must contain the block height that the local node is aware of so that the delegating node can make an informed decision based on whether they are behind or ahead.
+ - the current node is not the most preferred available coordinator for the current block height.
+
+If the Delegation is accepted, then the receiving node must begin [coordinating that transaction](#subprocess-coordinate-transaction)
+
+```mermaid
+---
+title: OnDelegationCommand
+---
+flowchart TB
+    A@{ shape: sm-circ, label: "Start" }
+    B@{ shape: diam, label: "Check <br/>block<br/>range" }
+    C@{ shape: lean-r, label: "Reject<br/>(wrong block height)" }
+    D@{ shape: fr-rect, label: "Select<br/>available<br/>coordinator" }
+    E@{ shape: diam, label: "this Is<br/>Coordinator" }
+    I@{ shape: lean-r, label: "Reject<br/>(wrong coordinator)" }
+    G@{ shape: fr-rect, label: "<a href="#subprocess-coordinate-transaction">coordinate transaction</a>" }
+    J@{ shape: fr-circ, label: " " }
+
+
+    A-->B
+    B --> |Behind| C
+    B --> |Ahead| C
+    B --> |Same| D
+    D --> E
+    E --> |Yes| G
+    E --> |No| I
+    G --> J
+```
+
+##### <a name="message-transaction-delegation-rejected"></a>Transaction delegation rejected
+
+The handling of a delegation rejected message depends on the reason for rejection.
+ - if the reason is `MismatchedBlockHeight` and the target delegate is ahead then a new delegation request is sent once the sender has reached a compatible block height.  Compatible block height is defined as a block height in the same block range. 
+ - if the reason is `MismatchedBlockHeight` and the target delegate is behind then a new delegation request is sent on a periodic interval until it is accepted or rejected with a different reason
+ - if the reason is `NotPreferredCoordinator` the `SendTransaction` process is reset
+
+```proto
+message DelegationRequestRejected {
+    string transaction_id = 1;
+    string delegate_node_id = 2;
+    string delegation_id = 3;
+    string contract_address = 4;
+    DelegationRequestRejectedReason reject_reason = 5;
+    optional MismatchedBlockHeightDetail mismatchedBlockHeightDetail = 6; //included if reject_reason is "MismatchedBlockHeight"
+    optional NotPreferredCoordinatorDetail notPreferredCoordinatorDetail = 7; //included if reject_reason is "NotPreferredCoordinator"
+}
+
+enum DelegationRequestRejectedReason{
+  MismatchedBlockHeight = 0;
+  NotPreferredCoordinator = 1;
+}
+
+message MismatchedBlockHeightDetail {
+  int64 provided_block_height = 1;
+  int64 observed_block_height = 2;
+}
+
+message NotPreferredCoordinatorDetail {
+  string preferred_coordinator = 1;
+  google.protobuf.Timestamp latest_heartbeat_time = 2;
+  string latest_heartbeat_id = 3;
+}
+
+```
+
+##### <a name="message-transaction-delegation-accepted"></a>Transaction delegation accepted
+
+If a node receives a `DelegationAccepted` message then it should start to monitor the continued acceptance of that delegation.  It can expect to receive `HeartbeatNotification` messages from the delegate node and for those messages to include the id of the delegated transaction. The `sender` node cannot assume that the `coordinator` node will persist the delegation request.  If the heartbeat messages stop or if the received heartbeat messages do not contain the expected transaction ids, then the sender should retrigger the `HandleTransaction` process to cause the transaction to be re-delegated either to the same delegate, or new delegate or to be coordinated by the sender node itself. Whichever is appropriate for the current point in time.  
+
+```proto
+message DelegationRequestAccepted {
+    string transaction_id = 1;
+    string delegate_node_id = 2;
+    string delegation_id = 3;
+    string contract_address = 4;
+}
+```
+
+#### Transaction Assemble
+
+
+This is an instance of the `Request` pattern where the `request sender` is the coordinator node for the given transaction and the `request receiver` is the sender node.
+
+```mermaid
+sequenceDiagram
+  %%{init: { "sequence": { "mirrorActors":false }}}%%
+  participant S as Sender
+  participant C as Coordinator
+  loop Every RetryInterval
+    C -) S: AssembleRequest
+  end
+  alt is valid
+    S --) C: AssembleResponse
+  else
+    S --) C: AssembleError
+  end
+```  
+
+Given that a node (referred to as `sender`) has delegated a transaction to another node (referred to as `delegate`) and hasn't since re-delegated that transaction for any reason to any other node, when the `sender` node receives an `AssembleRequest` message from the `delegate` then it should invoke the relevant domain code, with a domain context containing the state locks from the `AssembleRequest` message, sign the resulting payload and send an `AssembleResponse` message to the `delegate`.
+
+The `sender` should send an `AssembleError` message if it is unable to successfully assemble and sign the transaction for any reason.
+
+If no `AssembleResponse` or `AssembleError` message is received by the coordinator after the `assembleTimeout` period, then the coordinator may abandon this transaction or make another attempt to re-assemble it, at a later time, potentially with a new domain context.
+
+The `sender` node must not assume that a successful `AssembleResponse` will be the final assemble of that transaction.  If further `AssembleRequest` messages are received then the `sender` must fulfil those in a timely manner otherwise the  `coordinator` may stop coordinating that transaction.
+
+If the `AssembleRequest` does not correspond to an inflight transaction for that `sender` node then the sender must send a `AssembleError` message to the coordinator node.
+If the `AssembleRequest` does no correspond to the active delegation for the given transaction, then the `sender` node must send an `AssembleError` to the coordinator node.
+
+
+A note on "active delegation" vs "inflight transaction":  A given transaction is determined to be `in-flight` if the sender has received a `ptx_sendTransaction(s)` or `ptx_prepareTransaction(s)` call from the user and the transaction has not yet been dispatched to the submitter or prepared and distributed back to the sender.  While a transaction is in-flight, it may be the subject of multiple delegations but only one of those delegations are considered as `active` at any point in time.  For example, the sender node may detect that the coordinator has gone offline and will then create a new delegation for an alternative coordinator.
+
+
+##### <a name="message-assemble-request"></a>Assemble request
+
+```proto
+message AssembleRequest {
+    string transaction_id = 1;
+    string assemble_request_id = 2;
+    string contract_address = 3;
+    bytes transaction_inputs = 4;
+    bytes pre_assembly = 5;
+    bytes state_locks = 6;
+    int64 block_height = 7;
+    string delegation_id = 8;
+}
+```
+
+```mermaid
+---
+title: OnAssembleRequest
+---
+flowchart TB
+    A@{ shape: sm-circ, label: "Start" }
+    B@{ shape: h-cyl, label: "Inflight<br/>transactions" }
+    C@{ shape: rect, label: "Query<br/>inflight<br/>transactions" }
+    D@{ shape: rect, label: "Send AssembleError" }
+    E@{ shape: diam, label: "Is<br/>active<br/>delegation" }
+    F@{ shape: rect, label: "Send AssembleError" }
+    G@{ shape: rect, label: "Assemble" }
+    H@{ shape: rect, label: "Sign<br/>Payload" }
+    I@{ shape: rect, label: "Send AssembleResponse" }
+
+    A --> C
+    C <--> B
+    C --> |Not Found| D
+    C --> E
+    E --> |No| F
+    E --> |Yes| G
+    G --> H
+    H --> I
+```
+
+##### <a name="message-assemble-response"></a>Assemble response
+
+```proto
+message AssembleResponse {
+    string transaction_id = 1;
+    string assemble_request_id = 2;
+    string contract_address = 3;
+    bytes post_assembly = 4;
+}
+```
+
+##### <a name="message-assemble-error"></a>Assemble error
+
+```proto
+message AssembleError {
+    string transaction_id = 1;
+    string assemble_request_id = 2;
+    string contract_address = 3;
+    string error_message = 4;
+}
+```
+
+If a coordinator receives an `AssembleError` then it must stop coordinating that transaction.  It is the responsibility of the sender node to decide whether to finalize the transaction as `failed` or to retry at a later point in time.
+
+#### Transaction endorsement
+
+
+This is an instance of the `Request` pattern where the `request sender` is the coordinator node for the given transaction and the `request receiver` is one of the required endorsers.
+
+```mermaid
+sequenceDiagram
+  %%{init: { "sequence": { "mirrorActors":false }}}%%
+  participant C as Coordinator
+  participant E as Endorser
+  loop Every RetryInterval
+    C -) E: EndorsementRequest
+  end
+  alt is valid
+    E --) C: EndorsementResponse
+  else
+    E --) C: EndorsementError
+  end
+```  
+
+As a member of the endorsement committee for a domain instance, whenever a node receives an `Endorsement request` it must respond, with either an `EndorsementResponse` or `EndorsementError`.
+
+##### <a name="message-endorsement-request"></a>Endorsement request
+
+```proto
+message EndorsementRequest {
+    google.protobuf.Any attestation_request = 1;
+    string idempotency_key = 2;
+    string transaction_id = 3;
+    string contract_address = 4;
+    string party = 5;
+    google.protobuf.Any transaction_specification = 6;
+    repeated google.protobuf.Any verifiers = 7;
+    repeated google.protobuf.Any signatures = 8;
+    repeated google.protobuf.Any inputStates = 9;
+    repeated google.protobuf.Any readStates = 10;
+    repeated google.protobuf.Any outputStates = 11;
+    repeated google.protobuf.Any infoStates = 12;
+}
+```
+
+##### <a name="message-endorsement-response"></a>Endorsement response
+
+```proto
+message EndorsementResponse {
+    string transaction_id = 1;
+    string idempotency_key = 2;
+    string contract_address = 3;
+    optional google.protobuf.Any endorsement = 4;
+    string party = 5;
+    string attestation_request_name = 6;
+}
+```
+
+##### <a name="message-endorsement-response"></a>Endorsement error
+
+When a coordinator receives a `EndorsementError` it must remove that transaction, and any dependant transactions from the current graph of assembled transactions and queue them up for re-assembly.
+
+```proto
+message EndorsementError {
+    string transaction_id = 1;
+    string idempotency_key = 2;
+    string contract_address = 3;
+    optional string revert_reason = 4;
+    string party = 5;
+    string attestation_request_name = 6;
+}
+```
+
+#### Heartbeat
+
+Once a `coordinator` node has accepted a delegation, it will continue to periodically send `HeartbeatNotification` messages to the `sender` node for that transaction. The coordinator sends a heartbeat notification to all nodes for which it is currently coordinating transactions.  The message sent to any given node must include the ids for all active delegations. The message may contain other delegation ids that are unknown to the receiving node.
+
+This is a fire and forget notification.  There is no acknowledgement expected.
+
+```mermaid
+sequenceDiagram
+  %%{init: { "sequence": { "mirrorActors":false }}}%%
+  participant C as Coordinator
+  participant S1 as Sender 1
+  participant S2 as Sender 2
+  loop Every `HeartBeatInterval`
+    C -) S1: Heartbeat
+    C -) S2: Heartbeat
+  end
+  
+```  
+
+##### <a name="message-heartbeat-notification"></a>Heartbeat notification
+
+When a node receives a heartbeat message from a coordinator node, it should compare that notification with its record of inflight transactions and active delegations
+ - if the receiving node has any in flight transactions that have been delegated to coordinators other than the source of the received heartbeat, then the receiving node should initiate a re-evaluation of its choice of coordinator
+
+```proto
+message HeartbeatNotification {
+    string heartbeat_id = 1;
+    google.protobuf.Timestamp timestamp = 2;
+    string idempotency_key = 3;
+    string contract_address = 4;
+    repeated string transaction_ids = 5;
+}
+```
+
+#### Dispatch confirmation
+
+When a coordinator has gathered all required endorsements for a transaction and there are no dependant transactions still waiting to be endorsed, then the coordinator must request confirmation of dispatch from the sender of the transaction. This step is not strictly necessary to achieve data integrity but it does help to mitigate situations where the delegation had been rescinded and a transaction delegated to another coordinator without the initial coordinator being aware of that. If this confirmation is not sought, then there is a possibility that the coordinator will cause the submitter and / or another coordinator / submitter to perform wasteful processing submitting a transaction that will revert on the base ledger as a duplicate.
+
+```mermaid
+sequenceDiagram
+  %%{init: { "sequence": { "mirrorActors":false }}}%%
+  participant C as Coordinator
+  participant S as Sender
+  loop Every RetryInterval
+    C -) S: RequestDispatchConfirmation
+  end
+  alt request is valid
+    S --) C: DispatchConfirmationResponse
+  else
+    R --) S: Error
+  end
+```
+
+##### <a name="message-request-dispatch-confirmation"></a> Request dispatch confirmation
+
+Given that a node (referred to as `sender`) has delegated a transaction to another node (referred to as `delegate`) and hasn't since re-delegated that transaction for any reason to any other node, when the `sender` node receives a `RequestDispatchConfirmation` message from the `delegate` then it must send a `DispatchConfirmationResponse` message.
+If the sender does not recognize the delegation or if it has knowingly relegated to another coordinator, then it must send a `DispatchConfirmationError`
+
+TODO need more detail here
+
+##### <a name="message-dispatch-confirmation-response"></a> Dispatch confirmation response
+
+```proto
+message DispatchConfirmationResponse {
+    
+}
+```
+
+This is the successful response to a `Request dispatch confirmation` message.  
+
+##### <a name="message-dispatch-confirmation-error"></a> Dispatch confirmation error
+
+```proto
+message HeartbeatNotification {
+    string heartbeat_id = 1;
+    google.protobuf.Timestamp timestamp = 2;
+    string idempotency_key = 3;
+    string contract_address = 4;
+    repeated string transaction_ids = 5;
+}
+```
+
+
+#### Dispatch notification
+
+Once a coordinator has dispatched a transaction to a submitter, it must notify the sender via a dispatch notification flow which is an instance of the `Assured delivery data distribution` pattern.
+
+```mermaid
+sequenceDiagram
+  %%{init: { "sequence": { "mirrorActors":false }}}%%
+  
+  participant C as Coordinator
+  participant CDB as Coordinator's Database
+  participant S as Sender
+  participant SDB as Senders's Database
+  C->>CDB: InsertDispatchNotificationOperation
+  activate CDB
+  C->>CDB: Commit
+  deactivate CDB
+  loop Every RetryInterval
+    C -) S: 
+  end
+  S->>SDB: InsertDispatchNotification
+  activate SDB
+  S->>SDB: Commit
+  deactivate SDB
+  
+  S --) C: DispatchNotificationAcknowledgement
+
+  C->>CDB: InsertDispatchNotificationAcknowledgement
+  activate CDB
+  C->>CDB: Commit
+  deactivate CDB
+```
+
+
+##### <a name="message-dispatch-notification"></a> Dispatch notification
+
+
+
+##### <a name="message-dispatch-notification-acknowledgment"></a> Dispatch notification acknowledgment
+
+  
+
+### Sub processes
+
+#### <a name="subprocess-handle-transaction"></a> Handle transaction
+
+The `HandleTransaction` process is the main process implemented byt the sender node for a transaction. It is initially triggered as an effect of the user calling `ptx_sendTransaction(s)` ( or `ptx_prepareTransaction(s)`) and can be re-triggered in certain error cases or process restarts.
+
+```mermaid
+---
+title: Handle transaction
+---
+flowchart TB
+    Start@{ shape: sm-circ, label: "Start" }
+    A@{ shape: fr-rect, label: "Select<br/>available<br/>coordinator" }
+    B@{ shape: diam, label: "Is Local<br/>Coordinator" }
+    C@{ shape: fr-rect, label: "<a href="#subprocess-coordinate-transaction">coordinate transaction</a>" }
+    D@{ shape: fr-rect, label: "Delegate transaction" }
+    
+    Start-->A
+    A --> B
+    B --> |Yes| C
+    B --> |No| D
+
+```
+
+#### <a name="subprocess-coordinate-transaction"></a> Coordinate transaction 
+The `Coordinate transaction` subprocess is responsible for assembling the transaction, gathering endorsements, preparing the transaction for dispatch and then requesting confirmation from the sender before proceeding to dispatch for submission to the base ledger or distributed back to the sender for future submission.
+
+There is no guarantee that the coordinator will complete the preparation any may prematurely stop coordinating the transaction for an unexpected reason (e.g. process restart). While the coordinator does continue to coordinate the transaction, it must include that transaction's id in the heartbeat message that it sends to the sender of that transaction.  The heartbeat message may contain transactions that were delegated by other senders but a heartbeat message sent to a given node must at least contain the transaction ids for which that node is a sender.
+
+It is responsibility of the `sender` to send a new `DelegationRequest` to the coordinator, or to another coordinator node if there is any indication that the original coordinator has prematurely stopped coordinating a transaction for any reason.
+
+```mermaid
+---
+title: Coordinate transaction
+---
+flowchart TB
+    Start@{ shape: sm-circ, label: "Start" }
+    A@{ shape: rect, label: "Wait for assemble slot" }
+    B@{ shape: fr-rect, label: "Assemble Transaction" }
+    C@{ shape: fr-rect, label: "Gather endorsements" }
+    D@{ shape: diam, label: "Submit<br/>mode" }
+    E@{ shape: fr-rect, label: "Distribute prepared transaction" }
+    F@{ shape: fr-rect, label: "Confirm dispatch" }
+    G@{ shape: diam, label: "Is<br/>Confirmed" }
+    H@{ shape: rect, label: "Dispatch" }
+    I@{ shape: rect, label: "Send DispatchedNotification" }
+
+    Start --> A
+    A --> B
+    B --> C
+    C --> D
+    D --> |External| E
+    D --> |Auto| F
+    F --> G
+    G --> |Yes| H
+    G --> |No| J
+    H --> I
+```
+
+#### <a name="subprocess-check-availability"></a>Check availability
+
+Check availability sub process
+
+
+#### <a name="subprocess-select-available-coordinator"></a> Select available coordinator
+```mermaid
+---
+title: Select available coordinator
+---
+flowchart TB
+    Start@{ shape: sm-circ, label: "Start" }
+    End@{ shape: fr-circ, label: "End" }
+    F@{ shape: fr-rect, label: "<a href="#check-availability">Check availability</a>" }
+    H@{ shape: diam, label: "Is available" }
+    K@{ shape: win-pane, label: "Availability cache" }
+    H --> |Yes| I
+    H --> |No| D
+
+    Start-->A
+    A-->End
+```
+
+
+#### <a name="subprocess-gather-endorsements"></a>Gather endorsements
+
+Given that a node has started acting as a coordinator and has accepted delegation of a transaction, when that transaction is assembled, then the coordinator sends endorsement requests to all required endorsers.
+Once an endorsement response has been received from the minimum set of endorsers, then the transaction is marked as ready to dispatch and the  
+
+
+#### <a name="subprocess-reevaluate-active-delegations"></a>Revaluate active delegations
+
+If a sender node has detected any confusion in terms of which node it believes to be the current coordinator, then it should re-evaluate the status of all inflight transactions that have been delegated to a coordinator and decide whether to rescind that delegation and delegate to a different coordinator.
+It should be noted that rescinding a delegation is a passive decision.  There is no obligation to notify the delegate that has happened because this needs to be possible in cases where the sender node has lost connection to the delegate.  If the delegate node does continue to coordinate the transaction, then assuming it is operating as per spec, it will not get further than requesting confirmation to dispatch. That confirmation will be denied. The assumption, baked into the protocol, is that all other nodes will likewise passively rescind delegations from that coordinator and reject dispatch confirmations so the whole graph of dependencies behind that will need to be re-assembled which will also be rejected and eventually all rescinded delegations will be abandoned.
+
+
+
+## Key architectural decisions and alternatives considered
 
 ### Implicit or explicit liveness detection
 
@@ -696,7 +1420,7 @@ The distributed processing of the paladin engine aims to minimize the probabilit
  - The alternative would be to design a coordinated transactional handshake that was resilient to network outage.  There are known protocols ( such as 2 phase commit XA protocols) that could give us assurance that the prepared transaction eventually exists exactly once in one submitters database but that does not guarantee that it will end up successfully submitted to the base ledger and may lead to a stranded transaction.  So, if we did adopt that approach, we would need to mitigate the stranded transaction situation with a timeout / retry on the part of the sender.  If that retry turned out to be too eager, then we would still end up with duplicate submission to the base ledger.
  
  **Status**
-Initial Proposal.  This has not been discussed and/or agreed with other maintainers yet.
+Proposal.  This decision has been discussed with other maintainers but is pending final acceptance.
 
 ### Majority vote for confirmation of non availability of preferred coordinator
 
@@ -704,8 +1428,10 @@ Initial Proposal.  This has not been discussed and/or agreed with other maintain
 Given that all nodes can reach an independent universal conclusion about the ranking of preferred coordinators for any given point in time, the actual choice of coordinator depends on which of the preferred coordinators happen to be available.  The awareness of availability is not something that can be deterministically calculated because each node may have different information.  A decision needed to be made about whether this algorithm depends on all nodes (or a majority of nodes) agreeing about availability of preferred coordinator.
 
 **Decision**
-Algorithm does *not* depend on nor provide a facility to ensure that all nodes reach the same conclusion regarding availably of the preferred coordinator.
+
+Algorithm does *not* depend on nor provide a facility to ensure that all nodes reach the same conclusion regarding available of the preferred coordinator.
 
 **Consequences**
  - algorithm is simpler and does not need a voting handshake or voting `term` counting
  - network partitions (where some nodes recognize one coordinator and other nodes recognize another coordinator) can happen.  To have an algorithm that completely avoids  network partitions would become very complex, and error prone.  When network conditions, that could cause a partition arise, then such an algorithm would grind to a halt.  Given that the algorithm's main objective is efficiency and we rely on the base ledger contract for correctness and transactional integrity, the preferred algorithm should be able to continue to function - albeit with reduced efficiency due to increase in error handling and retry - in the case of a partition.
+
