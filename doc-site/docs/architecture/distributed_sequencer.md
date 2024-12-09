@@ -46,7 +46,7 @@ Each node is allocated positions on a hash ring.  These positions are a function
 
 For the current block height, a position on the ring is calculated from a deterministic function.  The node that is closest to that position on the ring is selected as the coordinator.  If that node is not available, then the next closest node is selected. If that node is not available, then the next closest again is selected, and so on.
 
-For each Pente domain instance ( smart contract API) the coordinator is selected by choosing one of the nodes in the configured privacy group of that contract
+For each smart contract instance in the domain the coordinator is selected by choosing one of the nodes in the configured privacy group of that contract
 
  - the selector is a pure function where the inputs are the node names + the current block number and the output is the name of one of the nodes
  - the function will return the same output for a range of `n` consecutive blocks ( where `n` is a configuration parameter of the policy)
