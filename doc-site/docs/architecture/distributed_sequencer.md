@@ -32,6 +32,8 @@ The basic premises of the algorithm are:
 To describe the algorithm in detail, we break it down to sub problems
 
 ### Composition of committee
+
+A smart contract instance of a domain opts into use of the distributed sequencer algorithm, and initializes it with the composition of the committee during the `InitContract` stage. This occurs individual on each node in the committee based on the on-chain configuration information that is written to the base ledger.
 When creating a new Pente domain contract instance ( i.e. privacy group) the list of nodes that are candidates for coordinator selection is declared.  For Pente this happens to be exactly equal to the privacy group but potentially could theoretically be a subset of the privacy group.
 
 Similarly, any other future domain that opts in to the dynamic coordinator selection policy,  must provide this information as part of the constructor handshake between the domain and the core paladin engine.
