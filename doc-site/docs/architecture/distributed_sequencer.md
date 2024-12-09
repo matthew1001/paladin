@@ -190,7 +190,7 @@ TODO
 It is likely that different nodes will become aware of new block heights at different times so the algorithm must accommodate that inconsistency. 
 
  - given that different nodes index the blockchain events with varying latency, it is not assumed that all nodes have the same awareness of "current block number" at any one time. This is accommodated by the following
- - Each node delegates all transactions to which ever node it determines as the current coordinator based on its latest knowledge of "current block"
+ - Each node delegates the transactions submitted locally to it by applications, to which ever node it determines as the current coordinator based on its latest knowledge of "current block"
  - The delegate node will accept the delegation if its awareness of current block also results in it being chosen by the selector function.  Otherwise, the delegate node rejects the delegation and includes its view of current block number in the response
  - On receiving the delegation rejection, the sender node can determine if it is ahead or behind (in terms of block indexing) the node it had chosen as delegate.  
  - If the sender node is ahead, it continues to retry the delegation until the delegate node finally catches up and accepts the delegation
