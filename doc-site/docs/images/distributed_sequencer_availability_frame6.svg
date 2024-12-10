@@ -14,6 +14,21 @@
    xmlns:xlink="http://www.w3.org/1999/xlink"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg">
+      <style>
+         .startup-message {
+            fill:#D68F5C;
+            stroke:none;
+            stroke-width:0.0848807;
+            stroke-dasharray:none;
+         }
+         .startup-message-path {
+            stroke:#D68F5C;
+            fill:#D68F5C;
+            stroke-width:0.224;
+            stroke-dasharray:none;
+            marker-end:url(#Triangle);
+         }
+      </style>
   <sodipodi:namedview
      id="namedview1"
      pagecolor="#ffffff"
@@ -621,8 +636,8 @@
            style="font-size:74.6667px;font-family:Arial;-inkscape-font-specification:'Arial, Normal'"
            id="tspan10">D</tspan></tspan></text>
     <circle
-       style="fill:#db1457;stroke:none;stroke-width:0.0848807;stroke-dasharray:none"
-       id="circle251"
+       class="startup-message"
+       id="startup-message-a-to-d"
        cx="-30.888073"
        cy="28.947765"
        transform="scale(-1,1)"
@@ -639,41 +654,41 @@
        sodipodi:nodetypes="cc" />
     <circle
        style="fill:#db1457;stroke:none;stroke-width:0.0848807;stroke-dasharray:none"
-       id="circle252"
+       id="heartbeat-message-c-to-b"
        cx="-30.587872"
        cy="14.835888"
        transform="scale(-1,1)"
        r="1" />
     <circle
-       style="fill:#db1457;stroke:none;stroke-width:0.0848807;stroke-dasharray:none"
-       id="circle253"
+      class="startup-message"
+       id="startup-message-a-to-c"
        cx="-10.429088"
        cy="28.678692"
        transform="scale(-1,1)"
        r="1" />
     <path
-       style="fill:#db1457;stroke:#db1457;stroke-width:0.224;stroke-dasharray:none;marker-end:url(#Triangle)"
+       class="startup-message-path"
        d="m 9.9572122,14.564373 1.7603098,15.05069"
-       id="path253"
+       id="startup-message-path-a-to-c"
        sodipodi:nodetypes="cc" />
     <path
-       style="fill:#db1457;stroke:#db1457;stroke-width:0.224;stroke-dasharray:none;marker-end:url(#Triangle)"
+       class="startup-message-path"
        d="m 12.509672,13.068103 16.19491,16.63499"
-       id="path254" />
+       id="startup-message-path-a-to-d" />
     <path
-       style="fill:#db1457;stroke:#db1457;stroke-width:0.224;stroke-dasharray:none;marker-end:url(#Triangle)"
+       class="startup-message-path"
        d="m 13.389822,10.251593 13.99452,0.26405"
-       id="path255" />
+       id="startup-message-path-a-to-b" />
     <circle
        style="fill:#db1457;stroke:none;stroke-width:0.0848807;stroke-dasharray:none"
-       id="circle255"
+       id="heartbeat-message-c-to-d"
        cx="-27.152111"
        cy="35.01582"
        transform="scale(-1,1)"
        r="1" />
     <circle
-       style="fill:#db1457;stroke:none;stroke-width:0.0848807;stroke-dasharray:none"
-       id="circle256"
+       class="startup-message"
+       id="startup-message-a-to-b"
        cx="-28.38435"
        cy="9.1392021"
        transform="scale(-1,1)"

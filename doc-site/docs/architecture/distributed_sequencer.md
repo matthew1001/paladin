@@ -36,17 +36,17 @@ To describe the algorithm in detail, we break it down to sub problems
 A smart contract instance of a domain opts into use of the distributed sequencer algorithm, and initializes it with the composition of the committee during the `InitContract` stage. This occurs individual on each node in the committee based on the on-chain configuration information that is written to the base ledger.
 The Pente privacy group smart contract, is an example of domain that uses the dynamic sequencer algorithm. The list of node-qualified signing identities that are candidates for coordinator selection is declared to be a set of anonymous addresses with a unique address allocated for member of the privacy group (future versions might choose to this to be a subset of the privacy group).
 
-Similarly, any other future domain that opts in to the dynamic coordinator selection policy,  must provide this information as part of the constructor handshake between the domain and the core paladin engine.
+Similarly, any other future domain that opts in to the distributed sequencer algorithm,  must provide this information as part of the constructor handshake between the domain and the core paladin engine.
 
 ### Coordinator selection
 
 This is a form of leader election but is achieved through deterministic calculation for a given point in time ( block height), given predefined members of the group, and a common (majority) awareness of the current availability of each member. So there is no actual "election" term needed.
 
-Each node is allocated positions on a hash ring.  These positions are a function of the node name.  Given that the entire committee agrees on the names of all nodes, all nodes independently arrive at the same decision about the positions of all nodes.
+Each committee member is allocated positions on a hash ring.  These positions are a function of the node-qualified signing identity.  Given that the entire committee agrees on the names of all nodes and the unique identity of each committee member, all nodes independently arrive at the same decision about the positions of all committee members.
 
-For the current block height, a position on the ring is calculated from a deterministic function.  The node that is closest to that position on the ring is selected as the coordinator.  If that node is not available, then the next closest node is selected. If that node is not available, then the next closest again is selected, and so on.
+For the current block height, a position on the ring is calculated from a deterministic function.  The committee member that is closest to that position on the ring is selected as the coordinator.  If the node for that identity is not available, then the next closest member is selected. If that node is not available, then the next closest again is selected, and so on.
 
-For each smart contract instance in the domain the coordinator is selected by choosing one of the nodes in the configured privacy group of that contract
+For each smart contract instance in the domain, the coordinator is selected by choosing one of the nodes in the configured privacy group of that contract
 
  - the selector is a pure function where the inputs are the node names + the current block number and the output is the name of one of the nodes
  - the function will return the same output for a range of `n` consecutive blocks ( where `n` is a configuration parameter of the policy)
@@ -63,7 +63,7 @@ In the example here, lets say we chose a hash function with a numeric output bet
 
 When a node starts acting as the coordinator, then it  periodically sends a heartbeat message to all nodes that for which it has an active delegation and will accept delegation requests from any other node in the group. 
 
-All sender nodes keep track of the current selected coordinator ( either by reevaluating the deterministic function periodically or caching the result until block height exceeds the current range boundary).  If they fail to receive a heartbeat message from the current coordinator, then they will chose the next closest node in the hashring (e.g. by reevaluating the hashring function with the unavailable nodes removed).
+All sender nodes keep track of the current selected coordinator ( either by reevaluating the deterministic function periodically or caching the result until block height exceeds the current range boundary).  If they fail to receive a heartbeat message from the current coordinator, then they will chose the next closest committee member in the hashring (e.g. by reevaluating the hashring function with the unavailable members removed).
 
 For illustration, consider the following example where nodes B, C, and D have recognized node A as the coordinator and have delegated transactions (labelled `B-1`, `C-1` and `D-1` )to it.
 
@@ -89,18 +89,22 @@ Node C then proceeds to act as coordinator and sends periodic heartbeat messages
 
 ![image](../images/distributed_sequencer_availability_frame5.svg){ width="500" }
 
+If Node A comes back online, what happens next depends on whether: 
 
-If Node A comes back online, then it will begin transmitting heartbeat messages again because it has selected itself as coordinator given the current block height.
+ - Node A was truly offline i.e. its process crashed or gracefully shutdown and has now restarted. In this case, Node A will send `startup` messages to all other nodes as soon as it detects activity on this privacy group. See <a href="#startup">Start up processing</a> for details on the logic for detecting activity and sending / receiving `startup` messages.
+ - Node A continued to run, but was not isolated from the other nodes due to a network outage.  In this case, Node A will resume sending heartbeat messages for any transaction that it was coordinating. In the special case where NodeA does not have any transactions in flight, then the startup message processing will be triggered, similarly ot the previous bullet. 
+ 
 
 ![image](../images/distributed_sequencer_availability_frame6.svg){ width="500" }
 
-
-As soon as nodes B. C and D receive the heartbeat messages from node A they each independently concur that node A is the preferred choice for coordinator and delegate any inflight transactions to it.  Node C decides to cease acting as coordinator and abandons any transactions that it has in flight.
+As soon as nodes B. C and D receive the startup messages from node A they each independently concur that node A is the preferred choice for coordinator and delegate any inflight transactions to it.  Node C decides to cease acting as coordinator and abandons any transactions that it has in flight.
 
 ![image](../images/distributed_sequencer_availability_frame1.svg){ width="500" }
 
 
- This universal conclusion is reached without any communication necessary between nodes B, C and D and without any knowledge of recent history.  Therefore is tolerant to any failover of nodes B, C or D in the interim and has a deterministic conclusion, that can be predicted by node A regardless of what other activity happened to occur while node A was offline (e.g. if node C had gone offline and coordinator role switched to B, or switch back to C ) 
+This universal conclusion is reached without any communication necessary between nodes B, C and D and without any knowledge of recent history.  Therefore is tolerant to any failover of nodes B, C or D in the interim and has a deterministic conclusion, that can be predicted by node A regardless of what other activity happened to occur while node A was offline (e.g. if node C had gone offline and coordinator role switched to B, or switch back to C ) 
+
+
 
 ### Network partition
 The sender node ultimately bears the responsibility of selecting a coordinator for their transactions. If a single coordinator is universally chosen, the algorithm operates accordingly with maximum efficiency and data integrity (transactions are successfully confirmed on base ledger and no state is double spent). 
@@ -128,25 +132,27 @@ The system reaches the desired eventual state of node A being coordinator, sendi
 
 ![image](../images/distributed_sequencer_partition_frame4.svg){ width="500" }
 
+<!--
 TODO
 
  - might be useful to illustrate the "limp mode" in more detail where both coordinators are managing to get transactions through but the base ledger contract is providing double spend protection and the retry strategy of the coordinator means that transactions are eventually processed correctly 
  - all of the above seems to assume that the network partition affects communication between paladin nodes but not the blockchain.  Should really discuss and elaborate what happens when the block chain nodes are not able to communicate with each other ( esp. in case of public chains where long finality times are possible).  The TL;DR is - notwithstanding this algorithm, the paladin core engine and its management of domain contexts must be mindful of the difference between block receipts and finality and should have mechanisms to configure the number of confirmed blocks it considers as final and/or to reset domain contexts and redo transaction intents that ended up on blocks that got reversed.
+ -->
  
 ### Coordinator switchover
 When the block height reaches a range boundary then all nodes independently reach a universal conclusion the new coordinator.
 
-Lets consider the case where the scenario explored above continues to the point where the blockchain moves to block 4.  In the interim, while node A was coordinator, nodes B, C and D delegated transactions `B-1`, `B-2`, `B-3`,  `C-1`, `C-2`, `C-3`, `D-1`, `D-2` and `D-3`,  and A itself has assembled `A-1`, `A-2`, `A-3`.
+Lets consider the case where the scenario explored above continues to the point where the blockchain moves to start mining block 5.  In the interim, while node A was coordinator, nodes B, C and D delegated transactions `B-1`, `B-2`, `B-3`,  `C-1`, `C-2`, `C-3`, `D-1`, `D-2` and `D-3`,  and A itself has assembled `A-1`, `A-2`, `A-3`.
 
 `A-1` , `B-1`, `C-1` and `D-1` have already been submitted to base ledger and confirmed.  
 `A-2` , `B-2`, `C-2` and `D-2` have been prepared for submission, assigned a signing address and a nonce but have not yet been mined into a confirmed block.  NOTE it is irrelevant whether these transactions have been the subject of an `eth_sendTransaction` yet or not.  i.e. whether they only exist in the memory of the paladin node's transaction manager or whether they exist in the mempool of node A's blockchain node.  What is important is that
 
  - they have been persisted to node A's database as being "dispatched" and
- - are not included in block 3 or earlier
+ - are not included in block 4 or earlier
 
 ![image](../images/distributed_sequencer_switchover_frame1.svg){ width="500" }
 
-As all nodes in the group ( including node A) receive receipts of block 3, they will recognize node B as the new coordinator
+As all nodes in the group ( including node A) learn that the new block height is 4, they will recognize node B as the new coordinator
 
 
 ![image](../images/distributed_sequencer_switchover_frame2.svg){ width="500" }
@@ -170,7 +176,7 @@ Node B will start to coordinate the assembly and endorsement of these transactio
 
 ![image](../images/distributed_sequencer_switchover_frame6.svg){ width="500" }
 
-Once  transactions `A-2` , `B-2`, `C-2` and `D-2` have been confirmed in a block ( which may be block 4 or may take more than one block) and node B has received confirmation of this, then node B will continue to prepare and submit transactions `A-3` , `B-3`, `C-3` and `D-3`.
+Once  transactions `A-2` , `B-2`, `C-2` and `D-2` have been confirmed in a block ( which may be block 5 or may take more than one block) and node B has received confirmation of this, then node B will continue to prepare and submit transactions `A-3` , `B-3`, `C-3` and `D-3`.
 
 ![image](../images/distributed_sequencer_switchover_frame7.svg){ width="500" }
 
@@ -180,11 +186,14 @@ Eventually transactions `A-3` , `B-3`, `C-3` and `D-3` are mined to a block.
 
 Note that there is a brief dip in throughput as node B waits for node A to flush through the pending dispatched transactions and there is also some additional processing for the inflight transactions that haven't been dispatched yet.  So a range size of 4 is unreasonable and it would be more likely for range sizes to be much larger so that these dips in throughput become negligible.
 
+<!--
 TODO
 
  - need more detail on precisely _how_  nodes B, C and D know that transactions `B-2``A-2` , `B-2`, `C-2` and `D-2` are past the point of no return and that transactions `A-3` , `B-3`, `C-3` and `D-3` do need to be re-delegated.
  - need more detail on precisely _how_ node B can continue to coordinate the assembly of transactions `A-3` , `B-3`, `C-3` and `D-3` in a domain context that is aware of the speculative states locks from transactions `B-2``A-2` , `B-2`, `C-2` and `D-2` 
  - It might be more productive for the next level of detail on these points to come in the form of a proposal in code.
+-->
+
 
 ### Variation in block height
 It is likely that different nodes will become aware of new block heights at different times so the algorithm must accommodate that inconsistency. 
@@ -226,8 +235,8 @@ Decisions and actions that need to be taken by the sender node
 
  - When a user sends a transaction intent (`ptx_sendTransaction` or `ptx_prepareTransaction`), the sender node needs to chose which coordinator to delegate to.
  - If the block height changes and there is a new preferred coordinator as per the selection algorithm then the sender node needs to decide whether to delegate the transaction to it. This will be dependent on whether the transaction has been dispatched or not.
- - If the coordinator node seems to have forgotten about the transaction, then the sender node needs to decide to re-delegate it
- - If the preferred coordinator node becomes unavailable then the sender node needs to decide which alternative coordinator to delegate to
+ - If the heartbeat messages sent by the coordinator node do not include all of the transactions that the sender has delegated to that coordinator, or if the if the sender stops receiving heartbeat messages from the preferred coordinator then then the sender node needs to decide to re-delegate those transactions to the preferred coordinator
+ - If the sender does not receive a delegation accepted message from the coordinator in a timely manner, then it considers the coordinator as unavailable and choses an alternative coordinator
  - If a transaction has been delegated to an alternative coordinator and the preferred coordinator becomes available again, then the sender needs to decide to re-delegate to the preferred coordinator
  - Given that there could have been a number of attempts to delegate and re-delegate the transaction to different coordinators, when any coordinator reaches the point of dispatching the transaction, the sender needs to decide whether or not it is valid to dispatch at the time, by that coordinator
  - If the base ledger transaction is reverted for any reason, then the sender decides to retry
@@ -866,12 +875,13 @@ sequenceDiagram
 
 ### Message specification and handler responsibilities
 
-The following concrete message exchanges defines the responsibilities and expectation of each node in the network.
+The following concrete message exchanges defines the responsibilities and expectation of each node in the network:
 
+ - <a href="#message-exchange-delegation">Transaction delegation</a>
+ - <a href="#message-exchange-assemble">Transaction Assemble</a>
+ - <a href="#message-exchange-endorsement">Transaction Endorsement</a>
 
-
-#### <a name="message-transaction-delegation-command"></a>Transaction delegation
-
+#### <a name="message-exchange-delegation"></a>Transaction delegation
 
 This is an instance of the `Command` pattern where the `command sender` is the sender node for the given transaction and the `command receiver` is the node that has been chosen, by the `sender` as the `coordinator`.  The `sender` sends a `DelegationCommand` message...
 
@@ -988,7 +998,7 @@ message DelegationRequestAccepted {
 }
 ```
 
-#### Transaction Assemble
+#### <a name="message-exchange-transaction-assemble"></a>Transaction Assemble
 
 
 This is an instance of the `Request` pattern where the `request sender` is the coordinator node for the given transaction and the `request receiver` is the sender node.
@@ -1087,7 +1097,7 @@ message AssembleError {
 
 If a coordinator receives an `AssembleError` then it must stop coordinating that transaction.  It is the responsibility of the sender node to decide whether to finalize the transaction as `failed` or to retry at a later point in time.
 
-#### Transaction endorsement
+#### <a name="message-exchange-endorsement"></a>Transaction endorsement
 
 
 This is an instance of the `Request` pattern where the `request sender` is the coordinator node for the given transaction and the `request receiver` is one of the required endorsers.
@@ -1156,7 +1166,7 @@ message EndorsementError {
 }
 ```
 
-#### Heartbeat
+#### <a name="message-exchange-heartbeat"></a>Heartbeat
 
 Once a `coordinator` node has accepted a delegation, it will continue to periodically send `HeartbeatNotification` messages to the `sender` node for that transaction. The coordinator sends a heartbeat notification to all nodes for which it is currently coordinating transactions.  The message sent to any given node must include the ids for all active delegations. The message may contain other delegation ids that are unknown to the receiving node.
 
@@ -1184,13 +1194,74 @@ When a node receives a heartbeat message from a coordinator node, it should comp
 message HeartbeatNotification {
     string heartbeat_id = 1;
     google.protobuf.Timestamp timestamp = 2;
-    string idempotency_key = 3;
-    string contract_address = 4;
-    repeated string transaction_ids = 5;
+    string contract_address = 3;
+    repeated string transaction_ids = 4;
 }
 ```
 
-#### Dispatch confirmation
+#### <a name="message-exchange-startup"></a>Startup
+
+<!--
+TBD: is `startup` / `startup message` the best term for this protocol point? It is relevant for node process startup time but is also relevant for any period of time after the node started until the first time it detects activity in a particular privacy group.  The protocol does not define a limit on this period so it could be a very long time.  
+Is is also valid for a spec compatible node to swap out of memory inactive privacy groups and when it does detect activity on a given privacy group, it cannot distinguish whether it has been active in that group since the last restart and will then send the startup message.  So maybe there is a better name than `startup` to reflect this.
+-->
+
+This is an instance of the `Reliable Notification` message exchange pattern where the sender of the notification is a node that was previously inactive with respect to a particular privacy group and the receiver of the notification is each of the other nodes in that group.
+
+Given that a node is currently inactive with respect to a privacy group that it is a member of, when that node detects any activity on that privacy group, then it sends a `startup message` to all other members of the privacy group. 
+
+Given that a node has some active delegations sent to any node that was not the preferred coordinator, when it receives a `startup message` from another node then it considers whether the node sending the `startup` message is more preferred as a coordinator than the current selected coordinator. When a node receives a startup message, then it sends an acknowledgment.
+
+For details on the processes that trigger a `startup message` to be sent, see:
+ - OnTransactionConfirmation
+ - OnDelegationRequest
+ - OnEndorsementRequest
+
+
+Differences between Startup messages and heartbeat messages
+
+- the sender of a startup message is not making any presumption or assertion that it should be the chosen coordinator.  In some cases a node can easily determine that it is the preferred coordinator (i.e. the hashring function places it closest for the current block range) however, there are cases where it would need to test the availability of other nodes in the network to determine that it is more preferred than other available nodes.  So the start up processing does not attempt make that decision and simply sends a startup message to members of any active privacy groups.
+ - start up messages are a one time message so they need to be acknowledged whereas heart beat messages are fire and forget because they are re-sent at periodic intervals 
+ - 
+
+##### <a name="message-startup-notification"></a> Startup notification message
+
+```proto
+message StartupNotification {
+    string startup_id = 1;
+    google.protobuf.Timestamp timestamp = 2;
+    string contract_address = 3;
+}
+```
+
+```mermaid
+---
+title: OnStartupNotification
+---
+flowchart TB
+    A@{ shape: sm-circ, label: "Start" }
+    B@{ shape: lean-r, label: "Send startup<br/>notification acknowledgment" }
+    C@{ shape: diam, label: "If<br/>active<br/>sender" }
+    D@{ shape: fr-rect, label: "Reevaluate<br/>active<br/>delegations" }
+    E@{ shape: fr-circ, label: " " }
+
+    A --> B
+    B --> C
+    C --> |Yes| D
+    C --> |No| E
+    D --> E
+
+    
+```
+
+##### <a name="message-startup-notification-acknowledgment"></a> Startup notification acknowledgment message
+```proto
+message StartupNotificationAcknowledgement {
+    string startup_id = 1;
+}
+```
+
+#### <a name="message-exchange-dispatch-confirmation"></a>Dispatch confirmation
 
 When a coordinator has gathered all required endorsements for a transaction and there are no dependant transactions still waiting to be endorsed, then the coordinator must request confirmation of dispatch from the sender of the transaction. This step is not strictly necessary to achieve data integrity but it does help to mitigate situations where the delegation had been rescinded and a transaction delegated to another coordinator without the initial coordinator being aware of that. If this confirmation is not sought, then there is a possibility that the coordinator will cause the submitter and / or another coordinator / submitter to perform wasteful processing submitting a transaction that will revert on the base ledger as a duplicate.
 
@@ -1238,7 +1309,7 @@ message HeartbeatNotification {
 }
 ```
 
-
+<!-- TODO remove the dispatch notification protocol point and replace it with continued heartbeat messages ( from coordinator or from submitter?) until transaction has been confirmed on base ledger -->
 #### Dispatch notification
 
 Once a coordinator has dispatched a transaction to a submitter, it must notify the sender via a dispatch notification flow which is an instance of the `Assured delivery data distribution` pattern.
@@ -1369,12 +1440,25 @@ Given that a node has started acting as a coordinator and has accepted delegatio
 Once an endorsement response has been received from the minimum set of endorsers, then the transaction is marked as ready to dispatch and the  
 
 
-#### <a name="subprocess-reevaluate-active-delegations"></a>Revaluate active delegations
+#### <a name="subprocess-reevaluate-active-delegations"></a>Reevaluate active delegations
 
 If a sender node has detected any confusion in terms of which node it believes to be the current coordinator, then it should re-evaluate the status of all inflight transactions that have been delegated to a coordinator and decide whether to rescind that delegation and delegate to a different coordinator.
 It should be noted that rescinding a delegation is a passive decision.  There is no obligation to notify the delegate that has happened because this needs to be possible in cases where the sender node has lost connection to the delegate.  If the delegate node does continue to coordinate the transaction, then assuming it is operating as per spec, it will not get further than requesting confirmation to dispatch. That confirmation will be denied. The assumption, baked into the protocol, is that all other nodes will likewise passively rescind delegations from that coordinator and reject dispatch confirmations so the whole graph of dependencies behind that will need to be re-assembled which will also be rejected and eventually all rescinded delegations will be abandoned.
 
 
+## Terminology
+
+Formal definitions of terms used in this document:
+
+**Sender**
+
+**Coordinator**
+
+**Delegation**
+
+**Active delegation**
+
+**Inflight transaction**
 
 ## Key architectural decisions and alternatives considered
 
@@ -1437,3 +1521,26 @@ Algorithm does *not* depend on nor provide a facility to ensure that all nodes r
  - algorithm is simpler and does not need a voting handshake or voting `term` counting
  - network partitions (where some nodes recognize one coordinator and other nodes recognize another coordinator) can happen.  To have an algorithm that completely avoids  network partitions would become very complex, and error prone.  When network conditions, that could cause a partition arise, then such an algorithm would grind to a halt.  Given that the algorithm's main objective is efficiency and we rely on the base ledger contract for correctness and transactional integrity, the preferred algorithm should be able to continue to function - albeit with reduced efficiency due to increase in error handling and retry - in the case of a partition.
 
+### Unavailable node revival
+
+**Context**
+As part of the fault tolerance, the protocol has a built in mechanism to detect when the preferred coordinator becomes unavailable and all nodes independently chose an alternative coordinator when they detect the unavailability of the preferred coordinator.  There needs to be a decision for how the protocol handles the case where the preferred coordinator comes back online.  This needs to cover the cases where the coordinator became unavailable due to connectivity issues and also the case where the coordinator node itself crashed and restarted or failed over.  It must also handle the case where the alternative coordinator subsequently became unavailable and all nodes had chosen a 2nd alternative.
+The decision should be optimized for the case where \
+ - there are a very large number of privacy groups, with different (overlapping) committee makeups, different preferred coordinator at any point in time
+ - there is a very large number of nodes on the network
+ - relatively small number of nodes per privacy group
+
+**Decision**
+It is the responsibility of the newly revived node to detect which privacy groups are currently active where any of the committee members of that group are resident on that node, then it sends a startup message ( which is an instance of the acknowledged notification pattern) to all other nodes that have members in that group.
+The newly revived node detects activity via blockchain events and/or having transactions delegated to it.
+It is the responsibility of sender nodes to re-evaluate their current choice of coordinator whenever a startup message is received.
+
+**Consequences**
+Compared with alternatives:
+ 
+ - we cannot expect A to spontaneously resume sending heartbeat messages for each of the delegates that it has accepted because we do not presume that the coordinator persists anything about the delegations sent to it.
+   - we could change the protocol to assume that the coordinator persists its delegations and starts transmitting heartbeats on startup but that adds a new persistence point in the mainline (non error case) and would impact the throughput and complexity of the system
+ - we could assert that sender nodes periodically check liveness via a request/reply pattern, for all nodes that are higher in preference to the current selected coordinator. Compared to the chosen option, that would cause a significant and continuous amount of processing and network chattiness during the window where the preferred coordinator is unavailable.  This also has the drawback that it is generating work ( which may be queued depending on the network transport being used) to be done by nodes that are potentially unavailable because of an overload of work.
+ - On startup (or periodically), a node sends a heartbeat to all nodes on the network. This could be extremely wasteful in cases of large networks which is very likely and the number of nodes in the network is likely to much higher than the number of nodes in all active privacy groups that a given node is a member of. 
+ 
+ 
