@@ -200,23 +200,22 @@ TODO
 ### Variation in block height
 It is likely that different nodes will become aware of new block heights at different times so the algorithm must accommodate that inconsistency. 
 
- - given that different nodes index the blockchain events with varying latency, it is not assumed that all nodes have the same awareness of "current block number" at any one time. This is accommodated by the following
+ - Given that different nodes index the blockchain events with varying latency, it is not assumed that all nodes have the same awareness of "current block number" at any one time. This is accommodated by the following
  - Each node delegates the transactions submitted locally to it by applications, to which ever node it determines as the current coordinator based on its latest knowledge of "current block"
  - The delegate node will accept the delegation if its awareness of current block also results in it being chosen by the selector function.  Otherwise, the delegate node rejects the delegation and includes its view of current block number in the response
  - On receiving the delegation rejection, the sender node can determine if it is ahead or behind (in terms of block indexing) the node it had chosen as delegate.  
  - If the sender node is ahead, it continues to retry the delegation until the delegate node finally catches up and accepts the delegation
  - If the sender node is behind, it waits until its block indexer catches up and then selects the coordinator for the new range
  - Coordinator node will continue to coordinate ( send endorsement requests and submit endorsed transactions to base ledger) until its block indexer has reached a block number that causes the coordinator selector to select a different node.
- - at that time, it waits until all dispatched transactions are confirmed on chain, then delegates all current inflight transactions to the new coordinator.
- - if the new coordinator is not up to date with block indexing, then it will reject and the delegation will be retried until it catches up. 
- - while a node is the current selected coordinator, it sends endorsement requests to every other node for every transaction that it is coordinating
- -  The endorsement request includes the name of the coordinator node
+ - At that time, it abandons all inflight transactions that have not yet been dispatched, stops sending heartbeat messages and will reject any further delegation requests.
+ - The sender for each of those abandoned transactions will stop receiving heartbeat messages and will either attempt to delegate to the old coordinator again or to the new coordinator depending on the current block height of that sender as above.
+ - While a node is the current selected coordinator, it sends endorsement requests to every other node for every transaction that it is coordinating
+ - The endorsement request includes the name of the coordinator node
  - Each endorsing node runs the selector function to determine if it believes that is the correct coordinator for the current block number
- - if not, then it rejects the endorsement and includes its view of the current block number in the rejection message
- - when the coordinator receives the rejection message, it can determine if it is ahead or behind the requested endorser
- - if the coordinator is ahead, it retries the endorsement request until the endorser catches up and eventually endorses the transaction
- - if the coordinator is behind, then it waits until its block indexer reaches the next range boundary and delegates all inflight transactions to the new coordinator
-
+ - If not, then it rejects the endorsement and includes its view of the current block number in the rejection message
+ - When the coordinator receives the rejection message, it can determine if it is ahead or behind the requested endorser
+ - If the coordinator is ahead, it retries the endorsement request until the endorser catches up and eventually endorses the transaction
+ - If the coordinator is behind, then it waits until its block indexer reaches the next range boundary and delegates all inflight transactions to the new coordinator
 
 
 ### Sender's responsibility
