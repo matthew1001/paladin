@@ -36,8 +36,6 @@ To describe the algorithm in detail, we break it down to sub problems
 A smart contract instance of a domain opts into use of the distributed sequencer algorithm, and initializes it with the composition of the committee during the `InitContract` stage. This occurs individual on each node in the committee based on the on-chain configuration information that is written to the base ledger.
 The Pente privacy group smart contract, is an example of domain that uses the dynamic sequencer algorithm. The list of node-qualified signing identities that are candidates for coordinator selection is declared to be a set of anonymous addresses with a unique address allocated for member of the privacy group (future versions might choose to this to be a subset of the privacy group).
 
-Similarly, any other future domain that opts in to the distributed sequencer algorithm,  must provide this information as part of the constructor handshake between the domain and the core paladin engine.
-
 ### Coordinator selection
 
 This is a form of leader election but is achieved through deterministic calculation for a given point in time ( block height), given predefined members of the group, and a common (majority) awareness of the current availability of each member. So there is no actual "election" term needed.
@@ -56,10 +54,12 @@ For each smart contract instance in the domain, the coordinator is selected by c
 
 ![image](../images/distributed_sequencer_hashring.svg){ width="500" }
 
-In the example here, lets say we chose a hash function with a numeric output between 0 and 360 where the hash of node A's name happens to be 315, node B is 45, node C is 225 and node D is 135.  Lets say we have a range size of 4, therefore for block numbers 0-3, we can calculate that they belong to range number 0, blocks 4-7 belong to range number 1 and so on.  Lets say that the hash function, when applied to `range0` returns 310.  When applied to `range1` returns 55 and when applied to `range2` returns 120.  Interpreting all of those hash output as degrees and plotting them on the circle ( with 0° at the top). We can then deterministically calculate that nodeA is selected while the block height is between 0 and 3, node B is selected when the block height is between 4 and 7 and node D is selected while the block height is between 8 an 11
+In the example here, lets say we chose a hash function with a numeric output between 0 and 360 where the hash of node A's name happens to be 315, node B is 45, node C is 225 and node D is 135.  Lets say we have a range size of 4, therefore for block numbers 1-4, we can calculate that they belong to range number 1, blocks 5-8 belong to range number 2 and so on.  Lets say that the hash function, when applied to `range1` returns 310.  When applied to `range2` returns 55 and when applied to `range3` returns 120.  Interpreting all of those hash output as degrees and plotting them on the circle ( with 0° at the top). We can then deterministically calculate that nodeA is selected while the block height is between 1 and 4, node B is selected when the block height is between 5 and 8 and node D is selected while the block height is between 9 and 12
 
 
-### Node availability detection
+NOTE: this is a contrived, simplified example for illustration.  In reality, the hashes are not uniformly distributed around the ring so to achieve an even distribution, virtual nodes are used.  Each node is assigned multiple locations on the ring by running the hash function on multiple deterministic mutations of the node name.  
+
+### <a name="node-availability-detection">Node availability detection
 
 When a node starts acting as the coordinator, then it  periodically sends a heartbeat message to all nodes that for which it has an active delegation and will accept delegation requests from any other node in the group. 
 
@@ -150,6 +150,8 @@ Lets consider the case where the scenario explored above continues to the point 
  - they have been persisted to node A's database as being "dispatched" and
  - are not included in block 4 or earlier
 
+Note: the suffixes `1` `2` and `3` do not imply any explicit ordering relationship between the transactions here and is simply to illustrate rough timing of when the transactions were initiated.  In this example, they happen to retain that order but there is no guarantee provided by the protocol that will be the case.  If there are requirements for explicit dependencies between transactions, then the`sender` must not delegate the dependant transactions until it has received confirmation from the base ledger that the dependencies have been completed.
+
 ![image](../images/distributed_sequencer_switchover_frame1.svg){ width="500" }
 
 As all nodes in the group ( including node A) learn that the new block height is 4, they will recognize node B as the new coordinator
@@ -223,10 +225,10 @@ The sender node for any given transaction remains ultimately responsible for ens
 
 Feedback available to the sender node that can be monitored to track the progress or otherwise of the transaction submission:
 
- - when the sender node is choosing the coordinator, it may have recently received a heartbeat message from the preferred coordinator or an alternative coordinator
- - when sending the delegation request to the coordinator, the sender node expects to receive an acknowledgement that the request has been received.  This is not a guarantee that the transaction will be completed.  At this point, the coordinator has only an in-memory record of that delegated transaction
- - coordinator heartbeat messages.  The payload of these messages contains a list of transaction IDs that the coordinator is actively coordinating
- - transaction confirmation request.  Once the coordinator has fulfilled the attestation plan, it sends a message to the transaction sender requesting permission to dispatch. If, for any reason, the sender has already re-delegated to another coordinator, then it will reject this request otherwise, it will accept.
+ - when the sender node is choosing the coordinator, it may have recently received a [coordinator heartbeat messages](#message-heartbeat-notification) from the preferred coordinator or an alternative coordinator
+ - when sending the delegation request to the coordinator, the sender node expects to receive a [delegation accepted message](message-transaction-delegation-accepted).  This is not a guarantee that the transaction will be completed.  At this point, the coordinator has only an in-memory record of that delegated transaction
+ - [coordinator heartbeat messages](#message-heartbeat-notification).  The payload of these messages contains a list of transaction IDs that the coordinator is actively coordinating
+ - [dispatch confirmation request](#message-exchange-dispatch-confirmation).  Once the coordinator has fulfilled the attestation plan, it sends a message to the transaction sender requesting permission to dispatch. If, for any reason, the sender has already re-delegated to another coordinator, then it will reject this request otherwise, it will accept.
  - transaction dispatched message.  When the coordinator prepares a transaction for submission to base ledger, it sends a message to the sender node for that transaction to communicate that fact.  The delivery of the message happens after the coordinator has written to its local database. The same database transaction triggers the downstream process to submit the transaction to the blockchain node.  The submission process happens concurrently to the transaction dispatched message.  So when the `sender` node receives the `transaction dispatched message`, there is no guarantee whether the transaction has been submitted to base ledger yet or not.  However, there is an assurance that the coordinator node has persistent the intent to submit it and will endeavor to do so even if it fails over.  However there are error situations where this is not possible (e.g. it could lose access to the signing key, or lose connectivity to the blockchain node) and these situations may be transient or may be permanent. 
  - blockchain event.  The base ledger contract for each domain emits a custom event that included the transaction ID.  The sender node will detect when such an event corresponds to one of its transactions and will record that transaction as confirmed.
  - transaction reverted message.  When the submitter fails to submit the transaction, for any reason, and gives up trying , then a `TransactionReverted` message is sent to the sender of that transaction.  There are some cases where the submitter retries certain failures and does *not* send this message.
@@ -237,7 +239,7 @@ Decisions and actions that need to be taken by the sender node
  - If the block height changes and there is a new preferred coordinator as per the selection algorithm then the sender node needs to decide whether to delegate the transaction to it. This will be dependent on whether the transaction has been dispatched or not.
  - If the heartbeat messages sent by the coordinator node do not include all of the transactions that the sender has delegated to that coordinator, or if the if the sender stops receiving heartbeat messages from the preferred coordinator then then the sender node needs to decide to re-delegate those transactions to the preferred coordinator
  - If the sender does not receive a delegation accepted message from the coordinator in a timely manner, then it considers the coordinator as unavailable and choses an alternative coordinator
- - If a transaction has been delegated to an alternative coordinator and the preferred coordinator becomes available again, then the sender needs to decide to re-delegate to the preferred coordinator
+ - If a transaction has been delegated to an alternative coordinator and the preferred coordinator becomes available again, then the sender needs to decide to re-delegate to the preferred coordinator.  See [Node availability detection](#node-availability-detection) for details on how the sender can detect when the coordinator becomes available again.
  - Given that there could have been a number of attempts to delegate and re-delegate the transaction to different coordinators, when any coordinator reaches the point of dispatching the transaction, the sender needs to decide whether or not it is valid to dispatch at the time, by that coordinator
  - If the base ledger transaction is reverted for any reason, then the sender decides to retry
 
@@ -245,7 +247,10 @@ To illustrate, lets consider the following scenarios
 
  - simple happy path: sender delegates transaction to a coordinator and that coordinator eventually successfully submits it to the base ledger contract
  - happy path with switchover: sender delegates transaction to a coordinator but before the transaction is ready for submission, the block height changes, a new coordinator is selected which then  eventually successfully submits it to the base ledger contract
- - realistic happy path: given that different nodes are likely to become aware of block height changes at different times, there are 6 different permutations of the order in which the 3 nodes ( sender, previous coordinator, new coordinator) become aware of the new block height but to understand the algorithm, we can reduce the analysis to 3 more general cases: When the sender is behind, when the previous coordinator is behind and when the new coordinator is behind.
+ - realistic happy path: given that different nodes are likely to become aware of block height changes at different times, there are 6 different permutations of the order in which the 3 nodes ( sender, previous coordinator, new coordinator) become aware of the new block height but to understand the algorithm, we can reduce the analysis to 3 more general cases: 
+     - When the sender is behind
+     - When the previous coordinator is behind
+     - When the new coordinator is behind.
  - failover cases: there is no persistence checkpoints between the transaction intent being received by the sender node and the transaction being dispatched to the base ledger submitter so if either the sender or coordinator node process restarts, then it loses all context of that delegation
      - sender failover.  If the sender restarts, it reads all pending transactions from its database and delegates each transaction to the chosen coordinator for that point in time. This may be the same coordinator that it delegates to previously or may be a new one. The sender holds, in memory, the name of the current coordinator and will only accept a dispatch confirmation from that coordinator.  So if it happens to be the case that it had delegated to a different coordinator before it restarted, then it will reject the dispatch confirmation from that coordinator and that copy of the assembled transaction will be discarded. Noting that this would trigger a re-assembly and re-run of the endorsement flow for any other transactions, including those from other senders, that have been assembled to spend the states produced by the discarded transaction. However, in most likeliness, all other senders will switch their preference to the same new coordinator and trigger a re-do of all non dispatched transactions.
      - coordinator failover. When the coordinator restarts, it will continue to send heartbeat messages but those messages only contain the transaction ids for the transactions that were delegated to it since restart.  For any pending transactions that were previously delegated to it, when the sender of those transactions receives the heartbeat message and realizes the that coordinator has "forgotten" about the transaction, then the sender re-delegates those transactions.
@@ -948,10 +953,14 @@ flowchart TB
     E --> |No| I
     G --> J
 ```
+<!--
+TODO include flow chart include the sending of the startup message
+-->
 
 ##### <a name="message-transaction-delegation-rejected"></a>Transaction delegation rejected
 
 The handling of a delegation rejected message depends on the reason for rejection.
+
  - if the reason is `MismatchedBlockHeight` and the target delegate is ahead then a new delegation request is sent once the sender has reached a compatible block height.  Compatible block height is defined as a block height in the same block range. 
  - if the reason is `MismatchedBlockHeight` and the target delegate is behind then a new delegation request is sent on a periodic interval until it is accepted or rejected with a different reason
  - if the reason is `NotPreferredCoordinator` the `SendTransaction` process is reset
@@ -1138,6 +1147,10 @@ message EndorsementRequest {
 }
 ```
 
+<!--
+TODO include flow chart including the sending of the startup message
+-->
+
 ##### <a name="message-endorsement-response"></a>Endorsement response
 
 ```proto
@@ -1213,9 +1226,10 @@ Given that a node is currently inactive with respect to a privacy group that it 
 Given that a node has some active delegations sent to any node that was not the preferred coordinator, when it receives a `startup message` from another node then it considers whether the node sending the `startup` message is more preferred as a coordinator than the current selected coordinator. When a node receives a startup message, then it sends an acknowledgment.
 
 For details on the processes that trigger a `startup message` to be sent, see:
- - OnTransactionConfirmation
- - OnDelegationRequest
- - OnEndorsementRequest
+
+ - [OnTransactionConfirmation](#message-exchange-transaction-confirmation)
+ - [OnDelegationCommand](#message-transaction-delegation-command)
+ - [OnEndorsementRequest](#message-endorsement-request)
 
 
 Differences between Startup messages and heartbeat messages
@@ -1350,12 +1364,13 @@ sequenceDiagram
 ##### <a name="message-dispatch-notification-acknowledgment"></a> Dispatch notification acknowledgment
 
   
+#### <a name="message-exchange-transaction-confirmation"></a> Transaction confirmation
 
 ### Sub processes
 
 #### <a name="subprocess-handle-transaction"></a> Handle transaction
 
-The `HandleTransaction` process is the main process implemented byt the sender node for a transaction. It is initially triggered as an effect of the user calling `ptx_sendTransaction(s)` ( or `ptx_prepareTransaction(s)`) and can be re-triggered in certain error cases or process restarts.
+The `HandleTransaction` process is the main process implemented by the sender node for a transaction. It is initially triggered as an effect of the user calling `ptx_sendTransaction(s)` ( or `ptx_prepareTransaction(s)`) and can be re-triggered in certain error cases or process restarts.
 
 ```mermaid
 ---
@@ -1378,7 +1393,7 @@ flowchart TB
 #### <a name="subprocess-coordinate-transaction"></a> Coordinate transaction 
 The `Coordinate transaction` subprocess is responsible for assembling the transaction, gathering endorsements, preparing the transaction for dispatch and then requesting confirmation from the sender before proceeding to dispatch for submission to the base ledger or distributed back to the sender for future submission.
 
-There is no guarantee that the coordinator will complete the preparation any may prematurely stop coordinating the transaction for an unexpected reason (e.g. process restart). While the coordinator does continue to coordinate the transaction, it must include that transaction's id in the heartbeat message that it sends to the sender of that transaction.  The heartbeat message may contain transactions that were delegated by other senders but a heartbeat message sent to a given node must at least contain the transaction ids for which that node is a sender.
+There is no guarantee that the coordinator will complete the preparation and may prematurely stop coordinating the transaction for an unexpected reason (e.g. process restart). While the coordinator does continue to coordinate the transaction, it must include that transaction's id in the heartbeat message that it sends to the sender of that transaction.  The heartbeat message may contain transactions that were delegated by other senders but a heartbeat message sent to a given node must at least contain the transaction ids for which that node is a sender.
 
 It is responsibility of the `sender` to send a new `DelegationRequest` to the coordinator, or to another coordinator node if there is any indication that the original coordinator has prematurely stopped coordinating a transaction for any reason.
 
