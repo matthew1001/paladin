@@ -29,7 +29,8 @@ The basic premises of the algorithm are:
  - The handshake between the sender node and the coordinator node(s) attempts to minimize the likelihood of the same transaction intent resulting in 2 valid base ledger transactions but cannot eliminate that possibility completely so there is protection against duplicate intent fulfillment in the base ledger contract
 
 ## Detailed Walkthrough
-To describe the algorithm in detail, we break it down to sub problems
+
+To describe the algorithm in detail, we break it down to sub problems.
 
 ### Composition of committee
 
@@ -55,7 +56,6 @@ For each smart contract instance in the domain, the coordinator is selected by c
 ![image](../images/distributed_sequencer_hashring.svg){ width="500" }
 
 In the example here, lets say we chose a hash function with a numeric output between 0 and 360 where the hash of node A's name happens to be 315, node B is 45, node C is 225 and node D is 135.  Lets say we have a range size of 4, therefore for block numbers 1-4, we can calculate that they belong to range number 1, blocks 5-8 belong to range number 2 and so on.  Lets say that the hash function, when applied to `range1` returns 310.  When applied to `range2` returns 55 and when applied to `range3` returns 120.  Interpreting all of those hash output as degrees and plotting them on the circle ( with 0° at the top). We can then deterministically calculate that nodeA is selected while the block height is between 1 and 4, node B is selected when the block height is between 5 and 8 and node D is selected while the block height is between 9 and 12
-
 
 NOTE: this is a contrived, simplified example for illustration.  In reality, the hashes are not uniformly distributed around the ring so to achieve an even distribution, virtual nodes are used.  Each node is assigned multiple locations on the ring by running the hash function on multiple deterministic mutations of the node name.  
 
@@ -156,7 +156,6 @@ Note: the suffixes `1` `2` and `3` do not imply any explicit ordering relationsh
 
 As all nodes in the group ( including node A) learn that the new block height is 4, they will recognize node B as the new coordinator
 
-
 ![image](../images/distributed_sequencer_switchover_frame2.svg){ width="500" }
 
 Node A will continue to process and monitor receipts for transactions `A-2` , `B-2`, `C-2` and `D-2` but will abandon transactions `A-3` , `B-3`, `C-3` and `D-3`.
@@ -242,23 +241,22 @@ Decisions and actions that need to be taken by the sender node
  - Given that there could have been a number of attempts to delegate and re-delegate the transaction to different coordinators, when any coordinator reaches the point of dispatching the transaction, the sender needs to decide whether or not it is valid to dispatch at the time, by that coordinator
  - If the base ledger transaction is reverted for any reason, then the sender decides to retry
 
-To illustrate, lets consider the following scenarios
+To illustrate, lets consider the following scenarios.  We start with simple happy path and then explore more realistic, but still happy paths, where the coordinator switchover happens naturally when the block height reaches then end of a predefined range.  Given that different nodes are likely to become aware of block height changes at different times, there are 6 different permutations of the order in which the 3 nodes ( sender, previous coordinator, new coordinator) become aware of the new block height but to understand the algorithm, we can reduce the analysis to 3 more general cases.  We then explore some error scenarios like failover where in-memory storage is lost on one or more nodes and availability issues where the nodes stop running or are unreachable.  There is no persistence checkpoints between the transaction intent being received by the sender node and the transaction being dispatched to the base ledger submitter so in the failover cases, if either the sender or coordinator node process restarts, then it loses all context of that delegation.
 
- - simple happy path: sender delegates transaction to a coordinator and that coordinator eventually successfully submits it to the base ledger contract
- - happy path with switchover: sender delegates transaction to a coordinator but before the transaction is ready for submission, the block height changes, a new coordinator is selected which then  eventually successfully submits it to the base ledger contract
- - realistic happy path: given that different nodes are likely to become aware of block height changes at different times, there are 6 different permutations of the order in which the 3 nodes ( sender, previous coordinator, new coordinator) become aware of the new block height but to understand the algorithm, we can reduce the analysis to 3 more general cases: 
-     - When the sender is behind
-     - When the previous coordinator is behind
-     - When the new coordinator is behind.
- - failover cases: there is no persistence checkpoints between the transaction intent being received by the sender node and the transaction being dispatched to the base ledger submitter so if either the sender or coordinator node process restarts, then it loses all context of that delegation
-     - sender failover.  If the sender restarts, it reads all pending transactions from its database and delegates each transaction to the chosen coordinator for that point in time. This may be the same coordinator that it delegates to previously or may be a new one. The sender holds, in memory, the name of the current coordinator and will only accept a dispatch confirmation from that coordinator.  So if it happens to be the case that it had delegated to a different coordinator before it restarted, then it will reject the dispatch confirmation from that coordinator and that copy of the assembled transaction will be discarded. Noting that this would trigger a re-assembly and re-run of the endorsement flow for any other transactions, including those from other senders, that have been assembled to spend the states produced by the discarded transaction. However, in most likeliness, all other senders will switch their preference to the same new coordinator and trigger a re-do of all non dispatched transactions.
-     - coordinator failover. When the coordinator restarts, it will continue to send heartbeat messages but those messages only contain the transaction ids for the transactions that were delegated to it since restart.  For any pending transactions that were previously delegated to it, when the sender of those transactions receives the heartbeat message and realizes the that coordinator has "forgotten" about the transaction, then the sender re-delegates those transactions.
- - coordinator becomes unavailable:  If the sender stops receiving heartbeat messages from the coordinator, then it assumes that the coordinator has become unavailable.  However it may actually be the case that the coordinator is still running and just that the network between the coordinator and the sender has a fault.  The action of the sender for each inflight transaction depends on exactly which stage of the flow the sender believes that transaction to be.  The consequence of the sender's action depend on whether the previous coordinator is still operating and where in the flow it believes the transaction to be.  Scenarios to explore are:
-     -  sender detects that the heartbeats have stopped before it has sent a response to a dispatch confirmation request (or before it has received the dispatch confirmation request)
-     -  sender detects that the heartbeats have stopped after it has received  
-  
+ - [Simple happy path](#senders-responsibiliy-simple-happy-path)
+ - [Happy path with switchover](senders-responsibility-coordinator-switchover)
+     - [When the new coordinator is behind](#senders-responsibility-coordinator-switchover-new-coordinator-behind)
+     - [When the previous coordinator is behind](#senders-responsibility-coordinator-switchover-original-coordinator-behind)
+     - [When the sender is behind](senders-responsibility-coordinator-switchover-original-sender-behind)
+ - [Failover cases](#senders-responsibility-failover) 
+     - [Sender failover](#senders-responsibility-sender-failover)
+     - [Coordinator failover](#senders-responsibility-coordinator-failover)
+ - [Coordinator becomes unavailable](#senders-responsibility-coordinator-becomes-unavailable)
+ - [Submitter becomes unavailable](#senders-responsibility-submitter-becomes-unavailable)
 
-#### Simple happy path
+#### <a name="senders-responsibility-simple-happy-path"></a>Simple happy path
+
+Sender delegates transaction to a coordinator and that coordinator eventually successfully submits it to the base ledger contract.
 
 ```mermaid
 sequenceDiagram
@@ -290,12 +288,13 @@ sequenceDiagram
   create participant SB as Submitter
   C->>SB: dispatch
   C->>S: dispatched
-  
 ```
 
-#### Coordinator switchover
-```mermaid
+#### <a name="senders-responsibility-coordinator-switchover"></a>Coordinator switchover
 
+Sender delegates transaction to a coordinator but before the transaction is ready for submission, the block height changes, a new coordinator is selected which then  eventually successfully submits it to the base ledger contract
+
+```mermaid
 sequenceDiagram
   %%{init: { "sequence": { "mirrorActors":false }}}%%
   actor user
@@ -352,7 +351,7 @@ sequenceDiagram
   
 ```
 
-#### Coordinator switchover where the new coordinator is behind on block indexing
+#### <a name="senders-responsibility-coordinator-switchover-new-coordinator-behind"></a>Coordinator switchover where the new coordinator is behind on block indexing
 ```mermaid
 
 sequenceDiagram
@@ -394,7 +393,7 @@ sequenceDiagram
 ```
 
 
-#### Coordinator switchover where original coordinator is behind on block indexing
+#### <a name="senders-responsibility-coordinator-switchover-original-coordinator-behind"></a>Coordinator switchover where original coordinator is behind on block indexing
 ```mermaid
 
 sequenceDiagram
@@ -433,7 +432,7 @@ sequenceDiagram
   
 ```
 
-#### Coordinator switchover where Sender is behind on block indexing
+#### <a name="senders-responsibility-coordinator-switchover-original-sender-behind"></a>Coordinator switchover where Sender is behind on block indexing
 ```mermaid
 
 sequenceDiagram
@@ -473,7 +472,7 @@ sequenceDiagram
 
 Theoretically, the sender could trust the response from the first coordinator and delegate to the new coordinator even though the sender itself has not witnessed the blockchain get to that height.  This may be a point of discussion for a future optimization.
 
-#### Failover
+#### <a name="senders-responsibility-failover"></a>Failover
 
 Before illustrating the failover scenarios, we shall add some detail to the happy path relating to the persistence points.  Previous diagrams omitted this detail because all activity is controlled by the in-memory view of the state machine and persistence only becomes relevant when we consider the cases where we loose one or more node's in-memory state.
 
@@ -554,11 +553,11 @@ sequenceDiagram
   deactivate CDB
   deactivate C
   Note over C: 🔥3C 
-
-  
 ```
 
-#### Sender failover
+#### <a name="senders-responsibility-sender-failover"></a>Sender failover
+
+If the sender restarts, it reads all pending transactions from its database and delegates each transaction to the chosen coordinator for that point in time. This may be the same coordinator that it delegates to previously or may be a new one. The sender holds, in memory, the name of the current coordinator and will only accept a dispatch confirmation from that coordinator.  So if it happens to be the case that it had delegated to a different coordinator before it restarted, then it will reject the dispatch confirmation from that coordinator and that copy of the assembled transaction will be discarded. Noting that this would trigger a re-assembly and re-run of the endorsement flow for any other transactions, including those from other senders, that have been assembled to spend the states produced by the discarded transaction. However, in most likeliness, all other senders will switch their preference to the same new coordinator and trigger a re-do of all non dispatched transactions.
 
 In the case where there is no change in coordinator selection after the failover, this scenario is a simple case of the sender re-loading its pending transactions from persistence and sending a delegation request to the coordinator which is received in an idempotent manner.  The complexities here depends on exactly when the sender restarts.  i.e. whether it is 
  - on or before 🔥1S 
@@ -645,20 +644,28 @@ sequenceDiagram
 
 The case where the sender selects a different coordinator after it restarts is no different to the case where the sender selects a new coordinator without a restart.  Whether that is because of a new block range or because the old coordinator is no longer available.  The fact that the sender has "forgotten" that it had previously delegate to a different coordinator does not change anything.  In the non-restart cases, the sender does not send any communications to the original coordinator ( i.e. it makes no attempt to actively claw back the delegation) - although doing so may be a subject for discussion on future optimization.  The only impact of the coordinator switch is when the original coordinator requests permission to dispatch.  It will be rejected because the sender has an in-memory record that it has delegate to the new coordinator which is exactly the same situation whether the sender had restarted before doing so or not.
 
-#### Coordinator failover
+#### <a name="senders-responsibility-coordinator-failover"></a>Coordinator failover
+When the coordinator restarts, it will continue to send heartbeat messages but those messages only contain the transaction ids for the transactions that were delegated to it since restart.  For any pending transactions that were previously delegated to it, when the sender of those transactions receives the heartbeat message and realizes the that coordinator has "forgotten" about the transaction, then the sender re-delegates those transactions.
 
 From the perspective of the coordinator if it restarts on or before point 🔥1C, then it is as if it has never seen any delegation for that transaction.  It may or may not get a new delegation depending on whether the sender selects that same coordinator by the time it realizes that this coordinator is no longer actively coordinating that transaction.
 
 If it restarts on or after point 🔥2C
-
 
 NOTE: all of the above discussion assumes that there is a timely recovery in the case of failover.  If the coordinator fails and does not recover in a timely manner, then that is a similar scenario to the coordinator becoming unavailable.
 
 **Assured once only confirmed transaction per intent**
 The sender makes every effort to ensure that only one transaction is submitted to the base ledger for any given user request but it is impossible for the sender to guarantee that so the algorithm relies on validation on the base ledger contract that no transaction `intent` will be confirmed more than once.
 
-TODO Need to flesh out more detail on how the base ledger achieves this.
+#### <a name="senders-responsibility-coordinator-becomes-unavailable"></a>Coordinator becomes unavailable
 
+If the sender stops receiving heartbeat messages from the coordinator, then it assumes that the coordinator has become unavailable.  However it may actually be the case that the coordinator is still running and just that the network between the coordinator and the sender has a fault.  The action of the sender for each inflight transaction depends on exactly which stage of the flow the sender believes that transaction to be.  The consequence of the sender's action depend on whether the previous coordinator is still operating and where in the flow it believes the transaction to be.  Scenarios to explore are:
+     -  sender detects that the heartbeats have stopped before it has sent a response to a dispatch confirmation request
+     -  sender detects that the heartbeats have stopped after it has sent a response to a dispatch confirmation request but before it has received any notification that the submitter has received the dispatch 
+
+<!-- TODO add sequence diagram -->
+
+#### <a name="senders-responsibility-submitter-becomes-unavailable"></a>Submitter becomes unavailable
+<!-- TODO add sequence diagram and description-->
 
 ### Complete sequence diagram
 
@@ -667,7 +674,6 @@ All of the above combined into a single diagram with links to the details descri
 TBD: not sure if this should be kept but it is useful as a TODO list for writing the detail protocol points
 
 ```mermaid
-
 sequenceDiagram
   %%{init: { "sequence": { "mirrorActors":false }}}%%
   autonumber
@@ -723,7 +729,6 @@ sequenceDiagram
   create participant SB as Submitter
   C2->>SB: dispatch
   C2->>S: dispatched
-  
 ```
 
 ## Protocol points
@@ -741,7 +746,6 @@ Reply messages also contain
   - `CorrelationID` this is a copy of the `MessageID` of the message that this reply corresponds to.
 
 These can be used by the transport layer plugins to exploit qualities of service capabilities of the chosen transport. 
-
 
 In addition to these, the distributed sequencer protocol defines some common message exchange patterns that provide delivery assurances and correlation in the context of the handshakes described in the protocol walkthrough above.
 
