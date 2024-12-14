@@ -17,14 +17,15 @@ The objective of this algorithm is to maximize efficiency ( reduce probably for 
 ## Summary
 The basic premises of the algorithm are:
 
- - composition of committee i.e. the set of nodes who are candidates for coordinator is universally agreed (similar to BFT algorithms).
- - liveness of the coordinator node can be detected via heartbeat messages (similar to RAFT).
- - ranking of the preference for coordinator selection for any given contract address, for any given point in time ( block height) is a deterministic function that all nodes will agree on given the same awareness of make up of committee
- - choice of coordinator can change over time either due increase in block height triggering a rotation of the responsibility or the current coordinator being detected as unavailable. 
- - situations can arise where different nodes chose different coordinators because of different awareness of block height and/or different awareness of availability.  The algorithm is less efficient when this happens but continues to function and can return to full efficiency as soon as the situation is resolved.
- - there is no need for election `term`s in this algorithm.
- - when coordinator responsibility is switched to another node, each inflight transaction is either re-assigned to the new coordinator or flushed through to confirmation on the base ledger
- - the sender node for each transaction is responsible for ensuring that the transaction always has one coordinator actively coordinating it by detecting and responding to situations where the current coordinator becomes available, a more preferred coordinator comes back online or preference changes due to new block height.  (unless the sender deems the transaction to be no longer valid in which case, it marks it as reverted).
+ - Composition of committee i.e. the set of nodes who are candidates for coordinator is universally agreed (similar to BFT algorithms).
+ - Liveness of the coordinator node can be detected via heartbeat messages (similar to RAFT).
+ - Ranking of the preference for coordinator selection for any given contract address, for any given point in time ( block height) is a deterministic function that all nodes will agree on given the same awareness of make up of committee
+ - Choice of coordinator can change over time either due increase in block height triggering a rotation of the responsibility or the current coordinator being detected as unavailable. 
+ - Situations can arise where different nodes chose different coordinators because of different awareness of block height and/or different awareness of availability.  The algorithm is less efficient when this happens but continues to function and can return to full efficiency as soon as the situation is resolved.
+ - There is no need for election `term`s in this algorithm.
+ - When coordinator responsibility is switched to another node, each inflight transaction is either re-assigned to the new coordinator or flushed through to confirmation on the base ledger
+ - The sender node for each transaction is responsible for ensuring that the transaction always has one coordinator actively coordinating it by detecting and responding to situations where the current coordinator becomes unavailable, a more preferred coordinator comes back online or preference changes due to new block height.  
+ - If the sender deems the transaction to be no longer valid, it is responsible for finalizing it as reverted.
  - The sender node continues to monitor and control the delegation of its transaction until it has received receipt of the transactions' confirmations on the base ledger. This provides an "at least once" quality of service for every transaction at the distributed sequencer layer. As described earlier the blockchain enforces "at most once" semantics, so there is no possibility of duplicate transactions.
  - The handshake between the sender node and the coordinator node(s) attempts to minimize the likelihood of the same transaction intent resulting in 2 valid base ledger transactions but cannot eliminate that possibility completely so there is protection against duplicate intent fulfillment in the base ledger contract
 
@@ -140,7 +141,7 @@ TODO
  -->
  
 ### Coordinator switchover
-When the block height reaches a range boundary then all nodes independently reach a universal conclusion the new coordinator.
+When the block height reaches a range boundary then all nodes independently reach a universal conclusion to chose the new coordinator.
 
 Lets consider the case where the scenario explored above continues to the point where the blockchain moves to start mining block 5.  In the interim, while node A was coordinator, nodes B, C and D delegated transactions `B-1`, `B-2`, `B-3`,  `C-1`, `C-2`, `C-3`, `D-1`, `D-2` and `D-3`,  and A itself has assembled `A-1`, `A-2`, `A-3`.
 
@@ -227,7 +228,6 @@ Feedback available to the sender node that can be monitored to track the progres
  - when sending the delegation request to the coordinator, the sender node expects to receive a [delegation accepted message](message-transaction-delegation-accepted).  This is not a guarantee that the transaction will be completed.  At this point, the coordinator has only an in-memory record of that delegated transaction
  - [coordinator heartbeat messages](#message-heartbeat-notification).  The payload of these messages contains a list of transaction IDs that the coordinator is actively coordinating
  - [dispatch confirmation request](#message-exchange-dispatch-confirmation).  Once the coordinator has fulfilled the attestation plan, it sends a message to the transaction sender requesting permission to dispatch. If, for any reason, the sender has already re-delegated to another coordinator, then it will reject this request otherwise, it will accept.
- - transaction dispatched message.  When the coordinator prepares a transaction for submission to base ledger, it sends a message to the sender node for that transaction to communicate that fact.  The delivery of the message happens after the coordinator has written to its local database. The same database transaction triggers the downstream process to submit the transaction to the blockchain node.  The submission process happens concurrently to the transaction dispatched message.  So when the `sender` node receives the `transaction dispatched message`, there is no guarantee whether the transaction has been submitted to base ledger yet or not.  However, there is an assurance that the coordinator node has persistent the intent to submit it and will endeavor to do so even if it fails over.  However there are error situations where this is not possible (e.g. it could lose access to the signing key, or lose connectivity to the blockchain node) and these situations may be transient or may be permanent. 
  - blockchain event.  The base ledger contract for each domain emits a custom event that included the transaction ID.  The sender node will detect when such an event corresponds to one of its transactions and will record that transaction as confirmed.
  - transaction reverted message.  When the submitter fails to submit the transaction, for any reason, and gives up trying , then a `TransactionReverted` message is sent to the sender of that transaction.  There are some cases where the submitter retries certain failures and does *not* send this message.
 
@@ -476,7 +476,7 @@ Theoretically, the sender could trust the response from the first coordinator an
 
 Before illustrating the failover scenarios, we shall add some detail to the happy path relating to the persistence points.  Previous diagrams omitted this detail because all activity is controlled by the in-memory view of the state machine and persistence only becomes relevant when we consider the cases where we loose one or more node's in-memory state.
 
-This diagram is annotated 🔥 with interesting points where a failover could occur
+This diagram is annotated ⚠️ with interesting points where a failover could occur
 
 ```mermaid
 sequenceDiagram
@@ -489,13 +489,21 @@ sequenceDiagram
   participant E as Endorser
   user->>S: ptx_sendTransaction
   activate S
-  S -->> user: TxID
   S ->> SDB: Insert transaction
+  activate SDB
+  Note over S: ⚠️1S 
+  S ->> SDB: Commit
+  deactivate SDB
+  Note over S: ⚠️2S 
   deactivate S
+  S -->> user: TxID
+  
   S->>C: delegate
+  Note over S: ⚠️3S 
   par endorsement flow
     C->>S: Assemble
     S-->>C: Assemble response
+    Note over S: ⚠️4S 
     loop for each endorser
       C -) E: endorse
       E -) C: endorsement
@@ -506,150 +514,94 @@ sequenceDiagram
     end
   end
   Note over S, C: once all endorsements <br/>have been gathered 
-  %Reliable handshake to request final permission to dispatch
+  
   C->>S: request dispatch confirmation
-  activate S
-  S ->> SDB: Insert dispatch confirmation
-  activate SDB
-  Note over S: 🔥1S  
-  S ->> SDB: Commit
-  deactivate SDB
-  deactivate S
-  Note over S: 🔥2S
-
-  %Reliable handshake to grant final permission to dispatch
   S->>C: dispatch confirmation
+  Note over S: ⚠️5S 
+
   activate C
   C->>CDB: Insert dispatch
   activate CDB
-  Note over C: 🔥1C  
+  Note over C: ⚠️1C  
   C->>CDB: Commit
   deactivate CDB
   deactivate C
-  Note over C: 🔥2C 
+  Note over C: ⚠️2C 
 
   %Actually do the dispatch
   create participant SB as Submitter
   C->>SB: dispatch
-  
-  %Reliable handshake to deliver the notification for dispatch
-  C->>S: dispatchedNotification
-  activate S
-  S ->> SDB: Insert dispatch
-  activate SDB
-  Note over S: 🔥2S
-  S ->> SDB: Commit
-  deactivate SDB
-  deactivate S
-  Note over S: 🔥3S
 
-  %acknowledge the notification of dispatch
-  S->>C: dispatchNotificationAcknowledgement
-  activate C
-  C->>CDB: Insert dispatchNotificationAcknowledgement
-  activate CDB
-  Note over C: 🔥2C  
-  C->>CDB: Commit
-  deactivate CDB
-  deactivate C
-  Note over C: 🔥3C 
+  loop every heartbeat cycle
+    SB -) S: heartbeat
+  end
+
+
+  create participant BL as Baseledger
+  SB -) BL: Submit
+  BL -) S: Event
+  Note over S: ⚠️6S
+  
 ```
 
 #### <a name="senders-responsibility-sender-failover"></a>Sender failover
 
 If the sender restarts, it reads all pending transactions from its database and delegates each transaction to the chosen coordinator for that point in time. This may be the same coordinator that it delegates to previously or may be a new one. The sender holds, in memory, the name of the current coordinator and will only accept a dispatch confirmation from that coordinator.  So if it happens to be the case that it had delegated to a different coordinator before it restarted, then it will reject the dispatch confirmation from that coordinator and that copy of the assembled transaction will be discarded. Noting that this would trigger a re-assembly and re-run of the endorsement flow for any other transactions, including those from other senders, that have been assembled to spend the states produced by the discarded transaction. However, in most likeliness, all other senders will switch their preference to the same new coordinator and trigger a re-do of all non dispatched transactions.
 
-In the case where there is no change in coordinator selection after the failover, this scenario is a simple case of the sender re-loading its pending transactions from persistence and sending a delegation request to the coordinator which is received in an idempotent manner.  The complexities here depends on exactly when the sender restarts.  i.e. whether it is 
- - on or before 🔥1S 
- - on or between either of the 🔥2S markers 
- - on or after point 🔥3S
-  
-```mermaid
-sequenceDiagram
-  %%{init: { "sequence": { "mirrorActors":false }}}%%
-  actor user
-  participant SDB as Sender's Database
-  participant S as Sender
-  participant C as Coordinator
-  participant E as Endorser
-  user->>S: ptx_sendTransaction
-  activate S
-  S -->> user: TxID
-  S ->> SDB: Insert transaction
-  deactivate S
-  S->>C: delegate
+In the case where there is no change in coordinator selection after the failover, this scenario is a simple case of the sender re-loading its pending transactions from persistence and sending a delegation request to the coordinator which is received in an idempotent manner.  The complexities here depends on exactly when the sender restarts. 
 
-  par endorsement flow
-    C->>S: Assemble
-    S-->>C: Assemble response
-    loop for each endorser
-      C -) E: endorse
-      E -) C: endorsement
-    end
-  and heartbeats
-    loop every heartbeat cycle
-      C -) S: heartbeat
-    end
-  and sender failover
-   note over SDB,C : in parallel to the normal endorsement flow and heartbeat,<br/> the sender happens to restart and resends<br/> the delegation request to the coordinator
-   S->>SDB: Get pending transactions
-   S->>C: Delegate
-   note right of C: this request matches an in-flight delegation<br/> so is received as a no-op to the coordinator
-  end
+**On or before ⚠️1S**
 
- %Reliable handshake to request final permission to dispatch
-  C->>S: request dispatch confirmation
-  activate S
-  S ->> SDB: Insert dispatch confirmation
-  activate SDB
-  note over SDB, C: 🔥1S if the sender restarts before committing the dispatch confirmation to its DB,<br/> then it never sends the the confirmation to the coordinator <br/>and the coordinator will retry
-  S ->> SDB: Commit
-  deactivate SDB
-  deactivate S
-  Note over S: 🔥2S if the sender restarts after committing the dispatch confirmation to its DB<br/> but before it has sent the confirmation to the coordinator,<br/> then it will send the confirmation when it restarts
+If the sender has restarted at any time before inserting and committing the transaction to its database, then the user never sees a successful response from `ptx_sendTransaction` and will retry.  The retry will be accepted and will be inserted to the database 
+
+**Between ⚠️1S and ⚠️2S**
+
+If the sender crashes after inserting the transaction but before returning a successful response, and new transaction id, then the user will retry.  The retry request will contain the same idempotency key as the initial request and a new transaction will not be inserted but a successful response will be returned with the transaction id.
+
+**Between ⚠️2S and ⚠️6S**
+
+If the sender restarts at any time after inserting and committing the transaction to its database and before finalizing the transaction, then it will re-delegate the transaction.  This is because the sender queries its database for all inflight transactions during [Startup processing](#subprocess_startup) 
+
+The outcome of this re-delegation depends on the state of the coordinator and submitter at this point.
+
+Note the following discussion assumes that the sender acquires no knowledge of the state of the transaction after startup. Exploring the flows with this assumption helps us to understand the robustness of the protocol.  In reality, there is a possibility that the sender receives heartbeat messages from coordinator or submitter early enough to make informed decisions that minimize unnecessary processing.  These details will be explored later when we look at [Startup processing](#subprocess_startup).
+
+**Between ⚠️2S and ⚠️3S**
+
+The sender restarts before sending the initial delegation request, then will delegate after restarting and the flow will continue as per the happy path.
+
+**Between ⚠️3S and ⚠️4S**
+
+If the coordinator had received a delegation request before the sender restarted and the sender restarts and re-sends the delegation request which the coordinator accepts the request in an idempotent manner. 
+
+Assuming the coordinator has not yet dispatched the transaction, It will return a `delegationRequestAccepted` message and will continue to coordinate the transaction as before.
+
+**Between ⚠️4S and ⚠️5S**
+If the coordinator had received a `AssembleResponse` before the sender restarted and re-sent the delegation request, then it will not issue another `AssembleRequest`. The coordinator will proceed to gather endorsements for the previously assembled transaction. The consequence of this is that the sender cannot rely on observing the `AssembleRequest` call as an indicator of the state of the transaction flow.
+
+There is a race condition to be aware of here.  If the coordinator hadn't get received the `DispatchConfirmation` response before the sender crashed, then there is a possibility that the sender will receive a `DispatchConfirmation` request before it has delegated the transaction. As far as the protocol is concerned, it is valid for the sender to respond with `DispatchConfirmationError` in this case. This causes disruption and extra processing relating to this transaction and any dependencies.  However, as an optimization, it is also valid for the sender to detect that the `DispatchConfirmation` relates to a transaction that has no current active delegate and decide to defer the `DispatchConfirmation` until it has triggered a `DelegationRequest` and received `DelegationRequestAccepted`.
+
+**Between ⚠️5S and ⚠️6S**
+If the coordinator had already received a confirmation to dispatch the transaction, then it will proceed to do so in parallel to accepting the delegation request in an idempotent manner.
+
+The sender will not receive another `DispatchConfirmation` request.
+
+The state of the transaction lifecycle goes through various transitions between ⚠️5S and ⚠️6S on the coordinator and submitter side.  However, from the perspective of a newly restarted sender, the precise point at which it re sends the delegation request is irrelevant. In all cases, the sender relies on heartbeat messages from the coordinator and submitter and ultimately on blockchain events to track the progress of the transaction.
 
 
-%Reliable handshake to grant final permission to dispatch
-  S->>C: dispatch confirmation
-  activate C
-  C->>CDB: Insert dispatch
-  activate CDB
-  C->>CDB: Commit
-  deactivate CDB
-  deactivate C
-  %Actually do the dispatch
-  create participant SB as Submitter
-  C->>SB: dispatch
-  
-  %Reliable handshake to deliver the notification for dispatch
-  C->>S: dispatchedNotification
-  activate S
-  S ->> SDB: Insert dispatch
-  activate SDB
-  S ->> SDB: Commit
-  deactivate SDB
-  deactivate S
-  Note over S: 🔥3S If the sender restarts after this point,<br/> it has nothing else to do other than wait for <br/>the confirmation from blockchain (or revert). <br/>  If it happens that it did not get as far as sending the <br/> dispatchNotificationAcknowledgement then the <br/>coordinator will retry sending the `dispatchedNotification`
-
-  %acknowledge the notification of dispatch
-  S->>C: dispatchNotificationAcknowledgement
-  activate C
-  C->>CDB: Insert dispatchNotificationAcknowledgement
-  activate CDB
-  C->>CDB: Commit
-  deactivate CDB
-  deactivate C
-  
-```
+<!-- TODO the above discussion might be easier in the context of a transaction state diagram instead or ( or complimentary to ) the sequence diagram -->
 
 The case where the sender selects a different coordinator after it restarts is no different to the case where the sender selects a new coordinator without a restart.  Whether that is because of a new block range or because the old coordinator is no longer available.  The fact that the sender has "forgotten" that it had previously delegate to a different coordinator does not change anything.  In the non-restart cases, the sender does not send any communications to the original coordinator ( i.e. it makes no attempt to actively claw back the delegation) - although doing so may be a subject for discussion on future optimization.  The only impact of the coordinator switch is when the original coordinator requests permission to dispatch.  It will be rejected because the sender has an in-memory record that it has delegate to the new coordinator which is exactly the same situation whether the sender had restarted before doing so or not.
 
 #### <a name="senders-responsibility-coordinator-failover"></a>Coordinator failover
-When the coordinator restarts, it will continue to send heartbeat messages but those messages only contain the transaction ids for the transactions that were delegated to it since restart.  For any pending transactions that were previously delegated to it, when the sender of those transactions receives the heartbeat message and realizes the that coordinator has "forgotten" about the transaction, then the sender re-delegates those transactions.
 
-From the perspective of the coordinator if it restarts on or before point 🔥1C, then it is as if it has never seen any delegation for that transaction.  It may or may not get a new delegation depending on whether the sender selects that same coordinator by the time it realizes that this coordinator is no longer actively coordinating that transaction.
 
-If it restarts on or after point 🔥2C
+When the coordinator restarts, it will continue to send heartbeat messages but those messages only contain the transaction ids for the transactions that were delegated to it since restart.  For any pending transactions that were previously delegated to it, when the sender of those transactions receives the heartbeat message and realizes the that coordinator has "forgotten" about the transaction, then the sender re-sends the delegation request for those transactions.
+
+<!-- TODO this section is written from the perspective of the coordinator but it would be more helpful to write it in terms of how the senders responsibilities and behavior result in successful transaction processing even when the coordinator fails over -->
+From the perspective of the coordinator if it restarts on or before point ⚠️1C, then it is as if it has never seen any delegation for that transaction.  It may or may not get a new delegation depending on whether the sender selects that same coordinator by the time it realizes that this coordinator is no longer actively coordinating that transaction.
+
+If it restarts on or after point ⚠️2C then it will continue to dispatch the transaction to the submitter.
 
 NOTE: all of the above discussion assumes that there is a timely recovery in the case of failover.  If the coordinator fails and does not recover in a timely manner, then that is a similar scenario to the coordinator becoming unavailable.
 
@@ -659,10 +611,11 @@ The sender makes every effort to ensure that only one transaction is submitted t
 #### <a name="senders-responsibility-coordinator-becomes-unavailable"></a>Coordinator becomes unavailable
 
 If the sender stops receiving heartbeat messages from the coordinator, then it assumes that the coordinator has become unavailable.  However it may actually be the case that the coordinator is still running and just that the network between the coordinator and the sender has a fault.  The action of the sender for each inflight transaction depends on exactly which stage of the flow the sender believes that transaction to be.  The consequence of the sender's action depend on whether the previous coordinator is still operating and where in the flow it believes the transaction to be.  Scenarios to explore are:
-     -  sender detects that the heartbeats have stopped before it has sent a response to a dispatch confirmation request
-     -  sender detects that the heartbeats have stopped after it has sent a response to a dispatch confirmation request but before it has received any notification that the submitter has received the dispatch 
 
-<!-- TODO add sequence diagram -->
+  1.  sender detects that the heartbeats have stopped before it has sent a response to a dispatch confirmation request.  In this case, the sender retries the whole [handle transaction process](#subprocess-handle-transaction) that beings with [select available coordianator](#subprocess-select-available-coordinator).  That will initially attempt to delegate to the preferred coordinator and then fall back to alterative coordinators if needed. 
+  2.  sender detects that the heartbeats have stopped after it has sent a response to a dispatch confirmation request but before it has received any heartbeat messages from the submitter. In this case, the sender responds in the same way to when the [submitter becomes unavailable](#senders-responsibility-submitter-becomes-unavailable)
+  
+
 
 #### <a name="senders-responsibility-submitter-becomes-unavailable"></a>Submitter becomes unavailable
 <!-- TODO add sequence diagram and description-->
@@ -886,8 +839,12 @@ sequenceDiagram
 The following concrete message exchanges defines the responsibilities and expectation of each node in the network:
 
  - <a href="#message-exchange-delegation">Transaction delegation</a>
- - <a href="#message-exchange-assemble">Transaction Assemble</a>
- - <a href="#message-exchange-endorsement">Transaction Endorsement</a>
+ - <a href="#message-exchange-assemble">Transaction assemble</a>
+ - <a href="#message-exchange-endorsement">Transaction endorsement</a>
+ - <a href="#message-exchange-heartbeat">Heartbeat</a>
+ - <a href="#message-exchange-startup">Startup</a>
+ - <a href="#message-exchange-dispatch-confirmation">Dispatch confirmation</a>
+ - 
 
 #### <a name="message-exchange-delegation"></a>Transaction delegation
 
@@ -1326,49 +1283,6 @@ message HeartbeatNotification {
 }
 ```
 
-<!-- TODO remove the dispatch notification protocol point and replace it with continued heartbeat messages ( from coordinator or from submitter?) until transaction has been confirmed on base ledger -->
-#### Dispatch notification
-
-Once a coordinator has dispatched a transaction to a submitter, it must notify the sender via a dispatch notification flow which is an instance of the `Assured delivery data distribution` pattern.
-
-```mermaid
-sequenceDiagram
-  %%{init: { "sequence": { "mirrorActors":false }}}%%
-  
-  participant C as Coordinator
-  participant CDB as Coordinator's Database
-  participant S as Sender
-  participant SDB as Senders's Database
-  C->>CDB: InsertDispatchNotificationOperation
-  activate CDB
-  C->>CDB: Commit
-  deactivate CDB
-  loop Every RetryInterval
-    C -) S: 
-  end
-  S->>SDB: InsertDispatchNotification
-  activate SDB
-  S->>SDB: Commit
-  deactivate SDB
-  
-  S --) C: DispatchNotificationAcknowledgement
-
-  C->>CDB: InsertDispatchNotificationAcknowledgement
-  activate CDB
-  C->>CDB: Commit
-  deactivate CDB
-```
-
-
-##### <a name="message-dispatch-notification"></a> Dispatch notification
-
-
-
-##### <a name="message-dispatch-notification-acknowledgment"></a> Dispatch notification acknowledgment
-
-  
-#### <a name="message-exchange-transaction-confirmation"></a> Transaction confirmation
-
 ### Sub processes
 
 #### <a name="subprocess-handle-transaction"></a> Handle transaction
@@ -1414,7 +1328,8 @@ flowchart TB
     F@{ shape: fr-rect, label: "Confirm dispatch" }
     G@{ shape: diam, label: "Is<br/>Confirmed" }
     H@{ shape: rect, label: "Dispatch" }
-    I@{ shape: rect, label: "Send DispatchedNotification" }
+    J@{ shape: rect, label: "Abandon" }
+    
 
     Start --> A
     A --> B
@@ -1425,7 +1340,7 @@ flowchart TB
     F --> G
     G --> |Yes| H
     G --> |No| J
-    H --> I
+    
 ```
 
 #### <a name="subprocess-check-availability"></a>Check availability
@@ -1440,15 +1355,20 @@ title: Select available coordinator
 ---
 flowchart TB
     Start@{ shape: sm-circ, label: "Start" }
-    End@{ shape: fr-circ, label: "End" }
     F@{ shape: fr-rect, label: "<a href="#check-availability">Check availability</a>" }
     H@{ shape: diam, label: "Is available" }
     K@{ shape: win-pane, label: "Availability cache" }
+    I@{ shape: lean-r, label: "Send Delegation Request" }
+    D@{ shape: fr-rect, label: "Select next preferred coordinator" }
+
+    Start --> F
+    F <--> K
+    F --> H
     H --> |Yes| I
     H --> |No| D
+    D --> F
 
-    Start-->A
-    A-->End
+    
 ```
 
 
@@ -1562,3 +1482,30 @@ Compared with alternatives:
  - On startup (or periodically), a node sends a heartbeat to all nodes on the network. This could be extremely wasteful in cases of large networks which is very likely and the number of nodes in the network is likely to much higher than the number of nodes in all active privacy groups that a given node is a member of. 
  
  
+### Syncpoint on submission
+
+**Context**
+When a transaction is dispatched to a submitter, the submitter node persists the prepared transaction at that point. Beyond this point, it is treated just like any other public transaction.  It is assigned to a signing key and has a nonce allocated.  This leads to the question of whether this state of the transaction is persisted only on the submitter or also on the sender node and/or also on the coordinator (in early implementations coordinator and submitter are on the same node but architecturally these are not coupled so this is not as moot a point as it may seem).
+
+**Decision**
+The dispatch syncpoint is persisted only on the submitter node.  The coordinator and sender nodes rely on heartbeat messages and ultimately blockchain events to keep track of the state of the transaction's lifecycle beyond the dispatch point.
+
+**Consequences**
+While the submitter node and sender node are both available, the `submitter` continues to send heartbeat messages to the `sender` and therefore sender's in-memory context for that transaction can be inspected to report the state of the transaction in its lifecycle.
+
+There are error cases and failover cases where a transaction results in 2 attempted base ledger transactions which would cause a temporary drop in throughput for the whole privacy group.
+
+If the `submitter` becomes unavailable or stops sending heartbeat messages for any reason, then after some timeout, the sender will re-delegate the transaction to the current coordinator which may result in a new dispatch.  If the original dispatch does continue to submission, this would ultimately cause a conflict and a revert on the base ledger.  There is not guarantee which of the 2 dispatches ends up failing.  Whichever one does fail, the submitter and coordinator for that transaction would abandon all context in which it had assembled further transactions so this would lead to an inefficiency in the system. 
+
+There is a window where 
+
+ - submitter has submitted the transaction to base ledger
+ - submitter has received confirmation from the blockchain that the transaction has completed
+ - submitter stops sending heartbeat messages
+ - sender is behind on block indexing so hasn't seen the confirmation for this transaction
+ - sender has restarted and lost all in-memory context of the state of the transaction
+ - sender will delegate the transaction to another coordinator
+
+If the sender node restarts at any time while there are active transactions in flight, then it is very likely that it will be in this window for some transactions on some contracts.  As above, this will ultimately cause a conflict on the base ledger and a drop in throughput for the whole privacy group but eventually all transactions are confirmed exactly once.
+
+This decision does not preclude the possibility of future optimizations to the protocol or implementation specific optimizations that could mitigate these risks and or catch the situation earlier so that the impact on throughput is not as severe.  For example, measures that prevent senders from delegating while they are significantly behind on block indexing and/or enhancements to coordinator's processing to detect the case where a delegated transactions is a duplicate of an already confirmed transaction.
