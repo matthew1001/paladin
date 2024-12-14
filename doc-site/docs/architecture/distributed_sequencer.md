@@ -159,32 +159,27 @@ As all nodes in the group ( including node A) learn that the new block height is
 
 ![image](../images/distributed_sequencer_switchover_frame2.svg){ width="500" }
 
-Node A will continue to process and monitor receipts for transactions `A-2` , `B-2`, `C-2` and `D-2` but will abandon transactions `A-3` , `B-3`, `C-3` and `D-3`.
+Node A will continue to process and monitor receipts for transactions `A-2` , `B-2`, `C-2` and `D-2` but will abandon transactions `A-3` , `B-3`, `C-3` and `D-3`.  Abandoned transactions will not be included in any future heartbeat messages.
 
 ![image](../images/distributed_sequencer_switchover_frame3.svg){ width="500" }
-
-Node A sends a `DelegationReturned` message to the respective sender nodes for each non dispatched transaction that it had in flight.
-
-
-![image](../images/distributed_sequencer_switchover_frame4.svg){ width="500" }
 
 The final transmission from node A, as coordinator, is a message to node B with details of the speculative domain context predicting confirmation of transactions `A-2` , `B-2`, `C-2` and `D-2` .  This includes the state IDs for any new states created by those transactions and any states that are spent by those transaction.  This message also includes the transaction hash for the final transaction that is submitted on the sequence coordinated by node A.  Node B needs to receive this message so that it can proceed with maximum efficiency. Therefore this message is sent with an assured delivery quality of service (similar to state distribution).  
 
 Meanwhile, all nodes delegate transactions  `A-3` , `B-3`, `C-3` and `D-3` to node B.  
 
-![image](../images/distributed_sequencer_switchover_frame5.svg){ width="500" }
+![image](../images/distributed_sequencer_switchover_frame4.svg){ width="500" }
 
 Node B will start to coordinate the assembly and endorsement of these transactions but hold off from preparing them for dispatch to its transaction manager yet.
 
-![image](../images/distributed_sequencer_switchover_frame6.svg){ width="500" }
+![image](../images/distributed_sequencer_switchover_frame5.svg){ width="500" }
 
 Once  transactions `A-2` , `B-2`, `C-2` and `D-2` have been confirmed in a block ( which may be block 5 or may take more than one block) and node B has received confirmation of this, then node B will continue to prepare and submit transactions `A-3` , `B-3`, `C-3` and `D-3`.
 
-![image](../images/distributed_sequencer_switchover_frame7.svg){ width="500" }
+![image](../images/distributed_sequencer_switchover_frame6.svg){ width="500" }
 
 Eventually transactions `A-3` , `B-3`, `C-3` and `D-3` are mined to a block.
 
-![image](../images/distributed_sequencer_switchover_frame8.svg){ width="500" }
+![image](../images/distributed_sequencer_switchover_frame7.svg){ width="500" }
 
 Note that there is a brief dip in throughput as node B waits for node A to flush through the pending dispatched transactions and there is also some additional processing for the inflight transactions that haven't been dispatched yet.  So a range size of 4 is unreasonable and it would be more likely for range sizes to be much larger so that these dips in throughput become negligible.
 
