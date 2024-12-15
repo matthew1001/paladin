@@ -17,14 +17,14 @@ The objective of this algorithm is to maximize efficiency ( reduce probably for 
 ## Summary
 The basic premises of the algorithm are:
 
+ - The sender node for each transaction is responsible for ensuring that the transaction always has one coordinator actively coordinating it by detecting and responding to situations where the current coordinator becomes unavailable, a more preferred coordinator comes back online or preference changes due to new block height.  
+- Ranking of the preference for coordinator selection for any given contract address, for any given point in time ( block height) is a deterministic function that all nodes will agree on given the same awareness of make up of committee 
  - Composition of committee i.e. the set of nodes who are candidates for coordinator is universally agreed (similar to BFT algorithms).
- - Liveness of the coordinator node can be detected via heartbeat messages (similar to RAFT).
- - Ranking of the preference for coordinator selection for any given contract address, for any given point in time ( block height) is a deterministic function that all nodes will agree on given the same awareness of make up of committee
+ - Liveness of the coordinator node can be detected via heartbeat messages (similar to RAFT) but absence of heartbeat messages is not an indicator of unavailability. The handshake to send / resend delegation requests is the only protocol point that can be relied on to detect unavailability of the coordinator.  This process is triggered if by absence of heartbeat messages.
  - Choice of coordinator can change over time either due increase in block height triggering a rotation of the responsibility or the current coordinator being detected as unavailable. 
  - Situations can arise where different nodes chose different coordinators because of different awareness of block height and/or different awareness of availability.  The algorithm is less efficient when this happens but continues to function and can return to full efficiency as soon as the situation is resolved.
  - There is no need for election `term`s in this algorithm.
  - When coordinator responsibility is switched to another node, each inflight transaction is either re-assigned to the new coordinator or flushed through to confirmation on the base ledger
- - The sender node for each transaction is responsible for ensuring that the transaction always has one coordinator actively coordinating it by detecting and responding to situations where the current coordinator becomes unavailable, a more preferred coordinator comes back online or preference changes due to new block height.  
  - If the sender deems the transaction to be no longer valid, it is responsible for finalizing it as reverted.
  - The sender node continues to monitor and control the delegation of its transaction until it has received receipt of the transactions' confirmations on the base ledger. This provides an "at least once" quality of service for every transaction at the distributed sequencer layer. As described earlier the blockchain enforces "at most once" semantics, so there is no possibility of duplicate transactions.
  - The handshake between the sender node and the coordinator node(s) attempts to minimize the likelihood of the same transaction intent resulting in 2 valid base ledger transactions but cannot eliminate that possibility completely so there is protection against duplicate intent fulfillment in the base ledger contract
@@ -62,41 +62,51 @@ NOTE: this is a contrived, simplified example for illustration.  In reality, the
 
 ### <a name="node-availability-detection">Node availability detection
 
-When a node starts acting as the coordinator, then it  periodically sends a heartbeat message to all nodes that for which it has an active delegation and will accept delegation requests from any other node in the group. 
+When a node starts acting as the coordinator it will accept delegation requests from any other node in the group.  It  periodically sends a heartbeat message to all nodes in the privacy group. The heartbeat message sent to each `sender` node contains the list of transaction ids that the coordinator is actively coordinating and were delegated by that `sender` node. 
 
-All sender nodes keep track of the current selected coordinator ( either by reevaluating the deterministic function periodically or caching the result until block height exceeds the current range boundary).  If they fail to receive a heartbeat message from the current coordinator, then they will chose the next closest committee member in the hashring (e.g. by reevaluating the hashring function with the unavailable members removed).
+All sender nodes keep track of the current selected coordinator for all inflight transactions.  If they fail to receive a heartbeat message from the current coordinator, or if they receive a heartbeat message but it does not contain all of the transaction ids that they expect, then they will re-trigger the [coordinator selection process](#subprocess-select-coordinator).
+
+The delegation process has a handshake that defines the conditions to presume that the coordinator is unavailable. If this handshake leads the sender to determine that the chosen coordinator is unavailable, then it will chose the next closest committee member in the hashring (e.g. by reevaluating the hashring function with the unavailable members removed).
 
 For illustration, consider the following example where nodes B, C, and D have recognized node A as the coordinator and have delegated transactions (labelled `B-1`, `C-1` and `D-1` )to it.
 
 ![image](../images/distributed_sequencer_availability_frame1.svg){ width="500" }
-
 
 Node A then proceeds to broadcast heartbeat messages
 
 ![image](../images/distributed_sequencer_availability_frame2.svg){ width="500" }
 
 
-Suddenly, Node A stops sending heartbeat messages, either because it has crashed or it has lost network connectivity to other nodes
+Suddenly, Node A stops sending heartbeat messages, either because:
+
+ - It has crashed and failed to recover
+ - It has been stopped by its operator and has not been restarted
+ - It has lost network connectivity to other nodes
+ - It has crashed, or has had a controlled restart, is now running again but has lost all in-memory context about any active transactions in this privacy group.
+
+For this scenario, we illustrate what happens in the case of one of the first 3 bullets.  See [coordinator failover](senders-responsibility-coordinator-failover) section for more details on the 4th case.
 
 ![image](../images/distributed_sequencer_availability_frame3.svg){ width="500" }
 
-
-When nodes B and D realize that the heartbeats have stopped, then they consider node A as unavailable and each independently select node C as the next closest node on the ring and delegate their inflight transactions to it.  Similarly, nodeC selects itself as the coordinator and continues to coordinate its own transaction `C-1` along with the delegated transactions from node B and node D.
+When nodes B and D realize that the heartbeats have stopped, then they each retry the [coordinator selection process](#subprocess-select-coordinator).  Again, they chose `A` as the preferred coordinator and send a `DelegationRequest`to node A
 
 ![image](../images/distributed_sequencer_availability_frame4.svg){ width="500" }
 
+A timeout in the delegation handshake tells nodes B, C and D that node A is unavailable.  Node B and D each independently select node C as the next closest node on the ring and delegate their inflight transactions to it.  Similarly, nodeC selects itself as the coordinator and continues to coordinate its own transaction `C-1` along with the delegated transactions from node B and node D.
+
+![image](../images/distributed_sequencer_availability_frame5.svg){ width="500" }
 
 Node C then proceeds to act as coordinator and sends periodic heartbeat messages to the other nodes. 
 
-![image](../images/distributed_sequencer_availability_frame5.svg){ width="500" }
+![image](../images/distributed_sequencer_availability_frame6.svg){ width="500" }
 
 If Node A comes back online, what happens next depends on whether: 
 
  - Node A was truly offline i.e. its process crashed or gracefully shutdown and has now restarted. In this case, Node A will send `startup` messages to all other nodes as soon as it detects activity on this privacy group. See <a href="#startup">Start up processing</a> for details on the logic for detecting activity and sending / receiving `startup` messages.
- - Node A continued to run, but was not isolated from the other nodes due to a network outage.  In this case, Node A will resume sending heartbeat messages for any transaction that it was coordinating. In the special case where NodeA does not have any transactions in flight, then the startup message processing will be triggered, similarly ot the previous bullet. 
+ - Node A continued to run, but was isolated from the other nodes due to a network outage.  In this case, Node A will resume sending heartbeat messages for any transaction that it was coordinating. In the special case where NodeA does not have any transactions in flight, then the startup message processing will be triggered, similarly ot the previous bullet. 
  
 
-![image](../images/distributed_sequencer_availability_frame6.svg){ width="500" }
+![image](../images/distributed_sequencer_availability_frame7.svg){ width="500" }
 
 As soon as nodes B. C and D receive the startup messages from node A they each independently concur that node A is the preferred choice for coordinator and delegate any inflight transactions to it.  Node C decides to cease acting as coordinator and abandons any transactions that it has in flight.
 
@@ -866,12 +876,13 @@ sequenceDiagram
 
 
 ##### <a name="message-transaction-delegation-command"></a>Delegation Command
+
 ```proto
 message DelegationCommand {
     string transaction_id = 1;
     string delegate_node_id = 2;
     string delegation_id = 3; //this is used to correlate the acknowledgement back to the delegation. unlike the transport message id / correlation id, this is not unique across retries
-    bytes private_transaction = 4; //json serialized copy of the in-memory private transaction object
+    repeated bytes private_transactions = 4; //json serialized copy of the in-memory private transaction objects
     int64 block_height = 5; // the block height upon which this delegation was calculated (the highest delegation wins when crossing in the post)
 }
 ```
@@ -882,7 +893,7 @@ Valid reasons for rejection are
  - requesters block height is in a different block range than expected.  In this case, the `DelegationRejected` message must contain the block height that the local node is aware of so that the delegating node can make an informed decision based on whether they are behind or ahead.
  - the current node is not the most preferred available coordinator for the current block height.
 
-If the Delegation is accepted, then the receiving node must begin [coordinating that transaction](#subprocess-coordinate-transaction)
+If the Delegation is accepted, then the receiving node must begin [coordinating](#subprocess-coordinate-transaction) those transactions
 
 ```mermaid
 ---
@@ -1167,6 +1178,15 @@ message HeartbeatNotification {
 }
 ```
 
+<!-- 
+TODO add flow chart to show how the different conditions are handled
+  - heartbeat received as expected
+  - heartbeat received from a different coordinator than expected which has a higher preference ranking
+  - heartbeat received from a different coordinator than expected which has a lower preference ranking
+  - heartbeat received from expected coordinator but does not include all transactions expected
+  - no heartbeat received after a time threshold
+-->
+
 #### <a name="message-exchange-startup"></a>Startup
 
 <!--
@@ -1290,16 +1310,61 @@ title: Handle transaction
 ---
 flowchart TB
     Start@{ shape: sm-circ, label: "Start" }
-    A@{ shape: fr-rect, label: "Select<br/>available<br/>coordinator" }
+    A@{ shape: fr-rect, label: "<a href="subprocess-select-coordinator">Select<br/>available<br/>coordinator</a>" }
     B@{ shape: diam, label: "Is Local<br/>Coordinator" }
     C@{ shape: fr-rect, label: "<a href="#subprocess-coordinate-transaction">coordinate transaction</a>" }
-    D@{ shape: fr-rect, label: "Delegate transaction" }
+    D@{ shape: fr-rect, label: "Monitor delegation" }
     
     Start-->A
     A --> B
     B --> |Yes| C
     B --> |No| D
 
+```
+
+#### <a name="subprocess-select-coordinator"></a> Select coordinator
+
+The coordinator selection process is coupled to the delegation process because the delegation request handshake is the mechanism to determine whether the preferred coordinator is available.  Failure to delegate to the preferred coordinator will cause the next preference to be selected.  By the end of this process, the transaction has been delegated.
+
+If the transaction was not able to be delegated to the same coordinator as all other inflight transactions, then that also triggers a re-delegation of those.
+
+```mermaid
+---
+title: Select available coordinator
+---
+flowchart TB
+    Start@{ shape: sm-circ, label: "Start" }
+    
+    A@{ shape: win-pane, label: "Read Available Committee" }
+    C@{ shape: fr-rect, label: "Select preferred coordinator" }
+    IsLocal@{ shape: diam, label: "Is Local" }
+    MatchesOthers@{ shape: diam, label: "Matches <br/>current <br/>inflight <br/>transactions" }
+    BuildDelegateAll@{ shape: rect, label: "Construct delegate request for all transactions" }
+    BuildDelegateThis@{ shape: rect, label: "Construct delegate request for this transaction" }
+
+    E@{ shape: lean-r, label: "Send Delegation Request" }
+    F@{ shape: lean-l, label: "Wait For Delegation Response" }
+    G@{ shape: diam, label: "Received" }
+    I@{ shape: win-pane, label: "Remove from available committee" }
+    
+    Success@{ shape: stadium, label: "Success" }
+    Error@{ shape: stadium, label: "Error" }
+    
+    Start --> A
+    A --> C
+    C --> MatchesOthers
+    MatchesOthers --> |No| BuildDelegateThis
+    MatchesOthers --> |Yes| BuildDelegateAll
+    BuildDelegateThis --> IsLocal
+    BuildDelegateAll --> IsLocal
+    IsLocal --> |No| E
+    IsLocal --> |Yes| Success
+    E --> F
+    F --> G
+    G --> |Accepted| Success
+    G --> |Error| Error
+    G --> |Timedout| I
+    I --> A
 ```
 
 #### <a name="subprocess-coordinate-transaction"></a> Coordinate transaction 
@@ -1338,35 +1403,6 @@ flowchart TB
     
 ```
 
-#### <a name="subprocess-check-availability"></a>Check availability
-
-Check availability sub process
-
-
-#### <a name="subprocess-select-available-coordinator"></a> Select available coordinator
-```mermaid
----
-title: Select available coordinator
----
-flowchart TB
-    Start@{ shape: sm-circ, label: "Start" }
-    F@{ shape: fr-rect, label: "<a href="#check-availability">Check availability</a>" }
-    H@{ shape: diam, label: "Is available" }
-    K@{ shape: win-pane, label: "Availability cache" }
-    I@{ shape: lean-r, label: "Send Delegation Request" }
-    D@{ shape: fr-rect, label: "Select next preferred coordinator" }
-
-    Start --> F
-    F <--> K
-    F --> H
-    H --> |Yes| I
-    H --> |No| D
-    D --> F
-
-    
-```
-
-
 #### <a name="subprocess-gather-endorsements"></a>Gather endorsements
 
 Given that a node has started acting as a coordinator and has accepted delegation of a transaction, when that transaction is assembled, then the coordinator sends endorsement requests to all required endorsers.
@@ -1404,6 +1440,7 @@ It may be possible to detect liveness of nodes implicitly through the normal exp
 Explicit heartbeat messages are factored into the protocol.
 
 **Consequences**
+
  - This is more provably functional and has similarities with other well known consensus algorithms such as RAFT and so has a better chance of being understood by more people which makes the overall protocol more susceptible to peer review and improvement.
  - Compared to implicitly detecting liveness, the explicit messages cause higher network usage but that is justified by the simplicity that it brings to the protocol.
 
@@ -1419,6 +1456,7 @@ Given the decision to use heartbeat messages for liveness detection, we need to 
 Nodes only send heartbeat messages while they are a coordinator for an active contract i.e. while there are transactions in flight that have been delegated to that node.
 
 **Consequences**
+
  - It is very likely that there are huge numbers of contracts in any given paladin network and most of them will be inactive ( will have zero transactions in flight) at any one time so it would be extremely wasteful and place huge burden on the network if potential coordinators for all contracts were to publish heartbeat messages proactively.
  - For the first transaction after an inactive period, the sender node has no knowledge of whether the current preferred coordinator is live.  The handshake for delivering the delegation message is the first opportunity to test liveness so that handshake must include an acknowledgement leg.
  - When a node restarts, if it is the preferred coordinator for an active contract, it does not necessary know that contract is active. While the node was down, all senders are likely to have chosen an alternative coordinator and will continue to delegate all transactions to it.  The first opportunity for a newly started node ( or a node that was on an isolated network partition that has been reconnected) would be when it receives the heartbeat messages from the current coordinator.  Thus, when any node receives a heartbeat message from a coordinator, it should trigger the node to evaluate whether it believes itself is a more preferred coordinator for that contract at this point in time and start sending heartbeat messages if so.
@@ -1435,6 +1473,7 @@ An `intent` is a request, from a paladin user, to invoke a private transaction. 
 The distributed processing of the paladin engine aims to minimize the probability of double submission but full assurance is only provided by validation on the base ledger contract.
 
 **Consequences**
+
  - This means that there is an extra gas cost for every transaction and the implementation of the base ledger contract needs to find the most efficient way of performing this validation e.g. using sparse merkle tree.
  - The alternative would be to design a coordinated transactional handshake that was resilient to network outage.  There are known protocols ( such as 2 phase commit XA protocols) that could give us assurance that the prepared transaction eventually exists exactly once in one submitters database but that does not guarantee that it will end up successfully submitted to the base ledger and may lead to a stranded transaction.  So, if we did adopt that approach, we would need to mitigate the stranded transaction situation with a timeout / retry on the part of the sender.  If that retry turned out to be too eager, then we would still end up with duplicate submission to the base ledger.
  
@@ -1451,6 +1490,7 @@ Given that all nodes can reach an independent universal conclusion about the ran
 Algorithm does *not* depend on nor provide a facility to ensure that all nodes reach the same conclusion regarding available of the preferred coordinator.
 
 **Consequences**
+
  - algorithm is simpler and does not need a voting handshake or voting `term` counting
  - network partitions (where some nodes recognize one coordinator and other nodes recognize another coordinator) can happen.  To have an algorithm that completely avoids  network partitions would become very complex, and error prone.  When network conditions, that could cause a partition arise, then such an algorithm would grind to a halt.  Given that the algorithm's main objective is efficiency and we rely on the base ledger contract for correctness and transactional integrity, the preferred algorithm should be able to continue to function - albeit with reduced efficiency due to increase in error handling and retry - in the case of a partition.
 
@@ -1458,7 +1498,8 @@ Algorithm does *not* depend on nor provide a facility to ensure that all nodes r
 
 **Context**
 As part of the fault tolerance, the protocol has a built in mechanism to detect when the preferred coordinator becomes unavailable and all nodes independently chose an alternative coordinator when they detect the unavailability of the preferred coordinator.  There needs to be a decision for how the protocol handles the case where the preferred coordinator comes back online.  This needs to cover the cases where the coordinator became unavailable due to connectivity issues and also the case where the coordinator node itself crashed and restarted or failed over.  It must also handle the case where the alternative coordinator subsequently became unavailable and all nodes had chosen a 2nd alternative.
-The decision should be optimized for the case where \
+The decision should be optimized for the case where
+
  - there are a very large number of privacy groups, with different (overlapping) committee makeups, different preferred coordinator at any point in time
  - there is a very large number of nodes on the network
  - relatively small number of nodes per privacy group

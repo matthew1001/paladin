@@ -7,21 +7,32 @@
    version="1.1"
    id="svg1"
    inkscape:version="1.3.2 (091e20e, 2023-11-25)"
-   sodipodi:docname="drawing.svg"
+   sodipodi:docname="distributed_sequencer_all.svg"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:xlink="http://www.w3.org/1999/xlink"
    xmlns="http://www.w3.org/2000/svg"
-   xmlns:svg="http://www.w3.org/2000/svg"
->
+   xmlns:svg="http://www.w3.org/2000/svg">
    <style>
-
+      .startup-message {
+      fill:#D68F5C;
+      stroke:none;
+      stroke-width:0.0848807;
+      stroke-dasharray:none;
+      }
+      .startup-message-path {
+      stroke:#D68F5C;
+      fill:#D68F5C;
+      stroke-width:0.224;
+      stroke-dasharray:none;
+      marker-end:url(#Triangle);
+      }
       .ring {
       fill:none;
       fill-opacity:1;
       stroke:#107070;
       stroke-width:0.604321;
-      stroke-dasharray:"none";
+      stroke-dasharray:none;
       stroke-opacity:1;
       }
       .node {
@@ -35,27 +46,26 @@
       stroke-width:0.324;
       stroke-dasharray:none;
       }
-      .node.unavailable {
-         fill:#f5f5f5;
-      }
-      .delegation-request {
-      
-      stroke:#d58cff;
-      stroke-width:0.221384;
-      stroke-dasharray:"none";
-      marker-end:url(#Triangle);
-      }
-      .delegation-request.timedout {
-      stroke-dasharray:1,1;
-         
-      }
-      
    </style>
    <sodipodi:namedview
       id="namedview1"
       pagecolor="#ffffff"
       bordercolor="#000000"
       borderopacity="0.25"
+      inkscape:showpageshadow="2"
+      inkscape:pageopacity="0.0"
+      inkscape:pagecheckerboard="0"
+      inkscape:deskcolor="#d1d1d1"
+      inkscape:document-units="mm"
+      inkscape:zoom="0.95162744"
+      inkscape:cx="631.54967"
+      inkscape:cy="931.56204"
+      inkscape:window-width="3840"
+      inkscape:window-height="2160"
+      inkscape:window-x="0"
+      inkscape:window-y="0"
+      inkscape:window-maximized="0"
+      inkscape:current-layer="layer1"
       showgrid="false" />
    <defs
       id="defs1">
@@ -92,26 +102,26 @@
             cy="22.217205"
             r="16.919201" />
          <circle
-            class="node coordinator unavailable"
-            id="node-a"
+            class="node coordinator"
+            id="circle238"
             cx="9.5980635"
             cy="10.638836"
             r="3.9091334" />
          <circle
             class="node"
-            id="node-b"
+            id="circle239"
             cx="33.252453"
             cy="10.726849"
             r="3.9091334" />
          <circle
-            class="node"
-            id="node-c"
+            class="node coordinator"
+            id="circle240"
             cx="10.038157"
             cy="34.029156"
             r="3.9091334" />
          <circle
             class="node"
-            id="node-d"
+            id="circle241"
             cx="33.296459"
             cy="34.161205"
             r="3.9091334" />
@@ -160,7 +170,7 @@
       <path
          sodipodi:type="star"
          style="fill:#db1457;stroke-width:1.66"
-         id="path91"
+         id="path241"
          inkscape:flatsided="false"
          sodipodi:sides="5"
          sodipodi:cx="33.446014"
@@ -170,78 +180,77 @@
          sodipodi:arg1="1.0471976"
          sodipodi:arg2="1.6755161"
          inkscape:rounded="0"
+         inkscape:randomized="0"
          d="m 36.52531,221.1483 -3.40117,-2.27107 -3.799028,1.5143 1.108897,-3.9365 -2.614148,-3.14515 4.086506,-0.16182 2.183396,-3.45811 1.416703,3.83649 3.963561,1.00792 -3.210936,2.53291 z"
          inkscape:transform-center-x="-0.072420214"
          inkscape:transform-center-y="-0.14404725"
-         transform="matrix(0.36404906,0,0,0.36404906,-6.243082,-61.17103)" />
-      <rect
-         style="fill:#d58cff;stroke:none;stroke-width:0.48883;stroke-dasharray:none"
-         id="rect100"
-         width="2.523248"
-         height="1.4850576"
-         x="8.8981953"
-         y="15.893757"
-         ry="0.7425288" />
+         transform="matrix(0.36404906,0,0,0.36404906,-7.1644178,-61.092207)" />
+
+      <circle
+         class="startup-message"
+         id="startup-message-a-to-d"
+         cx="-30.888073"
+         cy="28.947765"
+         transform="scale(-1,1)"
+         r="1" />
       <path
-         class="delegation-request timedout"
-         d="M 12.163213,30.14321 11.140442,15.16884"
-         id="delegation-request-c-to-a" />
+         style="fill:#db1457;stroke:#db1457;stroke-width:0.224;stroke-dasharray:none;marker-end:url(#Triangle)"
+         d="m 13.819772,32.866033 14.50281,0.83405"
+         id="path251"
+         sodipodi:nodetypes="cc" />
       <path
-         class="delegation-request timedout"
-         d="M 33.148049,30.28705 14.028349,13.81009"
-         id="delegation-request-d-to-a" />
+         style="fill:#db1457;stroke:#db1457;stroke-width:0.224;stroke-dasharray:none;marker-end:url(#Triangle)"
+         d="m 12.202382,30.716273 17.15958,-17.12835"
+         id="path252"
+         sodipodi:nodetypes="cc" />
+      <circle
+         style="fill:#db1457;stroke:none;stroke-width:0.0848807;stroke-dasharray:none"
+         id="heartbeat-message-c-to-b"
+         cx="-30.587872"
+         cy="14.835888"
+         transform="scale(-1,1)"
+         r="1" />
+      <circle
+         class="startup-message"
+         id="startup-message-a-to-c"
+         cx="-10.429088"
+         cy="28.678692"
+         transform="scale(-1,1)"
+         r="1" />
       <path
-         class="delegation-request timedout"
-         d="m 30.356732,11.78528 -15.02564,0.76553"
-         id="delegation-request-b-to-a" />
-      <text
-         xml:space="preserve"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:5.64444px;font-family:Arial;-inkscape-font-specification:'Arial, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#d58cff;stroke:#d58cff;stroke-width:0.224;stroke-dasharray:none"
-         x="9.0742264"
-         y="17.170002"
-         id="text103"><tspan
-         sodipodi:role="line"
-         id="tspan103"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:1.41111px;font-family:Arial;-inkscape-font-specification:'Arial, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#000000;stroke:none;stroke-width:0.224"
-         x="9.0742264"
-         y="17.170002">C-1</tspan></text>
+         class="startup-message-path"
+         d="m 9.9572122,14.564373 1.7603098,15.05069"
+         id="startup-message-path-a-to-c"
+         sodipodi:nodetypes="cc" />
+      <path
+         class="startup-message-path"
+         d="m 12.509672,13.068103 16.19491,16.63499"
+         id="startup-message-path-a-to-d" />
+      <path
+         class="startup-message-path"
+         d="m 13.389822,10.251593 13.99452,0.26405"
+         id="startup-message-path-a-to-b" />
+      <circle
+         style="fill:#db1457;stroke:none;stroke-width:0.0848807;stroke-dasharray:none"
+         id="heartbeat-message-c-to-d"
+         cx="-27.152111"
+         cy="35.01582"
+         transform="scale(-1,1)"
+         r="1" />
+      <circle
+         class="startup-message"
+         id="startup-message-a-to-b"
+         cx="-28.38435"
+         cy="9.1392021"
+         transform="scale(-1,1)"
+         r="1" />
       <rect
-         style="fill:#d58cff;stroke:none;stroke-width:0.48883;stroke-dasharray:none"
-         id="rect104"
-         width="2.523248"
-         height="1.4850576"
-         x="13.153622"
-         y="14.824055"
-         ry="0.7425288" />
-      <text
-         xml:space="preserve"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:5.64444px;font-family:Arial;-inkscape-font-specification:'Arial, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#d58cff;stroke:#d58cff;stroke-width:0.224;stroke-dasharray:none"
-         x="13.329655"
-         y="16.1003"
-         id="text104"><tspan
-         sodipodi:role="line"
-         id="tspan104"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:1.41111px;font-family:Arial;-inkscape-font-specification:'Arial, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#000000;stroke:none;stroke-width:0.224"
-         x="13.329655"
-         y="16.1003">D-1</tspan></text>
-      <rect
-         style="fill:#d58cff;stroke:none;stroke-width:0.48883;stroke-dasharray:none"
-         id="rect105"
-         width="2.523248"
-         height="1.4850576"
-         x="16.926716"
-         y="12.626331"
-         ry="0.7425288" />
-      <text
-         xml:space="preserve"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:5.64444px;font-family:Arial;-inkscape-font-specification:'Arial, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#d58cff;stroke:#d58cff;stroke-width:0.224;stroke-dasharray:none"
-         x="17.102745"
-         y="13.902576"
-         id="text105"><tspan
-         sodipodi:role="line"
-         id="tspan105"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:1.41111px;font-family:Arial;-inkscape-font-specification:'Arial, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#000000;stroke:none;stroke-width:0.224"
-         x="17.102745"
-         y="13.902576">B-1</tspan></text>
+         style="fill:#db1457;fill-opacity:1;stroke:none;stroke-width:0.124;stroke-dasharray:none"
+         id="rect812"
+         width="7.1569252"
+         height="0"
+         x="130.91214"
+         y="425.9863"
+         ry="0" />
    </g>
 </svg>
