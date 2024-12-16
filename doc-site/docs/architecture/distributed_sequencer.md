@@ -29,6 +29,64 @@ The basic premises of the algorithm are:
  - The sender node continues to monitor and control the delegation of its transaction until it has received receipt of the transactions' confirmations on the base ledger. This provides an "at least once" quality of service for every transaction at the distributed sequencer layer. As described earlier the blockchain enforces "at most once" semantics, so there is no possibility of duplicate transactions.
  - The handshake between the sender node and the coordinator node(s) attempts to minimize the likelihood of the same transaction intent resulting in 2 valid base ledger transactions but cannot eliminate that possibility completely so there is protection against duplicate intent fulfillment in the base ledger contract
 
+## Transaction lifecycle
+
+#### Senders transaction state
+
+The states that a transaction goes through, from the perspective of the transaction sender are:
+
+  - Queued: The transaction has been accepted by the sender (e.g. via a call to its `ptx_sendTransaction` or `ptx_prepareTransaction` RPC API) but hasn't yet been delegated to a coordinator.
+  - Delegated: The transaction has been delegated to a coordinator but hasn't yet been prepared for dispatch
+  - Prepared: A base ledger transaction has been prepared for this transaction and the sender has granted permission for the coordinator to dispatch that prepared transaction to a submitter. It is unknown, to the sender, whether the submitter has received the dispatch yet or not.
+  - Dispatched: The prepared base ledger transaction has been dispatched to a submitter
+  - Reverted: The transaction has been finalized as reverted.  There will be no further attempt to process this transaction. This is a final state.
+  - Confirmed: The base ledger transaction has been confirmed.  This is a final state.
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> Pending
+    Pending --> Delegated: Delegate
+    Delegated --> Assembling
+    Assembling --> Delegated
+    Assembling --> Pending : Park
+    Delegated --> Pending: End of range <br/> coordinator unavailable
+    Delegated --> Prepared
+    Prepared --> Dispatched
+    Dispatched --> Confirmed
+    Dispatched --> Pending : base ledger revert
+    Dispatched --> Pending : submitter unavailable
+    Assembling --> Reverted : revert
+    Confirmed --> [*]
+    Reverted --> [*]
+
+```
+
+#### Coordinators transaction state
+
+The states that a transaction goes through, from the perspective of the transaction coordinator are:
+
+  - Queued: The transaction has been accepted by the coordinator and is in a single threaded queue waiting to be assembled
+  - Assembling: The transaction has been sent to the sender along with a domain context that may be used to assemble the transaction
+  - Attestation: The transaction has been assembled and signed and is awaiting sufficient endorsements to fulfil the attestation plan
+  - Confirmation: The transaction has been endorsed, a base ledger transaction has been prepared and the coordinator is waiting for confirmation from the sender that the transaction may be dispatched
+  - Dispatched: The transaction has been dispatched to a submitter
+  
+Note: Strictly speaking, this is the lifecycle of a single `delegation`, The same transaction may go through several delegation flows before finally being 
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> Queued
+    Queued --> Assembling
+    Assembling --> [*] : timeout
+    Assembling --> [*] : reverted
+    Assembling --> Attestation : assembled
+    Attestation --> Confirmation
+    Confirmation --> Dispatched
+    Dispatched --> [*]
+```
+
 ## Detailed Walkthrough
 
 To describe the algorithm in detail, we break it down to sub problems.
