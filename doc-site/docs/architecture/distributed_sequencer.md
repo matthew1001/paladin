@@ -20,12 +20,14 @@ The basic premises of the algorithm are:
  - The sender node for each transaction is responsible for ensuring that the transaction always has one coordinator actively coordinating it by detecting and responding to situations where the current coordinator becomes unavailable, a more preferred coordinator comes back online or preference changes due to new block height.  
 - Ranking of the preference for coordinator selection for any given contract address, for any given point in time ( block height) is a deterministic function that all nodes will agree on given the same awareness of make up of committee 
  - Composition of committee i.e. the set of nodes who are candidates for coordinator is universally agreed (similar to BFT algorithms).
- - Liveness of the coordinator node can be detected via heartbeat messages (similar to RAFT) but absence of heartbeat messages is not an indicator of unavailability. The handshake to send / resend delegation requests is the only protocol point that can be relied on to detect unavailability of the coordinator.  This process is triggered if by absence of heartbeat messages.
+ - Liveness of the coordinator node can be detected via heartbeat messages (similar to RAFT) but absence of heartbeat messages is not an indicator of unavailability. The handshake to send / resend delegation requests is the only protocol point that can be relied on to detect unavailability of the coordinator.  This process is triggered by absence of heartbeat messages.
  - Choice of coordinator can change over time either due increase in block height triggering a rotation of the responsibility or the current coordinator being detected as unavailable. 
  - Situations can arise where different nodes chose different coordinators because of different awareness of block height and/or different awareness of availability.  The algorithm is less efficient when this happens but continues to function and can return to full efficiency as soon as the situation is resolved.
  - There is no need for election `term`s in this algorithm.
  - When coordinator responsibility is switched to another node, each inflight transaction is either re-assigned to the new coordinator or flushed through to confirmation on the base ledger
  - If the sender deems the transaction to be no longer valid, it is responsible for finalizing it as reverted.
+ - If the sender deems the transaction not ready to be submitted, it is responsible for parking it until it is ready.
+ - If the sender deems a failed transaction is worthy of retry, it is responsible for retrying at a frequency that does not cause excessive load on the system.
  - The sender node continues to monitor and control the delegation of its transaction until it has received receipt of the transactions' confirmations on the base ledger. This provides an "at least once" quality of service for every transaction at the distributed sequencer layer. As described earlier the blockchain enforces "at most once" semantics, so there is no possibility of duplicate transactions.
  - The handshake between the sender node and the coordinator node(s) attempts to minimize the likelihood of the same transaction intent resulting in 2 valid base ledger transactions but cannot eliminate that possibility completely so there is protection against duplicate intent fulfillment in the base ledger contract
 
@@ -120,6 +122,7 @@ In the example here, lets say we chose a hash function with a numeric output bet
 
 NOTE: this is a contrived, simplified example for illustration.  In reality, the hashes are not uniformly distributed around the ring so to achieve an even distribution, virtual nodes are used.  Each node is assigned multiple locations on the ring by running the hash function on multiple deterministic mutations of the node name.  
 
+<!-- TODO should "Node availability detection" and "Network partition" sections move down and come after "Coordinator switchover" and "Variation in block height"-->
 ### <a name="node-availability-detection">Node availability detection
 
 When a node starts acting as the coordinator it will accept delegation requests from any other node in the group.  It  periodically sends a heartbeat message to all nodes in the privacy group. The heartbeat message sent to each `sender` node contains the list of transaction ids that the coordinator is actively coordinating and were delegated by that `sender` node. 
@@ -163,7 +166,7 @@ Node C then proceeds to act as coordinator and sends periodic heartbeat messages
 If Node A comes back online, what happens next depends on whether: 
 
  - Node A was truly offline i.e. its process crashed or gracefully shutdown and has now restarted. In this case, Node A will send `startup` messages to all other nodes as soon as it detects activity on this privacy group. See <a href="#startup">Start up processing</a> for details on the logic for detecting activity and sending / receiving `startup` messages.
- - Node A continued to run, but was isolated from the other nodes due to a network outage.  In this case, Node A will resume sending heartbeat messages for any transaction that it was coordinating. In the special case where NodeA does not have any transactions in flight, then the startup message processing will be triggered, similarly ot the previous bullet. 
+ - Node A continued to run, but was isolated from the other nodes due to a network outage.  In this case, Node A will resume sending heartbeat messages for any transaction that it was coordinating. In the special case where NodeA does not have any transactions in flight, then the startup message processing will be triggered, similarly to the previous bullet. 
  
 
 ![image](../images/distributed_sequencer_availability_frame7.svg){ width="500" }
@@ -231,35 +234,20 @@ As all nodes in the group ( including node A) learn that the new block height is
 
 Node A will continue to process and monitor receipts for transactions `A-2` , `B-2`, `C-2` and `D-2` but will abandon transactions `A-3` , `B-3`, `C-3` and `D-3`.  Abandoned transactions will not be included in any future heartbeat messages.
 
-![image](../images/distributed_sequencer_switchover_frame3.svg){ width="500" }
+<!--  TODO edit image to illustrate submitter heartbeat messages ![image](../images/distributed_sequencer_switchover_frame3.svg){ width="500" } -->
 
-The final transmission from node A, as coordinator, is a message to node B with details of the speculative domain context predicting confirmation of transactions `A-2` , `B-2`, `C-2` and `D-2` .  This includes the state IDs for any new states created by those transactions and any states that are spent by those transaction.  This message also includes the transaction hash for the final transaction that is submitted on the sequence coordinated by node A.  Node B needs to receive this message so that it can proceed with maximum efficiency. Therefore this message is sent with an assured delivery quality of service (similar to state distribution).  
+Node A, as submitter (note in future it may be the case that the submitter is a different node to the coordinator) for transactions `A-2` , `B-2`, `C-2` and `D-2` will continue to send `SubmitterHeartbeatNotification` messages until those transactions have been confirmed on the base ledger. All sender nodes will hold off from delegating `A-3` , `B-3`, `C-3` and `D-3` - or any new transactions to node B while these `SubmitterHeartbeatNotification` messages are being received.
 
-Meanwhile, all nodes delegate transactions  `A-3` , `B-3`, `C-3` and `D-3` to node B.  
+Once all in flight dispatched transactions have been confirmed, node A stops sending the heartbeat messages and transactions  `A-3` , `B-3`, `C-3` and `D-3` are delegated to node B by their respective senders.  
 
-![image](../images/distributed_sequencer_switchover_frame4.svg){ width="500" }
+ ![image](../images/distributed_sequencer_switchover_frame6.svg){ width="500" }
 
-Node B will start to coordinate the assembly and endorsement of these transactions but hold off from preparing them for dispatch to its transaction manager yet.
 
-![image](../images/distributed_sequencer_switchover_frame5.svg){ width="500" }
-
-Once  transactions `A-2` , `B-2`, `C-2` and `D-2` have been confirmed in a block ( which may be block 5 or may take more than one block) and node B has received confirmation of this, then node B will continue to prepare and submit transactions `A-3` , `B-3`, `C-3` and `D-3`.
-
-![image](../images/distributed_sequencer_switchover_frame6.svg){ width="500" }
-
-Eventually transactions `A-3` , `B-3`, `C-3` and `D-3` are mined to a block.
+Eventually transactions `A-3` , `B-3`, `C-3` and `D-3` are confirmed on the base ledger.
 
 ![image](../images/distributed_sequencer_switchover_frame7.svg){ width="500" }
 
-Note that there is a brief dip in throughput as node B waits for node A to flush through the pending dispatched transactions and there is also some additional processing for the inflight transactions that haven't been dispatched yet.  So a range size of 4 is unreasonable and it would be more likely for range sizes to be much larger so that these dips in throughput become negligible.
-
-<!--
-TODO
-
- - need more detail on precisely _how_  nodes B, C and D know that transactions `B-2``A-2` , `B-2`, `C-2` and `D-2` are past the point of no return and that transactions `A-3` , `B-3`, `C-3` and `D-3` do need to be re-delegated.
- - need more detail on precisely _how_ node B can continue to coordinate the assembly of transactions `A-3` , `B-3`, `C-3` and `D-3` in a domain context that is aware of the speculative states locks from transactions `B-2``A-2` , `B-2`, `C-2` and `D-2` 
- - It might be more productive for the next level of detail on these points to come in the form of a proposal in code.
--->
+Note that there is a brief dip in throughput while node A flushes through the pending dispatched transactions and there is also some additional processing for the inflight transactions that haven't been dispatched yet.  So a range size of 4 is unreasonable and it would be more likely for range sizes to be much larger so that these dips in throughput become negligible.
 
 
 ### Variation in block height
@@ -289,9 +277,9 @@ The sender node for any given transaction remains ultimately responsible for ens
 
 Feedback available to the sender node that can be monitored to track the progress or otherwise of the transaction submission:
 
- - when the sender node is choosing the coordinator, it may have recently received a [coordinator heartbeat messages](#message-heartbeat-notification) from the preferred coordinator or an alternative coordinator
+ - when the sender node is choosing the coordinator, it may have recently received a [coordinator heartbeat messages](#message-coordinator-heartbeat-notification) from the preferred coordinator or an alternative coordinator
  - when sending the delegation request to the coordinator, the sender node expects to receive a [delegation accepted message](message-transaction-delegation-accepted).  This is not a guarantee that the transaction will be completed.  At this point, the coordinator has only an in-memory record of that delegated transaction
- - [coordinator heartbeat messages](#message-heartbeat-notification).  The payload of these messages contains a list of transaction IDs that the coordinator is actively coordinating
+ - [coordinator heartbeat messages](#message-coordinator-heartbeat-notification).  The payload of these messages contains a list of transaction IDs that the coordinator is actively coordinating
  - [dispatch confirmation request](#message-exchange-dispatch-confirmation).  Once the coordinator has fulfilled the attestation plan, it sends a message to the transaction sender requesting permission to dispatch. If, for any reason, the sender has already re-delegated to another coordinator, then it will reject this request otherwise, it will accept.
  - blockchain event.  The base ledger contract for each domain emits a custom event that included the transaction ID.  The sender node will detect when such an event corresponds to one of its transactions and will record that transaction as confirmed.
  - transaction reverted message.  When the submitter fails to submit the transaction, for any reason, and gives up trying , then a `TransactionReverted` message is sent to the sender of that transaction.  There are some cases where the submitter retries certain failures and does *not* send this message.
@@ -906,7 +894,8 @@ The following concrete message exchanges defines the responsibilities and expect
  - <a href="#message-exchange-delegation">Transaction delegation</a>
  - <a href="#message-exchange-assemble">Transaction assemble</a>
  - <a href="#message-exchange-endorsement">Transaction endorsement</a>
- - <a href="#message-exchange-heartbeat">Heartbeat</a>
+ - <a href="#message-exchange-coordinator-heartbeat">Coordinator heartbeat</a>
+ - <a href="#message-exchange-submitter-heartbeat">Submitter heartbeat</a>
  - <a href="#message-exchange-startup">Startup</a>
  - <a href="#message-exchange-dispatch-confirmation">Dispatch confirmation</a>
  - 
@@ -1022,7 +1011,7 @@ message NotPreferredCoordinatorDetail {
 
 ##### <a name="message-transaction-delegation-accepted"></a>Transaction delegation accepted
 
-If a node receives a `DelegationAccepted` message then it should start to monitor the continued acceptance of that delegation.  It can expect to receive `HeartbeatNotification` messages from the delegate node and for those messages to include the id of the delegated transaction. The `sender` node cannot assume that the `coordinator` node will persist the delegation request.  If the heartbeat messages stop or if the received heartbeat messages do not contain the expected transaction ids, then the sender should retrigger the `HandleTransaction` process to cause the transaction to be re-delegated either to the same delegate, or new delegate or to be coordinated by the sender node itself. Whichever is appropriate for the current point in time.  
+If a node receives a `DelegationAccepted` message then it should start to monitor the continued acceptance of that delegation.  It can expect to receive `CoordinatorHeartbeatNotification` messages from the delegate node and for those messages to include the id of the delegated transaction. The `sender` node cannot assume that the `coordinator` node will persist the delegation request.  If the heartbeat messages stop or if the received heartbeat messages do not contain the expected transaction ids, then the sender should retrigger the `HandleTransaction` process to cause the transaction to be re-delegated either to the same delegate, or new delegate or to be coordinated by the sender node itself. Whichever is appropriate for the current point in time.  
 
 ```proto
 message DelegationRequestAccepted {
@@ -1034,7 +1023,6 @@ message DelegationRequestAccepted {
 ```
 
 #### <a name="message-exchange-transaction-assemble"></a>Transaction Assemble
-
 
 This is an instance of the `Request` pattern where the `request sender` is the coordinator node for the given transaction and the `request receiver` is the sender node.
 
@@ -1205,9 +1193,9 @@ message EndorsementError {
 }
 ```
 
-#### <a name="message-exchange-heartbeat"></a>Heartbeat
+#### <a name="message-exchange-coordinator-heartbeat"></a>Heartbeat
 
-Once a `coordinator` node has accepted a delegation, it will continue to periodically send `HeartbeatNotification` messages to the `sender` node for that transaction. The coordinator sends a heartbeat notification to all nodes for which it is currently coordinating transactions.  The message sent to any given node must include the ids for all active delegations. The message may contain other delegation ids that are unknown to the receiving node.
+Once a `coordinator` node has accepted a delegation, it will continue to periodically send `CoordinatorHeartbeatNotification` messages to the `sender` node for that transaction. The coordinator sends a heartbeat notification to all nodes in the privacy group.  The message sent to any given node must include the ids for all active delegations. The message may contain other delegation ids that are unknown to the receiving node.
 
 This is a fire and forget notification.  There is no acknowledgement expected.
 
@@ -1224,13 +1212,14 @@ sequenceDiagram
   
 ```  
 
-##### <a name="message-heartbeat-notification"></a>Heartbeat notification
+
+##### <a name="message-coordinator-heartbeat-notification"></a>Coordinator heartbeat notification
 
 When a node receives a heartbeat message from a coordinator node, it should compare that notification with its record of inflight transactions and active delegations
  - if the receiving node has any in flight transactions that have been delegated to coordinators other than the source of the received heartbeat, then the receiving node should initiate a re-evaluation of its choice of coordinator
 
 ```proto
-message HeartbeatNotification {
+message CoordinatorHeartbeatNotification {
     string heartbeat_id = 1;
     google.protobuf.Timestamp timestamp = 2;
     string contract_address = 3;
@@ -1246,6 +1235,63 @@ TODO add flow chart to show how the different conditions are handled
   - heartbeat received from expected coordinator but does not include all transactions expected
   - no heartbeat received after a time threshold
 -->
+
+
+#### <a name="message-exchange-submitter-heartbeat"></a>Heartbeat
+
+Once a `submitter` node has accepted a dispatch, it will continue to periodically send `SubmitterHeartbeatNotification` messages to the `sender` node for that transaction. The submitter sends a heartbeat notification to all nodes for which it is currently submitting transactions.  The message sent to any given node must include the submissions and activity for all transactions that node is a sender of as well as the transaction ids for all transactions.
+
+This is a fire and forget notification.  There is no acknowledgement expected.
+
+```mermaid
+sequenceDiagram
+  %%{init: { "sequence": { "mirrorActors":false }}}%%
+  participant S as Submitter
+  participant S1 as Sender 1
+  participant S2 as Sender 2
+  loop Every `HeartBeatInterval`
+    S -) S1: Heartbeat
+    S -) S2: Heartbeat
+  end
+  
+```  
+
+##### <a name="message-submitter-heartbeat-notification"></a>Submitter heartbeat notification
+
+When a node receives a heartbeat message from a submitter, it should compare that notification with its record of inflight transactions and active delegations and use the information from the heartbeat message to update its in-memory record of that transaction which then influences future decisions / responses to other events.
+
+  - while recent submitter heartbeat notifications have been received, the sender should not delegate the transaction to other coordinators, even if block height moves into a new range
+  - while recent submitter heartbeat notifications have been received for any transactions in a given contract address, and the coordinator block range for those transactions is previous to the current coordinator block range, then the sender should not delegate any transactions to the new coordinator for the current block range
+
+```proto
+
+message Submission {
+  google.protobuf.Timestamp time = 1 ;
+  string transactionHash = 2 ;
+  string gasPrice = 3 ;
+}
+
+message SubmitterActivity {
+  google.protobuf.Timestamp time = 1 ;
+  string message = 2 ; 
+}
+
+message DispatchedTransaction {
+  string transaction_id = 1 ;
+  repeated Submission submissions = 2 ;
+  repeated SubmitterActivity activity = 3 ;
+}
+
+message SubmitterHeartbeatNotification {
+    string heartbeat_id = 1;
+    google.protobuf.Timestamp timestamp = 2;
+    string contract_address = 3;
+    repeated string transaction_ids = 4;
+}
+```
+
+<!-- TODO should the heartbeat contain such rich information about the `submissions` and `activity` for every transaction?  Or should there be a separate acknowledged notification message for these significant activity events  and that they should update the persistent state?  -->
+
 
 #### <a name="message-exchange-startup"></a>Startup
 
@@ -1349,7 +1395,7 @@ This is the successful response to a `Request dispatch confirmation` message.
 ##### <a name="message-dispatch-confirmation-error"></a> Dispatch confirmation error
 
 ```proto
-message HeartbeatNotification {
+message CoordinatorHeartbeatNotification {
     string heartbeat_id = 1;
     google.protobuf.Timestamp timestamp = 2;
     string idempotency_key = 3;
