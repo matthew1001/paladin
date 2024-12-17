@@ -46,14 +46,16 @@ The states that a transaction goes through, from the perspective of the transact
 stateDiagram-v2
     direction LR
     [*] --> Pending
-    Pending --> Delegated: Delegate
+    Pending --> Delegating: Delegate
+    Delegating --> Delegated: DelegationAccepted
+    Delegating --> Pending: Timeout
     Delegated --> Assembling
     Assembling --> Delegated
     Assembling --> Pending : Park
     Delegated --> Pending: End of range <br/> coordinator unavailable
+    Dispatched --> Confirmed
     Delegated --> Prepared
     Prepared --> Dispatched
-    Dispatched --> Confirmed
     Dispatched --> Pending : base ledger revert
     Dispatched --> Pending : submitter unavailable
     Assembling --> Reverted : revert
