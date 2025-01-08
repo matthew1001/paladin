@@ -9,10 +9,10 @@
       
       
       
-        <link rel="prev" href="../preparedtransaction/">
+        <link rel="prev" href="../onchainlocation/">
       
       
-        <link rel="next" href="../queryjson/">
+        <link rel="next" href="../preparedtransaction/">
       
       
       <link rel="icon" href="../../../assets/paladin-icon-light.png">
@@ -20,7 +20,7 @@
     
     
       
-        <title>PublicTx - Paladin</title>
+        <title>PeerInfo - Paladin</title>
       
     
     
@@ -196,7 +196,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              PublicTx
+              PeerInfo
             
           </span>
         </div>
@@ -1742,48 +1742,6 @@
                 
   
   
-  
-  
-    <li class="md-nav__item">
-      <a href="../peerinfo/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    PeerInfo
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../preparedtransaction/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    PreparedTransaction
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
     
   
   
@@ -1798,7 +1756,7 @@
           
   
   <span class="md-ellipsis">
-    PublicTx
+    PeerInfo
   </span>
   
 
@@ -1809,7 +1767,7 @@
         
   
   <span class="md-ellipsis">
-    PublicTx
+    PeerInfo
   </span>
   
 
@@ -1847,18 +1805,9 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#publictxsubmissiondata" class="md-nav__link">
+  <a href="#peerstats" class="md-nav__link">
     <span class="md-ellipsis">
-      PublicTxSubmissionData
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#transactionactivityrecord" class="md-nav__link">
-    <span class="md-ellipsis">
-      TransactionActivityRecord
+      PeerStats
     </span>
   </a>
   
@@ -1868,6 +1817,48 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../preparedtransaction/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    PreparedTransaction
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../publictx/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    PublicTx
+  </span>
+  
+
+      </a>
     </li>
   
 
@@ -2689,18 +2680,9 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#publictxsubmissiondata" class="md-nav__link">
+  <a href="#peerstats" class="md-nav__link">
     <span class="md-ellipsis">
-      PublicTxSubmissionData
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#transactionactivityrecord" class="md-nav__link">
-    <span class="md-ellipsis">
-      TransactionActivityRecord
+      PeerStats
     </span>
   </a>
   
@@ -2724,15 +2706,23 @@
   
 
 
-  <h1>PublicTx</h1>
+  <h1>PeerInfo</h1>
 
 <h3 id="example">Example<a class="headerlink" href="#example" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="nt">&quot;from&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0x0000000000000000000000000000000000000000&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nt">&quot;nonce&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nt">&quot;created&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="nt">&quot;transactionHash&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="p">}</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nt">&quot;stats&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">        </span><span class="nt">&quot;sentMsgs&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">        </span><span class="nt">&quot;receivedMsgs&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">        </span><span class="nt">&quot;sentBytes&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">        </span><span class="nt">&quot;receivedBytes&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">        </span><span class="nt">&quot;lastSend&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">        </span><span class="nt">&quot;lastReceive&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">        </span><span class="nt">&quot;reliableHighestSent&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">        </span><span class="nt">&quot;reliableAckBase&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">    </span><span class="p">},</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">    </span><span class="nt">&quot;activated&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="p">}</span>
 </code></pre></div>
 <h3 id="field-descriptions">Field Descriptions<a class="headerlink" href="#field-descriptions" title="Permanent link">&para;</a></h3>
 <table>
@@ -2745,148 +2735,86 @@
 </thead>
 <tbody>
 <tr>
-<td><code>localId</code></td>
-<td>A locally generated numeric ID for the public transaction. Unique within the node</td>
+<td><code>name</code></td>
+<td>The name of the peer node</td>
+<td><code>string</code></td>
+</tr>
+<tr>
+<td><code>stats</code></td>
+<td>Statistics for the outbound and inbound data transfer</td>
+<td><a href="#peerstats"><code>PeerStats</code></a></td>
+</tr>
+<tr>
+<td><code>activated</code></td>
+<td>The time when the peer was activated by an attempt to send data, or data arriving on a transport from this peer</td>
+<td><a href="../simpletypes/#timestamp"><code>Timestamp</code></a></td>
+</tr>
+<tr>
+<td><code>outboundTransport</code></td>
+<td>The name of the transport selected for outbound connection to the peer. Omitted if no attempt to send data has occurred for this peer</td>
+<td><code>string</code></td>
+</tr>
+<tr>
+<td><code>outbound</code></td>
+<td>Transport specific information about an established outbound connection to the peer. Omitted if the peer does not have an established outbound connection</td>
+<td>``</td>
+</tr>
+<tr>
+<td><code>outboundError</code></td>
+<td>Contains an error if attempting to send data, and the transport connection failed</td>
+<td><code>error</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="peerstats">PeerStats<a class="headerlink" href="#peerstats" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Field Name</th>
+<th>Description</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sentMsgs</code></td>
+<td>Count of messages sent since activation of this peer</td>
 <td><code>uint64</code></td>
 </tr>
 <tr>
-<td><code>to</code></td>
-<td>The target contract address (optional)</td>
-<td><a href="../simpletypes/#ethaddress"><code>EthAddress</code></a></td>
+<td><code>receivedMsgs</code></td>
+<td>Count of messages received since activation of this peer</td>
+<td><code>uint64</code></td>
 </tr>
 <tr>
-<td><code>data</code></td>
-<td>The pre-encoded calldata (optional)</td>
-<td><a href="../simpletypes/#hexbytes"><code>HexBytes</code></a></td>
+<td><code>sentBytes</code></td>
+<td>Count of payload bytes sent since activation of this peer (does not include header data)</td>
+<td><code>uint64</code></td>
 </tr>
 <tr>
-<td><code>from</code></td>
-<td>The sender's Ethereum address</td>
-<td><a href="../simpletypes/#ethaddress"><code>EthAddress</code></a></td>
+<td><code>receivedBytes</code></td>
+<td>Count of payload bytes received since activation of this peer (does not include header data)</td>
+<td><code>uint64</code></td>
 </tr>
 <tr>
-<td><code>nonce</code></td>
-<td>The transaction nonce</td>
-<td><a href="../simpletypes/#hexuint64"><code>HexUint64</code></a></td>
-</tr>
-<tr>
-<td><code>created</code></td>
-<td>The creation time</td>
+<td><code>lastSend</code></td>
+<td>Timestamp of the last send to this peer</td>
 <td><a href="../simpletypes/#timestamp"><code>Timestamp</code></a></td>
 </tr>
 <tr>
-<td><code>completedAt</code></td>
-<td>The completion time (optional)</td>
+<td><code>lastReceive</code></td>
+<td>Timestamp of the last receive from this peer</td>
 <td><a href="../simpletypes/#timestamp"><code>Timestamp</code></a></td>
 </tr>
 <tr>
-<td><code>transactionHash</code></td>
-<td>The transaction hash (optional)</td>
-<td><a href="../simpletypes/#bytes32"><code>Bytes32</code></a></td>
+<td><code>reliableHighestSent</code></td>
+<td>Outbound reliable messages are assigned a sequence. This is the highest sequence sent to the peer since activation</td>
+<td><code>uint64</code></td>
 </tr>
 <tr>
-<td><code>success</code></td>
-<td>The transaction success status (optional)</td>
-<td><code>bool</code></td>
-</tr>
-<tr>
-<td><code>revertData</code></td>
-<td>The revert data (optional)</td>
-<td><a href="../simpletypes/#hexbytes"><code>HexBytes</code></a></td>
-</tr>
-<tr>
-<td><code>submissions</code></td>
-<td>The submission data (optional)</td>
-<td><a href="#publictxsubmissiondata"><code>PublicTxSubmissionData[]</code></a></td>
-</tr>
-<tr>
-<td><code>activity</code></td>
-<td>The transaction activity records (optional)</td>
-<td><a href="#transactionactivityrecord"><code>TransactionActivityRecord[]</code></a></td>
-</tr>
-<tr>
-<td><code>gas</code></td>
-<td>The gas limit for the transaction (optional)</td>
-<td><a href="../simpletypes/#hexuint64"><code>HexUint64</code></a></td>
-</tr>
-<tr>
-<td><code>value</code></td>
-<td>The value transferred in the transaction (optional)</td>
-<td><a href="../simpletypes/#hexuint256"><code>HexUint256</code></a></td>
-</tr>
-<tr>
-<td><code>maxPriorityFeePerGas</code></td>
-<td>The maximum priority fee per gas (optional)</td>
-<td><a href="../simpletypes/#hexuint256"><code>HexUint256</code></a></td>
-</tr>
-<tr>
-<td><code>maxFeePerGas</code></td>
-<td>The maximum fee per gas (optional)</td>
-<td><a href="../simpletypes/#hexuint256"><code>HexUint256</code></a></td>
-</tr>
-<tr>
-<td><code>gasPrice</code></td>
-<td>The gas price (optional)</td>
-<td><a href="../simpletypes/#hexuint256"><code>HexUint256</code></a></td>
-</tr>
-</tbody>
-</table>
-<h2 id="publictxsubmissiondata">PublicTxSubmissionData<a class="headerlink" href="#publictxsubmissiondata" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Field Name</th>
-<th>Description</th>
-<th>Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>time</code></td>
-<td>The submission time</td>
-<td><a href="../simpletypes/#timestamp"><code>Timestamp</code></a></td>
-</tr>
-<tr>
-<td><code>transactionHash</code></td>
-<td>The transaction hash</td>
-<td><a href="../simpletypes/#bytes32"><code>Bytes32</code></a></td>
-</tr>
-<tr>
-<td><code>maxPriorityFeePerGas</code></td>
-<td>The maximum priority fee per gas (optional)</td>
-<td><a href="../simpletypes/#hexuint256"><code>HexUint256</code></a></td>
-</tr>
-<tr>
-<td><code>maxFeePerGas</code></td>
-<td>The maximum fee per gas (optional)</td>
-<td><a href="../simpletypes/#hexuint256"><code>HexUint256</code></a></td>
-</tr>
-<tr>
-<td><code>gasPrice</code></td>
-<td>The gas price (optional)</td>
-<td><a href="../simpletypes/#hexuint256"><code>HexUint256</code></a></td>
-</tr>
-</tbody>
-</table>
-<h2 id="transactionactivityrecord">TransactionActivityRecord<a class="headerlink" href="#transactionactivityrecord" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Field Name</th>
-<th>Description</th>
-<th>Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>time</code></td>
-<td>Time the record occurred</td>
-<td><a href="../simpletypes/#timestamp"><code>Timestamp</code></a></td>
-</tr>
-<tr>
-<td><code>message</code></td>
-<td>Activity message</td>
-<td><code>string</code></td>
+<td><code>reliableAckBase</code></td>
+<td>Outbound reliable messages are assigned a sequence. This is the lowest sequence that has not received an acknowledgement from the peer</td>
+<td><code>uint64</code></td>
 </tr>
 </tbody>
 </table>
@@ -2924,7 +2852,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../preparedtransaction/" class="md-footer__link md-footer__link--prev" aria-label="Previous: PreparedTransaction">
+          <a href="../onchainlocation/" class="md-footer__link md-footer__link--prev" aria-label="Previous: OnChainLocation">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -2934,20 +2862,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                PreparedTransaction
+                OnChainLocation
               </div>
             </div>
           </a>
         
         
           
-          <a href="../queryjson/" class="md-footer__link md-footer__link--next" aria-label="Next: QueryJSON">
+          <a href="../preparedtransaction/" class="md-footer__link md-footer__link--next" aria-label="Next: PreparedTransaction">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                QueryJSON
+                PreparedTransaction
               </div>
             </div>
             <div class="md-footer__button md-icon">
