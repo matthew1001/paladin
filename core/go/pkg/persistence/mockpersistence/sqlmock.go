@@ -23,9 +23,9 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	migratedb "github.com/golang-migrate/migrate/v4/database"
-	"github.com/kaleido-io/paladin/config/pkg/confutil"
-	"github.com/kaleido-io/paladin/config/pkg/pldconf"
-	"github.com/kaleido-io/paladin/core/pkg/persistence"
+	"github.com/LF-Decentralized-Trust-labs/paladin/config/pkg/confutil"
+	"github.com/LF-Decentralized-Trust-labs/paladin/config/pkg/pldconf"
+	"github.com/LF-Decentralized-Trust-labs/paladin/core/pkg/persistence"
 	gormPostgres "gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )

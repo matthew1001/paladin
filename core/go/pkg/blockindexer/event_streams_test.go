@@ -24,17 +24,17 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/LF-Decentralized-Trust-labs/paladin/config/pkg/confutil"
+	"github.com/LF-Decentralized-Trust-labs/paladin/config/pkg/pldconf"
+	"github.com/LF-Decentralized-Trust-labs/paladin/core/mocks/rpcclientmocks"
+	"github.com/LF-Decentralized-Trust-labs/paladin/core/pkg/persistence"
 	"github.com/google/uuid"
 	"github.com/hyperledger/firefly-signer/pkg/abi"
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
-	"github.com/kaleido-io/paladin/config/pkg/confutil"
-	"github.com/kaleido-io/paladin/config/pkg/pldconf"
-	"github.com/kaleido-io/paladin/core/mocks/rpcclientmocks"
-	"github.com/kaleido-io/paladin/core/pkg/persistence"
 
-	"github.com/kaleido-io/paladin/toolkit/pkg/pldapi"
-	"github.com/kaleido-io/paladin/toolkit/pkg/rpcclient"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/pldapi"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/rpcclient"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/tktypes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -56,7 +56,6 @@ func mockBlockListenerNil(mRPC *rpcclientmocks.WSClient) {
 }
 
 func TestInternalEventStreamDeliveryAtHead(t *testing.T) {
-
 	// This test uses a real DB, includes the full block indexer, but simulates the blockchain.
 	_, bi, mRPC, blDone := newTestBlockIndexer(t)
 	defer blDone()
@@ -127,11 +126,9 @@ func TestInternalEventStreamDeliveryAtHead(t *testing.T) {
 		}
 	}
 	assert.True(t, calledPostCommit)
-
 }
 
 func TestInternalEventStreamDeliveryAtHeadWithSourceAddress(t *testing.T) {
-
 	// This test uses a real DB, includes the full block indexer, but simulates the blockchain.
 	_, bi, mRPC, blDone := newTestBlockIndexer(t)
 	defer blDone()
@@ -198,11 +195,9 @@ func TestInternalEventStreamDeliveryAtHeadWithSourceAddress(t *testing.T) {
 		}`, 1000000+blockNumber, blockNumber), string(e.Data))
 	}
 	assert.True(t, calledPostCommit)
-
 }
 
 func TestInternalEventStreamDeliveryCatchUp(t *testing.T) {
-
 	// This test uses a real DB, includes the full block indexer, but simulates the blockchain.
 	ctx, bi, mRPC, done := newTestBlockIndexer(t)
 	defer done()
@@ -339,7 +334,6 @@ func TestInternalEventStreamDeliveryCatchUp(t *testing.T) {
 }
 
 func TestNoMatchingEvents(t *testing.T) {
-
 	// This test uses a real DB, includes the full block indexer, but simulates the blockchain.
 	_, bi, mRPC, blDone := newTestBlockIndexer(t)
 	defer blDone()
@@ -387,22 +381,18 @@ func TestNoMatchingEvents(t *testing.T) {
 	for i := 0; i < 15; i++ {
 		<-utBatchNotify
 	}
-
 }
 
 func TestStartBadInternalEventStream(t *testing.T) {
-
 	// This test uses a real DB, includes the full block indexer, but simulates the blockchain.
 	_, bi, _, blDone := newTestBlockIndexer(t)
 	defer blDone()
 
 	err := bi.Start(&InternalEventStream{})
 	assert.Regexp(t, "PD020005", err)
-
 }
 
 func TestTestNotifyEventStreamDoesNotBlock(t *testing.T) {
-
 	// This test uses a real DB, includes the full block indexer, but simulates the blockchain.
 	ctx, bi, _, blDone := newTestBlockIndexer(t)
 	defer blDone()
@@ -439,7 +429,6 @@ func TestTestNotifyEventStreamDoesNotBlock(t *testing.T) {
 			},
 		},
 	})
-
 }
 
 func TestUpsertInternalEventQueryExistingStreamFail(t *testing.T) {
@@ -893,7 +882,6 @@ func TestProcessCatchupEventMultiPageRealDB(t *testing.T) {
 }
 
 func TestEventSourcesHashing(t *testing.T) {
-
 	abiEventIndexed := &abi.Entry{
 		Type: abi.Event,
 		Name: "Purple",
@@ -901,7 +889,7 @@ func TestEventSourcesHashing(t *testing.T) {
 			{
 				Name:    "maybeIndexed",
 				Type:    "uint256",
-				Indexed: true, //only diff to other purple
+				Indexed: true, // only diff to other purple
 			},
 		},
 	}
@@ -951,5 +939,4 @@ func TestEventSourcesHashing(t *testing.T) {
 	ess := EventSources{{ABI: abi.ABI{{Type: abi.Event, Inputs: abi.ParameterArray{{Type: "wrong"}}}}}}
 	_, err := ess.Hash(context.Background())
 	assert.Regexp(t, "FF22025", err)
-
 }

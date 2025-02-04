@@ -19,7 +19,7 @@ import (
 	_ "embed"
 
 	"github.com/hyperledger/firefly-signer/pkg/abi"
-	"github.com/kaleido-io/paladin/toolkit/pkg/solutils"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/solutils"
 )
 
 //go:embed abis/IZeto.json

@@ -16,7 +16,7 @@
 package common
 
 import (
-	"github.com/kaleido-io/paladin/domains/zeto/pkg/constants"
+	"github.com/LF-Decentralized-Trust-labs/paladin/domains/zeto/pkg/constants"
 )
 
 func IsNullifiersCircuit(circuitId string) bool {

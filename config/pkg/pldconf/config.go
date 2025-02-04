@@ -20,7 +20,7 @@ import (
 	"os"
 
 	"github.com/hyperledger/firefly-common/pkg/i18n"
-	"github.com/kaleido-io/paladin/config/internal/msgs"
+	"github.com/LF-Decentralized-Trust-labs/paladin/config/internal/msgs"
 
 	"sigs.k8s.io/yaml" // because it supports JSON tags, and we embed our structs in the k8s operator
 )

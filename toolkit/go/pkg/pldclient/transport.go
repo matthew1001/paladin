@@ -18,7 +18,7 @@ package pldclient
 import (
 	"context"
 
-	"github.com/kaleido-io/paladin/toolkit/pkg/pldapi"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/pldapi"
 )
 
 type Transport interface {

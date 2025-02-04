@@ -26,7 +26,7 @@ import (
 	"strconv"
 
 	"github.com/hyperledger/firefly-common/pkg/i18n"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tkmsgs"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/tkmsgs"
 )
 
 const MAX_SAFE_INT64 = 0x7fffffffffffffff

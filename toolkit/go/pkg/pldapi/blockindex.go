@@ -17,7 +17,7 @@
 package pldapi
 
 import (
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/tktypes"
 )
 
 type EthTransactionResult string
@@ -49,6 +49,7 @@ type EmbeddedBlockInfo struct {
 	BlockTimestamp tktypes.Timestamp `docstruct:"IndexedEvent" json:"blockTimestamp"`
 }
 
+// TODO Enrique: IdempotencyKey?
 type IndexedTransaction struct {
 	Hash             tktypes.Bytes32                    `docstruct:"IndexedTransaction" json:"hash"               gorm:"primaryKey"`
 	BlockNumber      int64                              `docstruct:"IndexedTransaction" json:"blockNumber"`

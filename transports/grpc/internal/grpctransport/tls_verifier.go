@@ -26,8 +26,8 @@ import (
 	"sync/atomic"
 
 	"github.com/hyperledger/firefly-common/pkg/i18n"
-	"github.com/kaleido-io/paladin/toolkit/pkg/log"
-	"github.com/kaleido-io/paladin/transports/grpc/internal/msgs"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/log"
+	"github.com/LF-Decentralized-Trust-labs/paladin/transports/grpc/internal/msgs"
 	"google.golang.org/grpc/credentials"
 )
 

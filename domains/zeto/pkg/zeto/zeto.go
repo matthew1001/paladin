@@ -16,9 +16,9 @@
 package zeto
 
 import (
-	internal "github.com/kaleido-io/paladin/domains/zeto/internal/zeto"
-	"github.com/kaleido-io/paladin/domains/zeto/pkg/types"
-	"github.com/kaleido-io/paladin/toolkit/pkg/plugintk"
+	internal "github.com/LF-Decentralized-Trust-labs/paladin/domains/zeto/internal/zeto"
+	"github.com/LF-Decentralized-Trust-labs/paladin/domains/zeto/pkg/types"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/plugintk"
 )
 
 type Zeto interface {

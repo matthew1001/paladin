@@ -21,20 +21,19 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/LF-Decentralized-Trust-labs/paladin/config/pkg/confutil"
+	"github.com/LF-Decentralized-Trust-labs/paladin/config/pkg/pldconf"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/pldapi"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/query"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/rpcclient"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/rpcserver"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/tktypes"
 	"github.com/go-resty/resty/v2"
-	"github.com/kaleido-io/paladin/config/pkg/confutil"
-	"github.com/kaleido-io/paladin/config/pkg/pldconf"
-	"github.com/kaleido-io/paladin/toolkit/pkg/pldapi"
-	"github.com/kaleido-io/paladin/toolkit/pkg/query"
-	"github.com/kaleido-io/paladin/toolkit/pkg/rpcclient"
-	"github.com/kaleido-io/paladin/toolkit/pkg/rpcserver"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestBlockIndexRPCCalls(t *testing.T) {
-
 	ctx, rpcBlock, bi, biDone := newBlockIndexerWithOneBlock(t)
 	defer biDone()
 
@@ -112,11 +111,9 @@ func newBlockIndexerWithOneBlock(t *testing.T) (context.Context, *BlockInfoJSONR
 	<-utBatchNotify
 
 	return ctx, blocks[0], bi, done
-
 }
 
 func newTestRPCServer(t *testing.T, ctx context.Context, bi *blockIndexer) (rpcclient.Client, func()) {
-
 	s, err := rpcserver.NewRPCServer(ctx, &pldconf.RPCServerConfig{
 		HTTP: pldconf.RPCServerConfigHTTP{
 			HTTPServerConfig: pldconf.HTTPServerConfig{Address: confutil.P("127.0.0.1"), Port: confutil.P(0)},
@@ -132,5 +129,4 @@ func newTestRPCServer(t *testing.T, ctx context.Context, bi *blockIndexer) (rpcc
 	c := rpcclient.WrapRestyClient(resty.New().SetBaseURL(fmt.Sprintf("http://%s", s.HTTPAddr())))
 
 	return c, s.Stop
-
 }

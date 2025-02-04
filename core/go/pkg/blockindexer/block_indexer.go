@@ -27,23 +27,23 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/LF-Decentralized-Trust-labs/paladin/config/pkg/confutil"
+	"github.com/LF-Decentralized-Trust-labs/paladin/config/pkg/pldconf"
+	"github.com/LF-Decentralized-Trust-labs/paladin/core/internal/filters"
+	"github.com/LF-Decentralized-Trust-labs/paladin/core/internal/msgs"
+	"github.com/LF-Decentralized-Trust-labs/paladin/core/pkg/persistence"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/inflight"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/log"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/pldapi"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/query"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/retry"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/rpcclient"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/rpcserver"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/tktypes"
 	"github.com/google/uuid"
 	"github.com/hyperledger/firefly-common/pkg/i18n"
 	"github.com/hyperledger/firefly-signer/pkg/abi"
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
-	"github.com/kaleido-io/paladin/config/pkg/confutil"
-	"github.com/kaleido-io/paladin/config/pkg/pldconf"
-	"github.com/kaleido-io/paladin/core/internal/filters"
-	"github.com/kaleido-io/paladin/core/internal/msgs"
-	"github.com/kaleido-io/paladin/core/pkg/persistence"
-	"github.com/kaleido-io/paladin/toolkit/pkg/inflight"
-	"github.com/kaleido-io/paladin/toolkit/pkg/log"
-	"github.com/kaleido-io/paladin/toolkit/pkg/pldapi"
-	"github.com/kaleido-io/paladin/toolkit/pkg/query"
-	"github.com/kaleido-io/paladin/toolkit/pkg/retry"
-	"github.com/kaleido-io/paladin/toolkit/pkg/rpcclient"
-	"github.com/kaleido-io/paladin/toolkit/pkg/rpcserver"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
 )
 
 type BlockIndexer interface {
@@ -107,7 +107,6 @@ type blockIndexer struct {
 }
 
 func NewBlockIndexer(ctx context.Context, config *pldconf.BlockIndexerConfig, wsConfig *pldconf.WSClientConfig, persistence persistence.Persistence) (_ BlockIndexer, err error) {
-
 	blockListener, err := newBlockListener(ctx, config, wsConfig)
 	if err != nil {
 		return nil, err
@@ -203,11 +202,9 @@ func (bi *blockIndexer) startOrReset() {
 	bi.stateLock.Unlock()
 
 	go bi.startup(runCtx)
-
 }
 
 func (bi *blockIndexer) startup(runCtx context.Context) {
-
 	// Do we need the highest block height to start?
 	if bi.nextBlock == nil {
 		highestBlock, err := bi.blockListener.getHighestBlock(runCtx)
@@ -224,7 +221,6 @@ func (bi *blockIndexer) startup(runCtx context.Context) {
 
 	go bi.dispatcher(runCtx)
 	go bi.notificationProcessor(runCtx)
-
 }
 
 func (bi *blockIndexer) Stop() {
@@ -303,7 +299,6 @@ func (bi *blockIndexer) setFromBlockStr(ctx context.Context, fromBlock string) e
 }
 
 func (bi *blockIndexer) restoreCheckpoint() error {
-
 	// Outcomes possible:
 	// 1) We found a block written to the DB - one after this is our expected next block
 	// 2) We have a non-nil fromBlock - that is our checkpoint
@@ -350,7 +345,6 @@ func (bi *blockIndexer) notificationProcessor(ctx context.Context) {
 // Then we update the state the dispatcher uses to walk forwards from and see what
 // is confirmed and ready to dispatch
 func (bi *blockIndexer) processBlockNotification(ctx context.Context, block *BlockInfoJSONRPC) {
-
 	bi.stateLock.Lock()
 	defer bi.stateLock.Unlock()
 
@@ -407,7 +401,6 @@ func (bi *blockIndexer) processBlockNotification(ctx context.Context, block *Blo
 	// There's something for the dispatcher to process
 	log.L(ctx).Debugf("Notification for %d/%s tapping dispatcher", block.Number, block.Hash)
 	bi.tapDispatcher()
-
 }
 
 func (bi *blockIndexer) tapDispatcher() {
@@ -558,7 +551,6 @@ func (bi *blockIndexer) logToIndexedEvent(l *LogJSONRPC) *pldapi.IndexedEvent {
 }
 
 func (bi *blockIndexer) writeBatch(ctx context.Context, batch *blockWriterBatch) {
-
 	var blocks []*pldapi.IndexedBlock
 	var notifyTransactions []*IndexedTransactionNotify
 	var transactions []*pldapi.IndexedTransaction
@@ -684,7 +676,6 @@ func (bi *blockIndexer) notifyEventStreams(ctx context.Context, batch *blockWrit
 
 // MUST be called under lock
 func (bi *blockIndexer) popDispatchedIfAvailable(lastFromNotification *bool) (blockNumberToFetch ethtypes.HexUint64, found bool) {
-
 	if len(bi.newHeadToAdd) > 0 {
 		// If we find one in the lock, it must be ready for us to append
 		nextBlock := bi.newHeadToAdd[0]
@@ -705,7 +696,6 @@ func (bi *blockIndexer) popDispatchedIfAvailable(lastFromNotification *bool) (bl
 }
 
 func (bi *blockIndexer) readNextBlock(ctx context.Context, lastFromNotification *bool) (found bool) {
-
 	var nextBlock *BlockInfoJSONRPC
 	var blockNumberToFetch ethtypes.HexUint64
 	var dispatchedPopped bool
@@ -756,7 +746,6 @@ func (bi *blockIndexer) readNextBlock(ctx context.Context, lastFromNotification 
 		log.L(ctx).Debugf("Added read block %d / %s to list (new blocksSinceCheckpoint=%d)", nextBlock.Number, nextBlock.Hash, len(bi.blocksSinceCheckpoint))
 	}
 	return true
-
 }
 
 func (bi *blockIndexer) getNextConfirmed(ctx context.Context) (toDispatch *BlockInfoJSONRPC) {
@@ -992,7 +981,6 @@ func (bi *blockIndexer) matchLog(ctx context.Context, abi abi.ABI, in *LogJSONRP
 }
 
 func (bi *blockIndexer) QueryIndexedBlocks(ctx context.Context, jq *query.QueryJSON) ([]*pldapi.IndexedBlock, error) {
-
 	if jq.Limit == nil || *jq.Limit == 0 {
 		return nil, i18n.NewError(ctx, msgs.MsgBlockIndexerLimitRequired)
 	}
@@ -1007,7 +995,6 @@ func (bi *blockIndexer) QueryIndexedBlocks(ctx context.Context, jq *query.QueryJ
 }
 
 func (bi *blockIndexer) QueryIndexedTransactions(ctx context.Context, jq *query.QueryJSON) ([]*pldapi.IndexedTransaction, error) {
-
 	if jq.Limit == nil || *jq.Limit == 0 {
 		return nil, i18n.NewError(ctx, msgs.MsgBlockIndexerLimitRequired)
 	}
@@ -1022,7 +1009,6 @@ func (bi *blockIndexer) QueryIndexedTransactions(ctx context.Context, jq *query.
 }
 
 func (bi *blockIndexer) QueryIndexedEvents(ctx context.Context, jq *query.QueryJSON) ([]*pldapi.IndexedEvent, error) {
-
 	if jq.Limit == nil || *jq.Limit == 0 {
 		return nil, i18n.NewError(ctx, msgs.MsgBlockIndexerLimitRequired)
 	}

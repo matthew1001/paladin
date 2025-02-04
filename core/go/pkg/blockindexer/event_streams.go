@@ -20,16 +20,16 @@ import (
 	"context"
 	"time"
 
+	"github.com/LF-Decentralized-Trust-labs/paladin/core/internal/msgs"
+	"github.com/LF-Decentralized-Trust-labs/paladin/core/pkg/persistence"
 	"github.com/google/uuid"
 	"github.com/hyperledger/firefly-common/pkg/i18n"
 	"github.com/hyperledger/firefly-signer/pkg/abi"
-	"github.com/kaleido-io/paladin/core/internal/msgs"
-	"github.com/kaleido-io/paladin/core/pkg/persistence"
 
-	"github.com/kaleido-io/paladin/config/pkg/confutil"
-	"github.com/kaleido-io/paladin/toolkit/pkg/log"
-	"github.com/kaleido-io/paladin/toolkit/pkg/pldapi"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
+	"github.com/LF-Decentralized-Trust-labs/paladin/config/pkg/confutil"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/log"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/pldapi"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/tktypes"
 	"gorm.io/gorm/clause"
 )
 
@@ -72,7 +72,6 @@ type eventStreamBlock struct {
 }
 
 func (bi *blockIndexer) loadEventStreams(ctx context.Context) error {
-
 	// Paladin is optimized for a relatively small number of event streams
 	// We hold all event streams in memory, as we process all of them against every block.
 	var eventStreams []*EventStream
@@ -92,7 +91,6 @@ func (bi *blockIndexer) loadEventStreams(ctx context.Context) error {
 }
 
 func (bi *blockIndexer) upsertInternalEventStream(ctx context.Context, dbTX persistence.DBTX, ies *InternalEventStream) (*eventStream, error) {
-
 	// Defensive coding against panics
 	def := ies.Definition
 	if def == nil {
@@ -487,7 +485,6 @@ func (es *eventStream) dispatcher() {
 }
 
 func (es *eventStream) runBatch(batch *eventBatch) error {
-
 	// We start a database transaction, run the callback function
 	return es.bi.retry.Do(es.ctx, func(attempt int) (retryable bool, err error) {
 		err = es.bi.persistence.Transaction(es.ctx, func(ctx context.Context, dbTX persistence.DBTX) (err error) {
@@ -513,11 +510,9 @@ func (es *eventStream) runBatch(batch *eventBatch) error {
 		})
 		return true, err
 	})
-
 }
 
 func (es *eventStream) processCatchupEventPage(lastCatchupEvent *pldapi.IndexedEvent, checkpointBlock int64, catchUpToBlockNumber int64) (caughtUp bool, lastEvent *pldapi.IndexedEvent, err error) {
-
 	// We query up to the head of the chain as currently indexed, with a limit on the events
 	// we return for enrichment/processing.
 	//
@@ -617,5 +612,4 @@ func (es *eventStream) processCatchupEventPage(lastCatchupEvent *pldapi.IndexedE
 		}
 	}
 	return caughtUp, lastEvent, nil
-
 }

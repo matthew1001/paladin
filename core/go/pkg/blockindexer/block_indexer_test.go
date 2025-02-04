@@ -25,19 +25,19 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/LF-Decentralized-Trust-labs/paladin/config/pkg/confutil"
+	"github.com/LF-Decentralized-Trust-labs/paladin/config/pkg/pldconf"
+	"github.com/LF-Decentralized-Trust-labs/paladin/core/mocks/rpcclientmocks"
 	"github.com/google/uuid"
 	"github.com/hyperledger/firefly-signer/pkg/abi"
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
-	"github.com/kaleido-io/paladin/config/pkg/confutil"
-	"github.com/kaleido-io/paladin/config/pkg/pldconf"
-	"github.com/kaleido-io/paladin/core/mocks/rpcclientmocks"
 
-	"github.com/kaleido-io/paladin/core/pkg/persistence"
-	"github.com/kaleido-io/paladin/core/pkg/persistence/mockpersistence"
-	"github.com/kaleido-io/paladin/toolkit/pkg/pldapi"
-	"github.com/kaleido-io/paladin/toolkit/pkg/query"
-	"github.com/kaleido-io/paladin/toolkit/pkg/rpcclient"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
+	"github.com/LF-Decentralized-Trust-labs/paladin/core/pkg/persistence"
+	"github.com/LF-Decentralized-Trust-labs/paladin/core/pkg/persistence/mockpersistence"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/pldapi"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/query"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/rpcclient"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/tktypes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -146,7 +146,6 @@ func newMockBlockIndexer(t *testing.T, config *pldconf.BlockIndexerConfig) (cont
 	require.NoError(t, err)
 
 	return ctx, bi, mRPC, p, done
-
 }
 
 func testBlockArray(t *testing.T, l int, knownAddress ...ethtypes.Address0xHex) ([]*BlockInfoJSONRPC, map[string][]*TXReceiptJSONRPC) {
@@ -471,7 +470,6 @@ func TestBlockIndexerCatchUpToHeadFromZeroWithConfirmations(t *testing.T) {
 			lastIndex = int(page[i2].LogIndex)
 		}
 	}
-
 }
 
 func TestBlockIndexerListenFromCurrentBlock(t *testing.T) {
@@ -540,7 +538,6 @@ func TestBlockIndexerCancelledBeforeCurrentBlock(t *testing.T) {
 
 	<-bi.dispatcherDone
 	<-bi.processorDone
-
 }
 
 func TestBatching(t *testing.T) {
@@ -718,7 +715,6 @@ func testBlockIndexerHandleReorgInConfirmationWindow(t *testing.T, blockLenBefor
 	}
 	// Wait for the notifications to go through
 	<-notificationsDone
-
 }
 
 func TestBlockIndexerHandleRandomConflictingBlockNotification(t *testing.T) {
@@ -821,7 +817,6 @@ func TestBlockIndexerDispatcherFallsBehindHead(t *testing.T) {
 		assert.Len(t, notifiedBlocks, 1) // We should get one block per batch
 		checkIndexedBlockEqual(t, blocks[i], notifiedBlocks[0])
 	}
-
 }
 
 func TestBlockIndexerStartFromBlock(t *testing.T) {
@@ -899,7 +894,6 @@ func TestBlockIndexerBadStream(t *testing.T) {
 }
 
 func TestGetIndexedTransactionByHashErrors(t *testing.T) {
-
 	ctx, bi, _, p, done := newMockBlockIndexer(t, &pldconf.BlockIndexerConfig{})
 	defer done()
 
@@ -913,7 +907,6 @@ func TestGetIndexedTransactionByHashErrors(t *testing.T) {
 
 	_, err = bi.GetIndexedTransactionByHash(ctx, tktypes.RandBytes32())
 	assert.Regexp(t, "pop", err)
-
 }
 
 func TestBlockIndexerWaitForTransactionSuccess(t *testing.T) {
@@ -1009,7 +1002,6 @@ func TestBlockIndexerWaitForTransactionRevert(t *testing.T) {
 }
 
 func TestWaitForTransactionErrorCases(t *testing.T) {
-
 	ctx, bi, _, p, done := newMockBlockIndexer(t, &pldconf.BlockIndexerConfig{})
 	defer done()
 
@@ -1017,11 +1009,9 @@ func TestWaitForTransactionErrorCases(t *testing.T) {
 
 	_, err := bi.WaitForTransactionSuccess(ctx, tktypes.RandBytes32(), nil)
 	assert.Regexp(t, "pop", err)
-
 }
 
 func TestDecodeTransactionEventsFail(t *testing.T) {
-
 	ctx, bi, _, p, done := newMockBlockIndexer(t, &pldconf.BlockIndexerConfig{})
 	defer done()
 
@@ -1029,11 +1019,9 @@ func TestDecodeTransactionEventsFail(t *testing.T) {
 
 	_, err := bi.DecodeTransactionEvents(ctx, tktypes.RandBytes32(), testABI, "")
 	assert.Regexp(t, "pop", err)
-
 }
 
 func TestWaitForTransactionSuccessGetReceiptFail(t *testing.T) {
-
 	ctx, bi, mRPC, _, done := newMockBlockIndexer(t, &pldconf.BlockIndexerConfig{})
 	defer done()
 
@@ -1043,11 +1031,9 @@ func TestWaitForTransactionSuccessGetReceiptFail(t *testing.T) {
 
 	err := bi.getReceiptRevertError(ctx, tktypes.RandBytes32(), nil)
 	assert.Regexp(t, "pop", err)
-
 }
 
 func TestWaitForTransactionSuccessGetReceiptFallback(t *testing.T) {
-
 	ctx, bi, mRPC, _, done := newMockBlockIndexer(t, &pldconf.BlockIndexerConfig{})
 	defer done()
 
@@ -1059,11 +1045,9 @@ func TestWaitForTransactionSuccessGetReceiptFallback(t *testing.T) {
 
 	err := bi.getReceiptRevertError(ctx, tktypes.RandBytes32(), nil)
 	assert.Regexp(t, "PD011309", err)
-
 }
 
 func TestGetIndexedTransactionByNonceFail(t *testing.T) {
-
 	ctx, bi, _, mdb, done := newMockBlockIndexer(t, &pldconf.BlockIndexerConfig{})
 	defer done()
 
@@ -1071,7 +1055,6 @@ func TestGetIndexedTransactionByNonceFail(t *testing.T) {
 
 	_, err := bi.GetIndexedTransactionByNonce(ctx, tktypes.EthAddress(tktypes.RandBytes(20)), 12345)
 	assert.Regexp(t, "pop", err)
-
 }
 
 func TestHydrateBlockErrorCase(t *testing.T) {
@@ -1099,7 +1082,6 @@ func TestHydrateBlockErrorCase(t *testing.T) {
 	assert.Nil(t, batch.receipts[0])
 	assert.Regexp(t, "pop", batch.receiptResults[0])
 	batch.wg.Wait()
-
 }
 
 func TestHydrateBlockBesuNullCase(t *testing.T) {
@@ -1125,7 +1107,6 @@ func TestHydrateBlockBesuNullCase(t *testing.T) {
 	assert.Nil(t, batch.receipts[0])
 	assert.Regexp(t, "PD011310", batch.receiptResults[0])
 	batch.wg.Wait()
-
 }
 
 func TestHydrateBlockNoTransactions(t *testing.T) {

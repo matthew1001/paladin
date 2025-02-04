@@ -24,23 +24,25 @@ import (
 	"testing"
 	"time"
 
+	"github.com/LF-Decentralized-Trust-labs/paladin/config/pkg/confutil"
+	"github.com/LF-Decentralized-Trust-labs/paladin/config/pkg/pldconf"
+	"github.com/LF-Decentralized-Trust-labs/paladin/core/mocks/rpcclientmocks"
 	"github.com/google/uuid"
 	"github.com/hyperledger/firefly-common/pkg/fftypes"
 	"github.com/hyperledger/firefly-common/pkg/wsclient"
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
-	"github.com/kaleido-io/paladin/config/pkg/confutil"
-	"github.com/kaleido-io/paladin/config/pkg/pldconf"
-	"github.com/kaleido-io/paladin/core/mocks/rpcclientmocks"
 
-	"github.com/kaleido-io/paladin/toolkit/pkg/rpcclient"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/rpcclient"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/tktypes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
-const testBlockFilterID1 = "block_filter_1"
-const testBlockFilterID2 = "block_filter_2"
+const (
+	testBlockFilterID1 = "block_filter_1"
+	testBlockFilterID2 = "block_filter_2"
+)
 
 func newTestBlockListener(t *testing.T) (context.Context, *blockListener, *rpcclientmocks.WSClient, func()) {
 	ctx, cancelCtx := context.WithCancel(context.Background())
@@ -52,7 +54,6 @@ func newTestBlockListener(t *testing.T) (context.Context, *blockListener, *rpccl
 }
 
 func newTestBlockListenerConf(t *testing.T, ctx context.Context, config *pldconf.BlockIndexerConfig) (*blockListener, *rpcclientmocks.WSClient) {
-
 	mRPC := rpcclientmocks.NewWSClient(t)
 
 	subsChan := make(chan *rpcclient.RPCSubscriptionNotification)
@@ -67,7 +68,8 @@ func newTestBlockListenerConf(t *testing.T, ctx context.Context, config *pldconf
 	mRPC.On("Close", mock.Anything).Return(nil).Maybe()
 
 	bl, err := newBlockListener(ctx, config, &pldconf.WSClientConfig{
-		HTTPClientConfig: pldconf.HTTPClientConfig{URL: "ws://localhost:0" /* unused per below re-wire to mRPC */}})
+		HTTPClientConfig: pldconf.HTTPClientConfig{URL: "ws://localhost:0" /* unused per below re-wire to mRPC */},
+	})
 	require.NoError(t, err)
 	bl.wsConn = mRPC
 	return bl, mRPC
@@ -102,18 +104,15 @@ func TestBlockListenerStartGettingHighestBlockRetry(t *testing.T) {
 }
 
 func TestBlockListenerStartGettingHighestBlockFailBeforeStop(t *testing.T) {
-
 	_, bl, _, done := newTestBlockListener(t)
 	done() // Stop before we start
 
 	h, err := bl.getHighestBlock(context.Background())
 	assert.Regexp(t, "PD010301", err)
 	assert.Equal(t, uint64(0), h)
-
 }
 
 func TestBlockListenerStartGettingHighestBlockClosedCtx(t *testing.T) {
-
 	_, bl, _, done := newTestBlockListener(t)
 	defer done()
 
@@ -122,11 +121,9 @@ func TestBlockListenerStartGettingHighestBlockClosedCtx(t *testing.T) {
 	h, err := bl.getHighestBlock(closed)
 	assert.Regexp(t, "PD010301", err)
 	assert.Equal(t, uint64(0), h)
-
 }
 
 func TestBlockListenerOKSequential(t *testing.T) {
-
 	_, bl, mRPC, done := newTestBlockListener(t)
 	bl.blockPollingInterval = 1 * time.Microsecond
 	bl.unstableHeadLength = 2 // check wrapping
@@ -199,11 +196,9 @@ func TestBlockListenerOKSequential(t *testing.T) {
 	assert.Equal(t, uint64(1003), bl.highestBlock)
 
 	assert.Equal(t, bl.unstableHeadLength, bl.canonicalChain.Len())
-
 }
 
 func TestBlockListenerWSShoulderTap(t *testing.T) {
-
 	failedConnectOnce := false
 	failedSubOnce := false
 	toServer, fromServer, url, wsDone := wsclient.NewTestWSServer(func(req *http.Request) {
@@ -297,7 +292,6 @@ func TestBlockListenerWSShoulderTap(t *testing.T) {
 }
 
 func TestBlockListenerOKDuplicates(t *testing.T) {
-
 	_, bl, mRPC, done := newTestBlockListener(t)
 	bl.blockPollingInterval = 1 * time.Microsecond
 
@@ -374,11 +368,9 @@ func TestBlockListenerOKDuplicates(t *testing.T) {
 	<-bl.listenLoopDone
 
 	assert.Equal(t, uint64(1003), bl.highestBlock)
-
 }
 
 func TestBlockListenerBlockNotAvailableAfterNotify(t *testing.T) {
-
 	_, bl, mRPC, done := newTestBlockListener(t)
 	bl.blockPollingInterval = 1 * time.Microsecond
 
@@ -412,11 +404,9 @@ func TestBlockListenerBlockNotAvailableAfterNotify(t *testing.T) {
 	<-bl.listenLoopDone
 
 	assert.Equal(t, uint64(1000), bl.highestBlock)
-
 }
 
 func TestBlockListenerReorgKeepLatestHeadInSameBatch(t *testing.T) {
-
 	_, bl, mRPC, done := newTestBlockListener(t)
 	bl.blockPollingInterval = 1 * time.Microsecond
 
@@ -499,7 +489,6 @@ func TestBlockListenerReorgKeepLatestHeadInSameBatch(t *testing.T) {
 }
 
 func TestBlockListenerReorgKeepLatestHeadInSameBatchValidHashFirst(t *testing.T) {
-
 	_, bl, mRPC, done := newTestBlockListener(t)
 	bl.blockPollingInterval = 1 * time.Microsecond
 
@@ -614,7 +603,6 @@ func TestBlockListenerReorgKeepLatestHeadInSameBatchValidHashFirst(t *testing.T)
 }
 
 func TestBlockListenerReorgKeepLatestMiddleInSameBatch(t *testing.T) {
-
 	_, bl, mRPC, done := newTestBlockListener(t)
 	bl.blockPollingInterval = 1 * time.Microsecond
 
@@ -695,7 +683,6 @@ func TestBlockListenerReorgKeepLatestMiddleInSameBatch(t *testing.T) {
 }
 
 func TestBlockListenerReorgKeepLatestTailInSameBatch(t *testing.T) {
-
 	_, bl, mRPC, done := newTestBlockListener(t)
 	bl.blockPollingInterval = 1 * time.Microsecond
 
@@ -778,7 +765,6 @@ func TestBlockListenerReorgKeepLatestTailInSameBatch(t *testing.T) {
 }
 
 func TestBlockListenerReorgReplaceTail(t *testing.T) {
-
 	_, bl, mRPC, done := newTestBlockListener(t)
 	bl.blockPollingInterval = 1 * time.Microsecond
 
@@ -865,11 +851,9 @@ func TestBlockListenerReorgReplaceTail(t *testing.T) {
 	<-bl.listenLoopDone
 
 	assert.Equal(t, uint64(1003), bl.highestBlock)
-
 }
 
 func TestBlockListenerGap(t *testing.T) {
-
 	// We have seen that certain JSON/RPC endpoints might miss blocks during re-orgs, and our listener
 	// needs to cope with this. This means winding back when we find a gap and re-building our canonical
 	// view of the chain.
@@ -997,11 +981,9 @@ func TestBlockListenerGap(t *testing.T) {
 	<-bl.listenLoopDone
 
 	assert.Equal(t, uint64(1005), bl.highestBlock)
-
 }
 
 func TestBlockListenerRebuildToHead(t *testing.T) {
-
 	_, bl, mRPC, done := newTestBlockListener(t)
 	bl.blockPollingInterval = 1 * time.Microsecond
 
@@ -1081,11 +1063,9 @@ func TestBlockListenerRebuildToHead(t *testing.T) {
 	<-bl.listenLoopDone
 
 	assert.Equal(t, uint64(1003), bl.highestBlock)
-
 }
 
 func TestBlockListenerReorgWhileRebuilding(t *testing.T) {
-
 	_, bl, mRPC, done := newTestBlockListener(t)
 	bl.blockPollingInterval = 1 * time.Microsecond
 
@@ -1173,11 +1153,9 @@ func TestBlockListenerReorgWhileRebuilding(t *testing.T) {
 	<-bl.listenLoopDone
 
 	assert.Equal(t, uint64(1003), bl.highestBlock)
-
 }
 
 func TestBlockListenerReorgReplaceWholeCanonicalChain(t *testing.T) {
-
 	_, bl, mRPC, done := newTestBlockListener(t)
 	bl.blockPollingInterval = 1 * time.Microsecond
 
@@ -1270,11 +1248,9 @@ func TestBlockListenerReorgReplaceWholeCanonicalChain(t *testing.T) {
 	<-bl.listenLoopDone
 
 	assert.Equal(t, uint64(1003), bl.highestBlock)
-
 }
 
 func TestBlockListenerBlockNotFound(t *testing.T) {
-
 	_, bl, mRPC, done := newTestBlockListener(t)
 	bl.blockPollingInterval = 1 * time.Microsecond
 	block1003Hash := ethtypes.MustNewHexBytes0xPrefix(tktypes.RandHex(32))
@@ -1304,11 +1280,9 @@ func TestBlockListenerBlockNotFound(t *testing.T) {
 	bl.start()
 
 	bl.waitClosed()
-
 }
 
 func TestBlockListenerBlockHashFailed(t *testing.T) {
-
 	_, bl, mRPC, done := newTestBlockListener(t)
 	bl.blockPollingInterval = 1 * time.Microsecond
 	block1003Hash := ethtypes.MustNewHexBytes0xPrefix(tktypes.RandHex(32))
@@ -1338,11 +1312,9 @@ func TestBlockListenerBlockHashFailed(t *testing.T) {
 	bl.start()
 
 	bl.waitClosed()
-
 }
 
 func TestBlockListenerReestablishBlockFilter(t *testing.T) {
-
 	_, bl, mRPC, done := newTestBlockListener(t)
 	bl.blockPollingInterval = 1 * time.Microsecond
 
@@ -1365,11 +1337,9 @@ func TestBlockListenerReestablishBlockFilter(t *testing.T) {
 
 	bl.start()
 	bl.waitClosed()
-
 }
 
 func TestBlockListenerReestablishBlockFilterFail(t *testing.T) {
-
 	_, bl, mRPC, done := newTestBlockListener(t)
 	bl.blockPollingInterval = 1 * time.Microsecond
 
@@ -1383,7 +1353,6 @@ func TestBlockListenerReestablishBlockFilterFail(t *testing.T) {
 
 	bl.start()
 	bl.waitClosed()
-
 }
 
 func TestBlockListenerDispatchStopped(t *testing.T) {
@@ -1395,17 +1364,14 @@ func TestBlockListenerDispatchStopped(t *testing.T) {
 }
 
 func TestBlockListenerRebuildCanonicalChainEmpty(t *testing.T) {
-
 	_, bl, _, done := newTestBlockListener(t)
 	done()
 
 	res := bl.rebuildCanonicalChain()
 	assert.Nil(t, res)
-
 }
 
 func TestBlockListenerRebuildCanonicalFailTerminate(t *testing.T) {
-
 	_, bl, mRPC, done := newTestBlockListener(t)
 	defer done()
 	bl.canonicalChain.PushBack(&BlockInfoJSONRPC{
@@ -1422,11 +1388,9 @@ func TestBlockListenerRebuildCanonicalFailTerminate(t *testing.T) {
 
 	res := bl.rebuildCanonicalChain()
 	assert.Nil(t, res)
-
 }
 
 func TestBlockListenerClosedBeforeEstablishingBlockHeight(t *testing.T) {
-
 	_, bl, mRPC, done := newTestBlockListener(t)
 	done()
 
@@ -1436,5 +1400,4 @@ func TestBlockListenerClosedBeforeEstablishingBlockHeight(t *testing.T) {
 	bl.listenLoopDone = make(chan struct{})
 	listenerInitiated := make(chan struct{})
 	bl.listenLoop(&listenerInitiated)
-
 }

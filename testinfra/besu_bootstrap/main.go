@@ -26,7 +26,7 @@ import (
 
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 	"github.com/hyperledger/firefly-signer/pkg/secp256k1"
-	"github.com/kaleido-io/paladin/testinfra/pkg/besugenesis"
+	"github.com/LF-Decentralized-Trust-labs/paladin/testinfra/pkg/besugenesis"
 )
 
 func main() {
