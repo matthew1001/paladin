@@ -80,6 +80,12 @@ spec:
               },
               "transferLocked": {
                 "name": "nfanon"
+              },
+              "deposit": {
+                "name": "deposit"
+              },
+              "withdraw": {
+                "name": "withdraw"
               }
             }
           }
