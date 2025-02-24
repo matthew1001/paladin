@@ -86,11 +86,12 @@ func (bi *blockIndexer) loadEventStreams(ctx context.Context) error {
 	}
 
 	for _, esDefinition := range eventStreams {
-		bi.initEventStream(ctx, esDefinition, nil /* no handler at this point */)
+		bi.initEventStream(ctx, esDefinition, nil /* no handler at this point */) // TODO WHERE IS THE HANDLER SET!
 	}
 	return nil
 }
 
+// TODO
 func (bi *blockIndexer) upsertInternalEventStream(ctx context.Context, dbTX persistence.DBTX, ies *InternalEventStream) (*eventStream, error) {
 
 	// Defensive coding against panics
@@ -99,7 +100,7 @@ func (bi *blockIndexer) upsertInternalEventStream(ctx context.Context, dbTX pers
 		def = &EventStream{}
 	}
 
-	// This will need to open up when we have more externally consumable event streams
+	// This will need to open up when we have more externally consumable event streams - ENRIQUE HEEEEREE WE GO
 	def.Type = EventStreamTypeInternal.Enum()
 
 	// Validate the name
@@ -164,7 +165,7 @@ func (bi *blockIndexer) upsertInternalEventStream(ctx context.Context, dbTX pers
 	}
 
 	// We call init here
-	// TODO: Full stop/start lifecycle
+	// TODO: Full stop/start lifecycle - Enrique ask about this
 	es := bi.initEventStream(ctx, def, ies.Handler)
 
 	return es, nil
@@ -197,6 +198,7 @@ func (bi *blockIndexer) initEventStream(ctx context.Context, definition *EventSt
 	es.batchTimeout = confutil.DurationMin(definition.Config.BatchTimeout, 0, *EventStreamDefaults.BatchTimeout)
 
 	// Note the handler will be nil when this is first called on startup before we've been passed handlers.
+	// WHERE DO YOU SET THE HANDLER
 	es.handler = handler
 
 	// Calculate all the signatures we require
@@ -270,6 +272,12 @@ func (es *eventStream) stop() {
 	if es.dispatcherDone != nil {
 		<-es.dispatcherDone
 	}
+}
+
+func (bi *blockIndexer) stopEventStream(es *eventStream) {
+	bi.eventStreamsLock.Lock()
+	defer bi.eventStreamsLock.Unlock()
+	es.stop()
 }
 
 func (es *eventStream) readDBCheckpoint() (int64, error) {

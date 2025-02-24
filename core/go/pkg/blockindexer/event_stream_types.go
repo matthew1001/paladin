@@ -45,6 +45,7 @@ type EventStreamType string
 
 const (
 	EventStreamTypeInternal EventStreamType = "internal" // a core Paladin component, such as the state confirmation engine
+	EventStreamTypeExternal EventStreamType = "external" // an external component, such as a client application
 )
 
 func (est EventStreamType) Options() []string {

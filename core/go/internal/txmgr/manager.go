@@ -25,6 +25,7 @@ import (
 	"github.com/kaleido-io/paladin/config/pkg/pldconf"
 	"github.com/kaleido-io/paladin/core/internal/components"
 
+	"github.com/kaleido-io/paladin/core/pkg/blockindexer"
 	"github.com/kaleido-io/paladin/core/pkg/ethclient"
 	"github.com/kaleido-io/paladin/core/pkg/persistence"
 	"github.com/kaleido-io/paladin/toolkit/pkg/cache"
@@ -58,6 +59,7 @@ type txManager struct {
 	domainMgr           components.DomainManager
 	stateMgr            components.StateManager
 	identityResolver    components.IdentityResolver
+	blockIndexer        blockindexer.BlockIndexer
 	rpcEventStreams     *rpcEventStreams
 	txCache             cache.Cache[uuid.UUID, *components.ResolvedTransaction]
 	abiCache            cache.Cache[tktypes.Bytes32, *pldapi.StoredABI]
@@ -71,6 +73,9 @@ type txManager struct {
 	receiptListenersLoadPageSize int
 	receiptListenerLock          sync.Mutex
 	receiptListeners             map[string]*receiptListener
+
+	eventListenerLock sync.Mutex
+	eventListeners    map[string]*eventListener
 }
 
 func (tm *txManager) PreInit(c components.PreInitComponents) (*components.ManagerInitResult, error) {
@@ -91,16 +96,19 @@ func (tm *txManager) PostInit(c components.AllComponents) error {
 	tm.stateMgr = c.StateManager()
 	tm.identityResolver = c.IdentityResolver()
 	tm.localNodeName = c.TransportManager().LocalNodeName()
+	tm.blockIndexer = c.BlockIndexer()
 
 	return tm.loadReceiptListeners()
 }
 
 func (tm *txManager) Start() error {
 	tm.startReceiptListeners()
+	// tm.startEventListeners()
 	return nil
 }
 
 func (tm *txManager) Stop() {
 	tm.rpcEventStreams.stop()
 	tm.stopReceiptListeners()
+	//tm.stopEventListeners()
 }

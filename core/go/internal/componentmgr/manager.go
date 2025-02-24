@@ -207,6 +207,7 @@ func (cm *componentManager) Init() (err error) {
 		err = cm.wrapIfErr(err, msgs.MsgComponentPrivateTxManagerInitError)
 	}
 
+	// HOW THE HELL DO I GET the event streams I need...
 	if err == nil {
 		cm.txManager = txmgr.NewTXManager(cm.bgCtx, &cm.conf.TxManager)
 		cm.initResults["tx_manager"], err = cm.txManager.PreInit(cm)

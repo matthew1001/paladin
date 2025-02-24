@@ -74,6 +74,7 @@ func (sr stateRef) TableName() string {
 	return "states"
 }
 
+// TODO WE NEED THIS FOR EVENTS
 type persistedReceiptGap struct {
 	Listener    string              `gorm:"column:listener;primaryKey"`
 	Source      *tktypes.EthAddress `gorm:"column:source;primaryKey"`
@@ -170,7 +171,7 @@ func (rr *registeredReceiptReceiver) Close() {
 	rr.l.removeReceiver(rr.id)
 }
 
-func (tm *txManager) AddReceiptReceiver(ctx context.Context, name string, r components.ReceiptReceiver) (components.ReceiptReceiverCloser, error) {
+func (tm *txManager) AddReceiptReceiver(ctx context.Context, name string, r components.ReceiptReceiver) (components.ReceiverCloser, error) {
 	tm.receiptListenerLock.Lock()
 	defer tm.receiptListenerLock.Unlock()
 

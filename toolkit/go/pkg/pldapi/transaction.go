@@ -43,6 +43,7 @@ func (tt TransactionType) Options() []string {
 type PTXEventType string
 
 const (
+	PTXEventTypeEvents   PTXEventType = "events"
 	PTXEventTypeReceipts PTXEventType = "receipts"
 )
 
@@ -150,6 +151,11 @@ type TransactionReceiptFull struct {
 type TransactionReceiptBatch struct {
 	BatchID  uint64                    `docstruct:"TransactionReceiptBatch" json:"batchId,omitempty"`
 	Receipts []*TransactionReceiptFull `docstruct:"TransactionReceiptBatch" json:"receipts,omitempty"`
+}
+
+type EventBatch struct {
+	BatchID uint64           `docstruct:"EventBatch" json:"batchId,omitempty"`
+	Events  []*EventWithData `docstruct:"EventBatch" json:"events,omitempty"`
 }
 
 type TransactionReceiptDataOnchain struct {
