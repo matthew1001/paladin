@@ -13,22 +13,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package smt
+package org.lfdt.labs.paladin.pente.evmstate;
 
-import (
-	"testing"
+import org.hyperledger.besu.datatypes.Address;
 
-	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/tktypes"
-	"github.com/stretchr/testify/assert"
-)
+import java.io.IOException;
+import java.util.Optional;
 
-func TestPackageInit(t *testing.T) {
-	assert.Equal(t, SMT_HEIGHT_UTXO, len(Empty_Proof.Nodes))
-	assert.Equal(t, "0", Empty_Proof.Nodes[0])
-	assert.Equal(t, "0", Empty_Proof.Nodes[SMT_HEIGHT_UTXO-1])
-}
+public interface AccountLoader {
 
-func TestMerkleTreeName(t *testing.T) {
-	address, _ := tktypes.ParseEthAddress("0xe12c416382988005ace9b2e2f9a8a904d8be961c")
-	assert.Equal(t, "smt_test1_0xe12c416382988005ace9b2e2f9a8a904d8be961c", MerkleTreeName("test1", address))
+    public Optional<PersistedAccount> load(Address address) throws IOException;
+
 }
