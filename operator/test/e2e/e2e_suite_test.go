@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/LF-Decentralized-Trust-Labs/paladin/toolkit/pkg/log"
+	"github.com/LF-Decentralized-Trust-labs/paladin/toolkit/pkg/log"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
