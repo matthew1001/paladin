@@ -594,11 +594,13 @@ func (bi *blockIndexer) writeBatch(ctx context.Context, batch *blockWriterBatch)
 
 	err := bi.retry.Do(ctx, func(attempt int) (retryable bool, err error) {
 		err = bi.persistence.Transaction(ctx, func(ctx context.Context, dbTX persistence.DBTX) (err error) {
+			// We need to handle the case where the limit of 65000 is reached
 			for _, preCommitHandler := range bi.preCommitHandlers {
 				if err == nil {
 					err = preCommitHandler(ctx, dbTX, blocks, notifyTransactions)
 				}
 			}
+
 			if err == nil && len(blocks) > 0 {
 				err = dbTX.DB().
 					WithContext(ctx).
@@ -610,7 +612,7 @@ func (bi *blockIndexer) writeBatch(ctx context.Context, batch *blockWriterBatch)
 				err = dbTX.DB().
 					WithContext(ctx).
 					Table("indexed_transactions").
-					Create(transactions).
+					CreateInBatches(transactions, 1000).
 					Error
 			}
 			if err == nil && len(events) > 0 {
@@ -619,7 +621,7 @@ func (bi *blockIndexer) writeBatch(ctx context.Context, batch *blockWriterBatch)
 					Table("indexed_events").
 					Omit("Transaction").
 					Omit("Event").
-					Create(events).
+					CreateInBatches(events, 1000).
 					Error
 			}
 			return err
