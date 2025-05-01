@@ -1237,6 +1237,9 @@ func TestBlockIndexerManyTXsWaitForTransactionSuccess(t *testing.T) {
 	ctx, bi, mRPC, blDone := newTestBlockIndexer(t)
 	defer blDone()
 
+	// For SQLite the limit is 999, setting something lower
+	bi.insertDBBatchSize = 500
+
 	// 20000 transactions in a block
 	blocks, receipts := testBlockWithManyTXAndEvents(t, 20000, 0)
 	mockBlocksRPCCalls(mRPC, blocks, receipts)
@@ -1280,6 +1283,9 @@ func TestBlockIndexerManyTXsWaitForTransactionSuccess(t *testing.T) {
 func TestBlockIndexerManyEventsWaitForTransactionSuccess(t *testing.T) {
 	ctx, bi, mRPC, blDone := newTestBlockIndexer(t)
 	defer blDone()
+
+	// For SQLite the limit is 999, setting something lower
+	bi.insertDBBatchSize = 500
 
 	// 20000 events in a single tx
 	blocks, receipts := testBlockWithManyTXAndEvents(t, 1, 20000)
