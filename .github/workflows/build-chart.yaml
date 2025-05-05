@@ -76,6 +76,7 @@ jobs:
 
       - name: Load image
         run: |
+          ls -l /tmp
           docker load --input /tmp/paladin-operator-${{ github.sha }}.tar
           docker load --input /tmp/paladin-${{ github.sha }}.tar
           docker image ls -a  
