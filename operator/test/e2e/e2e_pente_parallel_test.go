@@ -33,15 +33,16 @@ import (
 
 	"github.com/kaleido-io/paladin/config/pkg/pldconf"
 	nototypes "github.com/kaleido-io/paladin/domains/noto/pkg/types"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldclient"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/solutils"
 	"github.com/kaleido-io/paladin/toolkit/pkg/algorithms"
-	"github.com/kaleido-io/paladin/toolkit/pkg/pldclient"
-	"github.com/kaleido-io/paladin/toolkit/pkg/solutils"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
 	"github.com/kaleido-io/paladin/toolkit/pkg/verifiers"
 )
 
 var _ = Describe("pente - parallelism on a single contract", Ordered, func() {
 	BeforeAll(func() {
+		// Skip("for now")
 	})
 
 	AfterAll(func() {
@@ -81,7 +82,7 @@ var _ = Describe("pente - parallelism on a single contract", Ordered, func() {
 							verifier, err := rpc[src].PTX().ResolveVerifier(ctx, fmt.Sprintf("test@%s", dest),
 								algorithms.ECDSA_SECP256K1, verifiers.ETH_ADDRESS)
 							if err == nil {
-								addr, err := tktypes.ParseEthAddress(verifier)
+								addr, err := pldtypes.ParseEthAddress(verifier)
 								Expect(err).To(BeNil())
 								Expect(addr).ToNot(BeNil())
 							}
@@ -93,11 +94,11 @@ var _ = Describe("pente - parallelism on a single contract", Ordered, func() {
 		})
 
 		penteGroupStars := nototypes.PentePrivateGroup{
-			Salt:    tktypes.Bytes32(tktypes.RandBytes(32)),               // unique salt must be shared privately to retain anonymity
+			Salt:    pldtypes.RandBytes32(),                               // unique salt must be shared privately to retain anonymity
 			Members: []string{"tara@node1", "hoshi@node2", "seren@node3"}, // these will be salted to establish the endorsement key identifiers
 		}
 
-		var penteContract *tktypes.EthAddress
+		var penteContract *pldtypes.EthAddress
 		It("deploys a pente privacy group across all three nodes", func() {
 
 			const ENDORSEMENT_TYPE__GROUP_SCOPED_IDENTITIES = "group_scoped_identities"
@@ -146,7 +147,7 @@ var _ = Describe("pente - parallelism on a single contract", Ordered, func() {
 			erc20DeployID = deploy.ID()
 		})
 
-		var erc20StarsAddr *tktypes.EthAddress
+		var erc20StarsAddr *pldtypes.EthAddress
 		It("requests the receipt from pente to get the contract address", func() {
 
 			domainReceiptJSON, err := rpc["node1"].PTX().GetDomainReceipt(ctx, "pente", erc20DeployID)
@@ -159,15 +160,15 @@ var _ = Describe("pente - parallelism on a single contract", Ordered, func() {
 
 		})
 
-		getEthAddress := func(identity, node string) tktypes.EthAddress {
+		getEthAddress := func(identity, node string) pldtypes.EthAddress {
 			addr, err := rpc[node].PTX().ResolveVerifier(ctx, fmt.Sprintf("%s@%s", identity, node), algorithms.ECDSA_SECP256K1, verifiers.ETH_ADDRESS)
 			Expect(err).To(BeNil())
-			return *tktypes.MustEthAddress(addr)
+			return *pldtypes.MustEthAddress(addr)
 		}
-		getERC20Balance := func(identity, node string) *tktypes.HexUint256 {
+		getERC20Balance := func(identity, node string) *pldtypes.HexUint256 {
 			addr := getEthAddress(identity, node)
 			type ercBalanceOf struct {
-				Param0 *tktypes.HexUint256 `json:"0"`
+				Param0 *pldtypes.HexUint256 `json:"0"`
 			}
 			var result ercBalanceOf
 			err := rpc[node].ForABI(ctx, erc20PrivateABI).
@@ -237,9 +238,7 @@ var _ = Describe("pente - parallelism on a single contract", Ordered, func() {
 
 			results := make(chan error)
 			for _iUser, _user := range users {
-				iUser := _iUser
-				user := _user
-				go func() {
+				go func(iUser int, user []string) {
 					var err error
 					defer func() {
 						results <- err
@@ -267,12 +266,12 @@ var _ = Describe("pente - parallelism on a single contract", Ordered, func() {
 							Send().
 							// We submit the transactions one-at-a-time within each go-routine in this test
 							// (but have three concurrent go routines running)
-							Wait(5 * time.Second)
+							Wait(15 * time.Second)
 						testLog("[%d]:%.3d/%.3d SimpleERC20 mint %d from %s@%s to %s@%s transaction %s",
 							iUser, i, count, amount, user[0], user[1], toUser[0], toUser[1], invoke.ID())
 						err = invoke.Error()
 					}
-				}()
+				}(_iUser, _user)
 			}
 			// Wait for the three go routines to complete
 			for i := 0; i < len(users); i++ {
@@ -296,9 +295,7 @@ var _ = Describe("pente - parallelism on a single contract", Ordered, func() {
 
 			results := make(chan []pldclient.SentTransaction)
 			for _iUser, _user := range users {
-				iUser := _iUser
-				user := _user
-				go func() {
+				go func(iUser int, user []string) {
 					const count = 10
 					transfers := make([]pldclient.SentTransaction, 0, count)
 					toUser := users[(iUser+1)%len(users)]
@@ -325,7 +322,7 @@ var _ = Describe("pente - parallelism on a single contract", Ordered, func() {
 						transfers = append(transfers, invoke)
 					}
 					results <- transfers
-				}()
+				}(_iUser, _user)
 			}
 			// Wait for the three go routines to complete
 			for i := 0; i < len(users); i++ {

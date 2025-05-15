@@ -24,10 +24,9 @@ import (
 	"github.com/kaleido-io/paladin/config/pkg/pldconf"
 	"github.com/kaleido-io/paladin/core/internal/components"
 	"github.com/kaleido-io/paladin/core/internal/flushwriter"
-	"github.com/kaleido-io/paladin/core/internal/preparedtxdistribution"
 
 	"github.com/kaleido-io/paladin/core/pkg/persistence"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 	"gorm.io/gorm"
 )
 
@@ -51,7 +50,7 @@ type SyncPoints interface {
 	// to the PrivateTxnManager's persistence store in the same database transaction
 	// Although the actual persistence is offloaded to the flushwriter, this method is synchronous and will block until the
 	// dispatch sequence is written to the database
-	PersistDispatchBatch(dCtx components.DomainContext, contractAddress tktypes.EthAddress, dispatchBatch *DispatchBatch, stateDistributions []*components.StateDistribution, preparedTxnDistributions []*preparedtxdistribution.PreparedTxnDistribution) error
+	PersistDispatchBatch(dCtx components.DomainContext, contractAddress pldtypes.EthAddress, dispatchBatch *DispatchBatch, stateDistributions []*components.StateDistribution, preparedTxnDistributions []*components.PreparedTransactionWithRefs) error
 
 	// Deploy is a special case of dispatch batch, where there are no private states, so no domain context is required
 	PersistDeployDispatchBatch(ctx context.Context, dispatchBatch *DispatchBatch) error
@@ -59,22 +58,24 @@ type SyncPoints interface {
 	// QueueTransactionFinalize integrates with TxManager to mark a transaction as finalized with the given formatter revert reason
 	// this is an async operation so it can safely be called from the sequencer event loop thread
 	// the onCommit and onRollback callbacks are called, on a separate goroutine when the transaction is committed or rolled back
-	QueueTransactionFinalize(ctx context.Context, domain string, contractAddress tktypes.EthAddress, transactionID uuid.UUID, failureMessage string, onCommit func(context.Context), onRollback func(context.Context, error))
+	QueueTransactionFinalize(ctx context.Context, domain string, contractAddress pldtypes.EthAddress, transactionID uuid.UUID, failureMessage string, onCommit func(context.Context), onRollback func(context.Context, error))
 
 	Close()
 }
 
 type syncPoints struct {
-	started  bool
-	writer   flushwriter.Writer[*syncPointOperation, *noResult]
-	txMgr    components.TXManager
-	pubTxMgr components.PublicTxManager
+	started      bool
+	writer       flushwriter.Writer[*syncPointOperation, *noResult]
+	txMgr        components.TXManager
+	pubTxMgr     components.PublicTxManager
+	transportMgr components.TransportManager
 }
 
-func NewSyncPoints(ctx context.Context, conf *pldconf.FlushWriterConfig, p persistence.Persistence, txMgr components.TXManager, pubTxMgr components.PublicTxManager) SyncPoints {
+func NewSyncPoints(ctx context.Context, conf *pldconf.FlushWriterConfig, p persistence.Persistence, txMgr components.TXManager, pubTxMgr components.PublicTxManager, transportMgr components.TransportManager) SyncPoints {
 	s := &syncPoints{
-		txMgr:    txMgr,
-		pubTxMgr: pubTxMgr,
+		txMgr:        txMgr,
+		pubTxMgr:     pubTxMgr,
+		transportMgr: transportMgr,
 	}
 	s.writer = flushwriter.NewWriter(ctx, s.runBatch, p, conf, &WriterConfigDefaults)
 	return s

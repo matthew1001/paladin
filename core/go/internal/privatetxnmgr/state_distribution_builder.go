@@ -18,13 +18,12 @@ package privatetxnmgr
 import (
 	"context"
 
-	"github.com/google/uuid"
-	"github.com/hyperledger/firefly-common/pkg/i18n"
+	"github.com/kaleido-io/paladin/common/go/pkg/i18n"
+	"github.com/kaleido-io/paladin/common/go/pkg/log"
 	"github.com/kaleido-io/paladin/core/internal/components"
 	"github.com/kaleido-io/paladin/core/internal/msgs"
-	"github.com/kaleido-io/paladin/toolkit/pkg/log"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 	"github.com/kaleido-io/paladin/toolkit/pkg/prototk"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
 )
 
 func newStateDistributionBuilder(c components.AllComponents, tx *components.PrivateTransaction) *stateDistributionBuilder {
@@ -32,8 +31,8 @@ func newStateDistributionBuilder(c components.AllComponents, tx *components.Priv
 		tx: tx,
 		StateDistributionSet: components.StateDistributionSet{
 			LocalNode: c.TransportManager().LocalNodeName(),
-			Remote:    []*components.StateDistribution{},
-			Local:     []*components.StateDistribution{},
+			Remote:    []*components.StateDistributionWithData{},
+			Local:     []*components.StateDistributionWithData{},
 		},
 	}
 }
@@ -61,7 +60,7 @@ func (sd *stateDistributionBuilder) processStateForDistribution(ctx context.Cont
 
 	remainingNullifiers := instruction.NullifierSpecs
 	for _, recipient := range instruction.DistributionList {
-		nodeName, err := tktypes.PrivateIdentityLocator(recipient).Node(ctx, false)
+		nodeName, err := pldtypes.PrivateIdentityLocator(recipient).Node(ctx, false)
 		if err != nil {
 			return i18n.WrapError(ctx, err, msgs.MsgPrivateTxMgrDistributionNotFullyQualified, recipient)
 		}
@@ -78,16 +77,17 @@ func (sd *stateDistributionBuilder) processStateForDistribution(ctx context.Cont
 		}
 		remainingNullifiers = newRemainingNullifiers
 
-		distribution := &components.StateDistribution{
-			ID:              uuid.New().String(),
-			IdentityLocator: recipient,
-			Domain:          tx.Domain,
-			ContractAddress: tx.Address.String(),
-			// the state data json is available on both but we take it
-			// from the outputState to make sure it is the same json that was used to generate the hash
-			StateID:       fullState.ID.String(),
-			SchemaID:      fullState.Schema.String(),
-			StateDataJson: string(fullState.Data),
+		distribution := &components.StateDistributionWithData{
+			StateDistribution: components.StateDistribution{
+				IdentityLocator: recipient,
+				Domain:          tx.Domain,
+				ContractAddress: tx.Address.String(),
+				// the state data json is available on both but we take it
+				// from the outputState to make sure it is the same json that was used to generate the hash
+				StateID:  fullState.ID.String(),
+				SchemaID: fullState.Schema.String(),
+			},
+			StateData: fullState.Data,
 		}
 
 		// Add the nullifier requirement if there is one
@@ -131,7 +131,7 @@ func (sd *stateDistributionBuilder) Build(ctx context.Context) (sds *components.
 
 	// This code depends on the fact we ensure this gets fully qualified as the transaction comes into the system,
 	// on the sending node. So as the transaction flows around everyone knows who the originating node is.
-	sd.SenderNode, err = tktypes.PrivateIdentityLocator(tx.PreAssembly.TransactionSpecification.From).Node(ctx, false)
+	sd.SenderNode, err = pldtypes.PrivateIdentityLocator(tx.PreAssembly.TransactionSpecification.From).Node(ctx, false)
 	if err != nil {
 		return nil, i18n.WrapError(ctx, err, msgs.MsgPrivateTxMgrFromNotResolvedDistroTime)
 	}

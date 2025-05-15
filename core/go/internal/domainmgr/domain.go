@@ -23,27 +23,27 @@ import (
 	"sync/atomic"
 
 	"github.com/google/uuid"
-	"github.com/hyperledger/firefly-common/pkg/i18n"
 	"github.com/hyperledger/firefly-signer/pkg/abi"
 	"github.com/hyperledger/firefly-signer/pkg/eip712"
 	"github.com/hyperledger/firefly-signer/pkg/ethsigner"
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 	"github.com/hyperledger/firefly-signer/pkg/secp256k1"
+	"github.com/kaleido-io/paladin/common/go/pkg/i18n"
 	"github.com/kaleido-io/paladin/config/pkg/pldconf"
 	"github.com/kaleido-io/paladin/core/internal/components"
 	"github.com/kaleido-io/paladin/core/internal/msgs"
 	"github.com/kaleido-io/paladin/core/pkg/blockindexer"
+	"github.com/kaleido-io/paladin/core/pkg/persistence"
 	"golang.org/x/crypto/sha3"
-	"gorm.io/gorm"
 
+	"github.com/kaleido-io/paladin/common/go/pkg/log"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldapi"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/query"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/retry"
 	"github.com/kaleido-io/paladin/toolkit/pkg/algorithms"
-	"github.com/kaleido-io/paladin/toolkit/pkg/log"
-	"github.com/kaleido-io/paladin/toolkit/pkg/pldapi"
 	"github.com/kaleido-io/paladin/toolkit/pkg/prototk"
-	"github.com/kaleido-io/paladin/toolkit/pkg/query"
-	"github.com/kaleido-io/paladin/toolkit/pkg/retry"
 	"github.com/kaleido-io/paladin/toolkit/pkg/signpayloads"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
 	"github.com/kaleido-io/paladin/toolkit/pkg/verifiers"
 )
 
@@ -52,11 +52,11 @@ type domain struct {
 	cancelCtx context.CancelFunc
 
 	conf            *pldconf.DomainConfig
-	defaultGasLimit tktypes.HexUint64
+	defaultGasLimit pldtypes.HexUint64
 	dm              *domainManager
 	name            string
 	api             components.DomainManagerToDomain
-	registryAddress *tktypes.EthAddress
+	registryAddress *pldtypes.EthAddress
 
 	stateLock          sync.Mutex
 	initialized        atomic.Bool
@@ -74,22 +74,25 @@ type domain struct {
 }
 
 type inFlightDomainRequest struct {
-	d    *domain
-	id   string                   // each request gets a unique ID
-	dbTX *gorm.DB                 // only if there's a DB transactions such as when called by block indexer
-	dCtx components.DomainContext // might be short lived, or managed externally (by private TX manager)
+	d        *domain
+	id       string                   // each request gets a unique ID
+	dbTX     persistence.DBTX         // only if there's a DB transactions such as when called by block indexer
+	dCtx     components.DomainContext // might be short lived, or managed externally (by private TX manager)
+	readOnly bool
 }
+
+var DefaultDefaultGasLimit pldtypes.HexUint64 = 4000000 // high gas limit by default (accommodating zkp transactions)
 
 func (dm *domainManager) newDomain(name string, conf *pldconf.DomainConfig, toDomain components.DomainManagerToDomain) *domain {
 	d := &domain{
 		dm:              dm,
 		conf:            conf,
-		defaultGasLimit: pldconf.DefaultDefaultGasLimit, // can be set by config below
-		initRetry:       retry.NewRetryIndefinite(&conf.Init.Retry),
+		defaultGasLimit: DefaultDefaultGasLimit,                     // can be set by config below
+		initRetry:       retry.NewRetryIndefinite(&conf.Init.Retry), // indefinite retry
 		name:            name,
 		api:             toDomain,
 		initDone:        make(chan struct{}),
-		registryAddress: tktypes.MustEthAddress(conf.RegistryAddress), // check earlier in startup
+		registryAddress: pldtypes.MustEthAddress(conf.RegistryAddress), // check earlier in startup
 
 		schemasByID:        make(map[string]components.Schema),
 		schemasBySignature: make(map[string]components.Schema),
@@ -97,14 +100,14 @@ func (dm *domainManager) newDomain(name string, conf *pldconf.DomainConfig, toDo
 		inFlight: make(map[string]*inFlightDomainRequest),
 	}
 	if conf.DefaultGasLimit != nil {
-		d.defaultGasLimit = tktypes.HexUint64(*conf.DefaultGasLimit)
+		d.defaultGasLimit = pldtypes.HexUint64(*conf.DefaultGasLimit)
 	}
-	log.L(dm.bgCtx).Debugf("Domain %s configured. Config: %s", name, tktypes.JSONString(conf.Config))
+	log.L(dm.bgCtx).Debugf("Domain %s configured. Config: %s", name, pldtypes.JSONString(conf.Config))
 	d.ctx, d.cancelCtx = context.WithCancel(log.WithLogField(dm.bgCtx, "domain", d.name))
 	return d
 }
 
-func (d *domain) processDomainConfig(confRes *prototk.ConfigureDomainResponse) (*prototk.InitDomainRequest, error) {
+func (d *domain) processDomainConfig(dbTX persistence.DBTX, confRes *prototk.ConfigureDomainResponse) (*prototk.InitDomainRequest, error) {
 	d.stateLock.Lock()
 	defer d.stateLock.Unlock()
 
@@ -121,7 +124,7 @@ func (d *domain) processDomainConfig(confRes *prototk.ConfigureDomainResponse) (
 	var schemas []components.Schema
 	if len(abiSchemas) > 0 {
 		var err error
-		schemas, err = d.dm.stateStore.EnsureABISchemas(d.ctx, d.dm.persistence.DB(), d.name, abiSchemas)
+		schemas, err = d.dm.stateStore.EnsureABISchemas(d.ctx, dbTX, d.name, abiSchemas)
 		if err != nil {
 			return nil, err
 		}
@@ -154,11 +157,10 @@ func (d *domain) processDomainConfig(confRes *prototk.ConfigureDomainResponse) (
 		}
 		stream.Sources = append(stream.Sources, blockindexer.EventStreamSource{ABI: eventsABI})
 
-		postCommit, _, err := d.dm.txManager.UpsertABI(d.ctx, d.dm.persistence.DB(), eventsABI)
+		_, err := d.dm.txManager.UpsertABI(d.ctx, dbTX, eventsABI)
 		if err != nil {
 			return nil, err
 		}
-		postCommit() // we didn't actually use a coordinated TX to call immediately
 	}
 
 	// We build a stream name in a way assured to result in a new stream if the ABI changes
@@ -170,9 +172,9 @@ func (d *domain) processDomainConfig(confRes *prototk.ConfigureDomainResponse) (
 	stream.Name = fmt.Sprintf("domain_%s_%s", d.name, streamHash)
 
 	// Create the event stream
-	d.eventStream, err = d.dm.blockIndexer.AddEventStream(d.ctx, &blockindexer.InternalEventStream{
-		Definition: stream,
-		Handler:    d.handleEventBatch,
+	d.eventStream, err = d.dm.blockIndexer.AddEventStream(d.ctx, dbTX, &blockindexer.InternalEventStream{
+		Definition:  stream,
+		HandlerDBTX: d.handleEventBatch,
 	})
 	if err != nil {
 		return nil, err
@@ -195,14 +197,18 @@ func (d *domain) init() {
 			Name:                    d.name,
 			RegistryContractAddress: d.RegistryAddress().String(),
 			ChainId:                 d.dm.ethClientFactory.ChainID(),
-			ConfigJson:              tktypes.JSONString(d.conf.Config).String(),
+			ConfigJson:              pldtypes.JSONString(d.conf.Config).String(),
 		})
 		if err != nil {
 			return true, err
 		}
 
 		// Process the configuration, so we can move onto init
-		initReq, err := d.processDomainConfig(confRes)
+		var initReq *prototk.InitDomainRequest
+		err = d.dm.persistence.Transaction(d.ctx, func(ctx context.Context, dbTX persistence.DBTX) error {
+			initReq, err = d.processDomainConfig(dbTX, confRes)
+			return err
+		})
 		if err != nil {
 			return true, err
 		}
@@ -224,12 +230,13 @@ func (d *domain) init() {
 	}
 }
 
-func (d *domain) newInFlightDomainRequest(dbTX *gorm.DB, dc components.DomainContext) *inFlightDomainRequest {
+func (d *domain) newInFlightDomainRequest(dbTX persistence.DBTX, dc components.DomainContext, readOnly bool) *inFlightDomainRequest {
 	c := &inFlightDomainRequest{
-		d:    d,
-		dCtx: dc,
-		id:   tktypes.ShortID(),
-		dbTX: dbTX,
+		d:        d,
+		dCtx:     dc,
+		id:       pldtypes.ShortID(),
+		dbTX:     dbTX,
+		readOnly: readOnly,
 	}
 	d.inFlightLock.Lock()
 	defer d.inFlightLock.Unlock()
@@ -243,7 +250,7 @@ func (i *inFlightDomainRequest) close() {
 	delete(i.d.inFlight, i.id)
 }
 
-func (d *domain) checkInFlight(ctx context.Context, stateQueryContext string) (*inFlightDomainRequest, error) {
+func (d *domain) checkInFlight(ctx context.Context, stateQueryContext string, needWrite bool) (*inFlightDomainRequest, error) {
 	if err := d.checkInit(ctx); err != nil {
 		return nil, err
 	}
@@ -252,6 +259,9 @@ func (d *domain) checkInFlight(ctx context.Context, stateQueryContext string) (*
 	c := d.inFlight[stateQueryContext]
 	if c == nil {
 		return nil, i18n.NewError(ctx, msgs.MsgDomainRequestNotInFlight, stateQueryContext)
+	}
+	if needWrite && c.readOnly {
+		return nil, i18n.NewError(ctx, msgs.MsgDomainWriteActionNotPossibleInContext)
 	}
 	return c, nil
 }
@@ -271,7 +281,7 @@ func (d *domain) Name() string {
 	return d.name
 }
 
-func (d *domain) RegistryAddress() *tktypes.EthAddress {
+func (d *domain) RegistryAddress() *pldtypes.EthAddress {
 	return d.registryAddress
 }
 
@@ -279,33 +289,7 @@ func (d *domain) Configuration() *prototk.DomainConfig {
 	return d.config
 }
 
-// Domain callback to query the state store
-func (d *domain) FindAvailableStates(ctx context.Context, req *prototk.FindAvailableStatesRequest) (*prototk.FindAvailableStatesResponse, error) {
-	c, err := d.checkInFlight(ctx, req.StateQueryContext)
-	if err != nil {
-		return nil, err
-	}
-
-	var query query.QueryJSON
-	if err = json.Unmarshal([]byte(req.QueryJson), &query); err != nil {
-		return nil, i18n.WrapError(ctx, err, msgs.MsgDomainInvalidQueryJSON)
-	}
-
-	schemaID, err := tktypes.ParseBytes32(req.SchemaId)
-	if err != nil {
-		return nil, i18n.WrapError(ctx, err, msgs.MsgDomainInvalidSchemaID, req.SchemaId)
-	}
-
-	var states []*pldapi.State
-	if req.UseNullifiers != nil && *req.UseNullifiers {
-		_, states, err = c.dCtx.FindAvailableNullifiers(c.dbTX, schemaID, &query)
-	} else {
-		_, states, err = c.dCtx.FindAvailableStates(c.dbTX, schemaID, &query)
-	}
-	if err != nil {
-		return nil, err
-	}
-
+func toProtoStates(states []*pldapi.State) []*prototk.StoredState {
 	pbStates := make([]*prototk.StoredState, len(states))
 	for i, s := range states {
 		pbStates[i] = &prototk.StoredState{
@@ -322,8 +306,38 @@ func (d *domain) FindAvailableStates(ctx context.Context, req *prototk.FindAvail
 			})
 		}
 	}
+	return pbStates
+}
+
+// Domain callback to query the state store
+func (d *domain) FindAvailableStates(ctx context.Context, req *prototk.FindAvailableStatesRequest) (*prototk.FindAvailableStatesResponse, error) {
+	c, err := d.checkInFlight(ctx, req.StateQueryContext, false)
+	if err != nil {
+		return nil, err
+	}
+
+	var query query.QueryJSON
+	if err = json.Unmarshal([]byte(req.QueryJson), &query); err != nil {
+		return nil, i18n.WrapError(ctx, err, msgs.MsgDomainInvalidQueryJSON)
+	}
+
+	schemaID, err := pldtypes.ParseBytes32(req.SchemaId)
+	if err != nil {
+		return nil, i18n.WrapError(ctx, err, msgs.MsgDomainInvalidSchemaID, req.SchemaId)
+	}
+
+	var states []*pldapi.State
+	if req.UseNullifiers != nil && *req.UseNullifiers {
+		_, states, err = c.dCtx.FindAvailableNullifiers(c.dbTX, schemaID, &query)
+	} else {
+		_, states, err = c.dCtx.FindAvailableStates(c.dbTX, schemaID, &query)
+	}
+	if err != nil {
+		return nil, err
+	}
+
 	return &prototk.FindAvailableStatesResponse{
-		States: pbStates,
+		States: toProtoStates(states),
 	}, nil
 
 }
@@ -422,7 +436,7 @@ func (d *domain) inlineEthSign(ctx context.Context, payload []byte, keyIdentifie
 
 	var localKeyIdentifier, nodeName string
 	if err == nil {
-		localKeyIdentifier, nodeName, err = tktypes.PrivateIdentityLocator(keyIdentifier).Validate(ctx, "", true)
+		localKeyIdentifier, nodeName, err = pldtypes.PrivateIdentityLocator(keyIdentifier).Validate(ctx, "", true)
 	}
 
 	if err == nil && nodeName != "" && nodeName != d.dm.transportMgr.LocalNodeName() {
@@ -436,7 +450,7 @@ func (d *domain) inlineEthSign(ctx context.Context, payload []byte, keyIdentifie
 
 	var signatureRSV []byte
 	if err == nil {
-		signatureRSV, err = d.dm.keyManager.Sign(ctx, resolvedKey, signpayloads.OPAQUE_TO_RSV, tktypes.HexBytes(sigPayloadHash.Sum(nil)))
+		signatureRSV, err = d.dm.keyManager.Sign(ctx, resolvedKey, signpayloads.OPAQUE_TO_RSV, pldtypes.HexBytes(sigPayloadHash.Sum(nil)))
 	}
 
 	if err == nil {
@@ -565,7 +579,7 @@ func (d *domain) InitDeploy(ctx context.Context, tx *components.PrivateContractD
 	txSpec := &prototk.DeployTransactionSpecification{}
 	tx.TransactionSpecification = txSpec
 	txSpec.From = tx.From
-	txSpec.TransactionId = tktypes.Bytes32UUIDFirst16(tx.ID).String()
+	txSpec.TransactionId = pldtypes.Bytes32UUIDFirst16(tx.ID).String()
 	txSpec.ConstructorParamsJson = tx.Inputs.String()
 
 	// Do the request with the domain
@@ -708,9 +722,9 @@ func (d *domain) CustomHashFunction() bool {
 	return d.config.CustomHashFunction
 }
 
-func (d *domain) ValidateStateHashes(ctx context.Context, states []*components.FullState) ([]tktypes.HexBytes, error) {
+func (d *domain) ValidateStateHashes(ctx context.Context, states []*components.FullState) ([]pldtypes.HexBytes, error) {
 	if len(states) == 0 {
-		return []tktypes.HexBytes{}, nil
+		return []pldtypes.HexBytes{}, nil
 	}
 	validateRes, err := d.api.ValidateStateHashes(d.ctx, &prototk.ValidateStateHashesRequest{
 		States: d.toEndorsableList(states),
@@ -719,9 +733,9 @@ func (d *domain) ValidateStateHashes(ctx context.Context, states []*components.F
 		return nil, i18n.WrapError(d.ctx, err, msgs.MsgDomainInvalidStates)
 	}
 	validResponse := len(validateRes.StateIds) == len(states)
-	hexIDs := make([]tktypes.HexBytes, len(states))
+	hexIDs := make([]pldtypes.HexBytes, len(states))
 	for i := 0; i < len(states) && validResponse; i++ {
-		hexID, err := tktypes.ParseHexBytes(ctx, validateRes.StateIds[i])
+		hexID, err := pldtypes.ParseHexBytes(ctx, validateRes.StateIds[i])
 		if err != nil || len(hexID) == 0 {
 			return nil, i18n.WrapError(d.ctx, err, msgs.MsgDomainInvalidResponseToValidate)
 		}
@@ -735,7 +749,7 @@ func (d *domain) ValidateStateHashes(ctx context.Context, states []*components.F
 	return hexIDs, nil
 }
 
-func (d *domain) GetDomainReceipt(ctx context.Context, dbTX *gorm.DB, txID uuid.UUID) (tktypes.RawJSON, error) {
+func (d *domain) GetDomainReceipt(ctx context.Context, dbTX persistence.DBTX, txID uuid.UUID) (pldtypes.RawJSON, error) {
 
 	// Load up the currently available set of states
 	txStates, err := d.dm.stateStore.GetTransactionStates(ctx, dbTX, txID)
@@ -746,7 +760,7 @@ func (d *domain) GetDomainReceipt(ctx context.Context, dbTX *gorm.DB, txID uuid.
 	return d.BuildDomainReceipt(ctx, dbTX, txID, txStates)
 }
 
-func (d *domain) BuildDomainReceipt(ctx context.Context, dbTX *gorm.DB, txID uuid.UUID, txStates *pldapi.TransactionStates) (tktypes.RawJSON, error) {
+func (d *domain) BuildDomainReceipt(ctx context.Context, dbTX persistence.DBTX, txID uuid.UUID, txStates *pldapi.TransactionStates) (pldtypes.RawJSON, error) {
 	if txStates.None {
 		// We know nothing about this transaction yet
 		return nil, i18n.NewError(ctx, msgs.MsgDomainDomainReceiptNotAvailable, txID)
@@ -759,7 +773,7 @@ func (d *domain) BuildDomainReceipt(ctx context.Context, dbTX *gorm.DB, txID uui
 
 	// As long as we have some knowledge, we call to the domain and see what it builds with what we have available
 	res, err := d.api.BuildReceipt(ctx, &prototk.BuildReceiptRequest{
-		TransactionId: tktypes.Bytes32UUIDFirst16(txID).String(),
+		TransactionId: pldtypes.Bytes32UUIDFirst16(txID).String(),
 		Complete:      txStates.Unavailable == nil, // important for the domain to know if we have everything (it may fail with partial knowledge)
 		InputStates:   d.toEndorsableListBase(txStates.Spent),
 		ReadStates:    d.toEndorsableListBase(txStates.Read),
@@ -769,5 +783,117 @@ func (d *domain) BuildDomainReceipt(ctx context.Context, dbTX *gorm.DB, txID uui
 	if err != nil {
 		return nil, err
 	}
-	return tktypes.RawJSON(res.ReceiptJson), nil
+	return pldtypes.RawJSON(res.ReceiptJson), nil
+}
+
+func (d *domain) SendTransaction(ctx context.Context, req *prototk.SendTransactionRequest) (*prototk.SendTransactionResponse, error) {
+	c, err := d.checkInFlight(ctx, req.StateQueryContext, true /* need write */)
+	if err != nil {
+		return nil, err
+	}
+
+	txType := pldapi.TransactionTypePrivate
+	if req.Transaction.Type == prototk.TransactionInput_PUBLIC {
+		txType = pldapi.TransactionTypePublic
+	}
+	contractAddress, err := pldtypes.ParseEthAddress(req.Transaction.ContractAddress)
+	if err != nil {
+		return nil, err
+	}
+	var functionABI abi.Entry
+	if err = json.Unmarshal([]byte(req.Transaction.FunctionAbiJson), &functionABI); err != nil {
+		return nil, err
+	}
+
+	txIDs, err := d.dm.txManager.SendTransactions(ctx, c.dbTX, &pldapi.TransactionInput{
+		TransactionBase: pldapi.TransactionBase{
+			Type: txType.Enum(),
+			From: req.Transaction.From,
+			To:   contractAddress,
+			Data: pldtypes.RawJSON(req.Transaction.ParamsJson),
+		},
+		ABI: abi.ABI{&functionABI},
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &prototk.SendTransactionResponse{Id: txIDs[0].String()}, nil
+}
+
+func (d *domain) LocalNodeName(ctx context.Context, req *prototk.LocalNodeNameRequest) (*prototk.LocalNodeNameResponse, error) {
+	return &prototk.LocalNodeNameResponse{
+		Name: d.dm.transportMgr.LocalNodeName(),
+	}, nil
+}
+
+func (d *domain) GetStatesByID(ctx context.Context, req *prototk.GetStatesByIDRequest) (*prototk.GetStatesByIDResponse, error) {
+	c, err := d.checkInFlight(ctx, req.StateQueryContext, false)
+	if err != nil {
+		return nil, err
+	}
+
+	schemaID, err := pldtypes.ParseBytes32(req.SchemaId)
+	if err != nil {
+		return nil, i18n.WrapError(ctx, err, msgs.MsgDomainInvalidSchemaID, req.SchemaId)
+	}
+
+	_, states, err := c.dCtx.GetStatesByID(c.dbTX, schemaID, req.StateIds)
+	return &prototk.GetStatesByIDResponse{
+		States: toProtoStates(states),
+	}, err
+}
+
+func (d *domain) ConfigurePrivacyGroup(ctx context.Context, inputConfiguration map[string]string) (configuration map[string]string, err error) {
+	res, err := d.api.ConfigurePrivacyGroup(ctx, &prototk.ConfigurePrivacyGroupRequest{
+		InputConfiguration: inputConfiguration,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return res.Configuration, nil
+}
+
+func (d *domain) InitPrivacyGroup(ctx context.Context, id pldtypes.HexBytes, genesis *pldapi.PrivacyGroupGenesisState) (tx *pldapi.TransactionInput, err error) {
+
+	// This one is a straight forward pass-through to the domain - the Privacy Group manager does the
+	// hard work in validating the data returned against the genesis ABI spec returned.
+	res, err := d.api.InitPrivacyGroup(ctx, &prototk.InitPrivacyGroupRequest{
+		PrivacyGroup: mapPrivacyGroupToProto(id, genesis),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	signer := ""
+	if res.Transaction.RequiredSigner != nil {
+		signer = *res.Transaction.RequiredSigner
+	}
+	txType := pldapi.TransactionTypePrivate.Enum()
+	if res.Transaction.Type == prototk.PreparedTransaction_PUBLIC {
+		txType = pldapi.TransactionTypePublic.Enum()
+	}
+
+	var functionABI abi.Entry
+	if err := json.Unmarshal(([]byte)(res.Transaction.FunctionAbiJson), &functionABI); err != nil {
+		return nil, i18n.WrapError(ctx, err, msgs.MsgDomainPrivateAbiJsonInvalid)
+	}
+	var optionalContractAddr *pldtypes.EthAddress
+	if res.Transaction.ContractAddress != nil {
+		optionalContractAddr, err = pldtypes.ParseEthAddress(*res.Transaction.ContractAddress)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &pldapi.TransactionInput{
+		TransactionBase: pldapi.TransactionBase{
+			From:   signer,
+			To:     optionalContractAddr,
+			Type:   txType,
+			Data:   pldtypes.RawJSON(res.Transaction.ParamsJson),
+			Domain: d.name,
+		},
+		ABI: abi.ABI{&functionABI},
+	}, nil
+
 }

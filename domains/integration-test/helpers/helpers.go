@@ -23,12 +23,12 @@ import (
 	"time"
 
 	"github.com/hyperledger/firefly-signer/pkg/abi"
-	"github.com/hyperledger/firefly-signer/pkg/rpcbackend"
 	"github.com/kaleido-io/paladin/config/pkg/pldconf"
 	"github.com/kaleido-io/paladin/core/pkg/testbed"
-	"github.com/kaleido-io/paladin/toolkit/pkg/pldapi"
-	"github.com/kaleido-io/paladin/toolkit/pkg/pldclient"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldapi"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldclient"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/rpcclient"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -43,7 +43,7 @@ type TransactionHelper struct {
 type DomainTransactionHelper struct {
 	ctx context.Context
 	t   *testing.T
-	rpc rpcbackend.Backend
+	rpc rpcclient.Client
 	tx  *pldapi.TransactionInput
 }
 
@@ -72,13 +72,13 @@ func (th *TransactionHelper) SignAndSend(signer string) pldclient.SentTransactio
 	return stx
 }
 
-func (th *TransactionHelper) Prepare() tktypes.HexBytes {
+func (th *TransactionHelper) Prepare() pldtypes.HexBytes {
 	b, err := th.builder.BuildCallData()
 	require.NoError(th.t, err)
 	return b
 }
 
-func (th *TransactionHelper) FindEvent(txHash *tktypes.Bytes32, abi abi.ABI, eventName string, eventParams any) *pldapi.EventWithData {
+func (th *TransactionHelper) FindEvent(txHash *pldtypes.Bytes32, abi abi.ABI, eventName string, eventParams any) *pldapi.EventWithData {
 	targetEvent := abi.Events()[eventName]
 	assert.NotNil(th.t, targetEvent)
 	assert.NotEmpty(th.t, targetEvent.SolString())
@@ -94,7 +94,7 @@ func (th *TransactionHelper) FindEvent(txHash *tktypes.Bytes32, abi abi.ABI, eve
 	return nil
 }
 
-func NewDomainTransactionHelper(ctx context.Context, t *testing.T, rpc rpcbackend.Backend, to *tktypes.EthAddress, fn *abi.Entry, inputs tktypes.RawJSON) *DomainTransactionHelper {
+func NewDomainTransactionHelper(ctx context.Context, t *testing.T, rpc rpcclient.Client, to *pldtypes.EthAddress, fn *abi.Entry, inputs pldtypes.RawJSON) *DomainTransactionHelper {
 	return &DomainTransactionHelper{
 		ctx: ctx,
 		t:   t,
@@ -122,7 +122,7 @@ func (dth *DomainTransactionHelper) SignAndSend(signer string, confirm ...bool) 
 	go func() {
 		var result any
 		rpcerr := dth.rpc.CallRPC(dth.ctx, &result, "testbed_invoke", dth.tx, confirmEvents)
-		if rpcerr != nil && rpcerr.Error() != nil {
+		if rpcerr != nil {
 			tx.result <- rpcerr.Error()
 		}
 		tx.result <- result
@@ -135,18 +135,21 @@ func (dth *DomainTransactionHelper) Prepare(signer string) *testbed.TransactionR
 	dth.tx.From = signer
 	rpcerr := dth.rpc.CallRPC(dth.ctx, &result, "testbed_prepare", dth.tx)
 	if rpcerr != nil {
-		require.NoError(dth.t, rpcerr.Error())
+		require.NoError(dth.t, rpcerr)
 	}
 	return &result
 }
 
-func (st *SentDomainTransaction) Wait() {
+func (st *SentDomainTransaction) Wait() map[string]any {
 	result := <-st.result
 	switch r := result.(type) {
 	case error:
 		require.NoError(st.t, r)
+	case map[string]any:
+		return r
 	default:
 	}
+	return nil
 }
 
 func toJSON(t *testing.T, v any) []byte {

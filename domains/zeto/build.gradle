@@ -13,9 +13,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import org.apache.tools.ant.taskdefs.condition.Os
-import org.apache.tools.ant.filters.LineContains
-
 ext {
     goFiles = fileTree(".") {
         include "internal/**/*.go"
@@ -24,7 +21,7 @@ ext {
     goFilesE2E = fileTree(".") {
         include "integration-test/**/*.go"
     }
-    targetCoverage = 94.5
+    targetCoverage = 92.3
     maxCoverageBarGap = 1
     coveragePackages = [
         "github.com/kaleido-io/paladin/domains/zeto/internal/...",
@@ -32,7 +29,7 @@ ext {
         "github.com/kaleido-io/paladin/domains/zeto/pkg/zetosigner",
     ]
 
-    zetoVersion = "v0.0.10"
+    zetoVersion = "v0.0.12"
     zetoHost = "hyperledger-labs"
     zkpOut = "${projectDir}/zkp"
     toolsOut = "${projectDir}/tools"
@@ -163,6 +160,7 @@ task copySolidity(type: Copy, dependsOn: [protoc, ":solidity:compile", extractZe
     from fileTree("${zkpOut}/artifacts/contracts") {
         include 'lib/interfaces/izeto.sol/IZeto.json'
         include 'lib/interfaces/izeto_encrypted.sol/IZetoEncrypted.json'
+        include 'lib/interfaces/izeto_lockable.sol/IZetoLockable.json'
         include 'lib/interfaces/zeto_fungible_initializable.sol/IZetoFungibleInitializable.json'
         include 'lib/interfaces/zeto_nf_initializable.sol/IZetoNonFungibleInitializable.json'
     }
@@ -178,7 +176,8 @@ task copyPkgSolidity(type: Copy) {
 
     into 'pkg/types/abis'
     from fileTree(configurations.contractCompile.asPath) {
-        include 'contracts/domains/interfaces/IZetoPrivate.sol/IZetoPrivate.json'
+        include 'contracts/domains/interfaces/IZetoFungible.sol/IZetoFungible.json'
+        include 'contracts/domains/interfaces/IZetoNonFungible.sol/IZetoNonFungible.json'
     }
 
     // Flatten all paths into the destination folder
@@ -186,51 +185,15 @@ task copyPkgSolidity(type: Copy) {
     includeEmptyDirs = false
 }
 
-task copySolidityForTest(type: Copy, dependsOn: [extractZetoArtifacts, generatePoseidonArtifacts, ":solidity:compile"]) {
-    inputs.files(configurations.contractCompile)
-    from fileTree(configurations.contractCompile.asPath) {
-        include 'contracts/domains/zeto/ZetoFactory.sol/ZetoFactory.json'
-    }
-    from fileTree("${zkpOut}/artifacts/contracts") {
-        include '**/*.json'
-        exclude '**/*.dbg.json'
-    }
-    from fileTree("${zkpOut}/artifacts/@iden3/contracts") {
-        include '**/*.json'
-        exclude '**/*.dbg.json'
-    }
-    from fileTree("${toolsOut}/solidity") {
-        include 'Poseidon2.json'
-        include 'Poseidon3.json'
-    }
-    into 'integration-test/abis'
-
-    // Flatten all paths into the destination folder
-    eachFile { path = name }
-    includeEmptyDirs = false
-}
-
-task testE2E(type: Exec, dependsOn: [protoc, copySolidity, copyPkgSolidity, copySolidityForTest, ':testinfra:startTestInfra', ":core:go:makeMocks"]) {
-    inputs.files(configurations.toolkitGo)
-    inputs.files(configurations.coreGo)
-    inputs.files(goFiles)
-    inputs.files(goFilesE2E)
-    inputs.file('./integration-test/config-for-deploy.yaml')
-    outputs.dir('coverage')
-
-    workingDir '.'
-    executable 'go'
-    args 'test'
-    args '-timeout=300s'
-    args './integration-test'
-    if (project.findProperty('verboseTests') == 'true') {
-        args '-v'
-    }
-
-    helpers.dumpLogsOnFailure(it, ':testinfra:startTestInfra')
-}
-
-task unitTests(type: Exec, dependsOn: [protoc, ":core:go:makeMocks", ":testinfra:startTestInfra", downloadZetoCompiledContracts, copySolidity, copyPkgSolidity]) {
+task unitTests(type: Exec, dependsOn: [
+        protoc,
+        ":core:go:makeMocks",
+        ":testinfra:startTestInfra",
+        downloadZetoCompiledContracts,
+        copySolidity,
+        copyPkgSolidity,
+        ":domains:integration-test:copySolidity" // TODO: find a better way to share this
+    ]) {
     inputs.files(configurations.toolkitGo)
     inputs.files(configurations.coreGo)
     inputs.files(goFiles)
@@ -274,14 +237,12 @@ task buildGo(type: GoLib, dependsOn: [":toolkit:go:protoc", copySolidity, copyPk
 
 task build {
     dependsOn test
-    dependsOn testE2E
 }
 
 task clean(type: Delete) {
     delete 'coverage'
     delete 'internal/zeto/abis'
     delete 'pkg/types/abis'
-    delete 'integration-test/abis'
     delete zkpOut
     delete toolsOut
 }

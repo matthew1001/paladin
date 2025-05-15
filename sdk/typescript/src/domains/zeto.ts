@@ -1,7 +1,8 @@
 import { TransactionType } from "../interfaces";
 import PaladinClient from "../paladin";
 import { PaladinVerifier } from "../verifier";
-import * as zetoPrivateJSON from "./abis/IZetoPrivate.json";
+import * as zetoPrivateJSON from "./abis/IZetoFungible.json";
+import * as zetoPublicJSON from "./abis/Zeto_Anon.json";
 
 const POLL_TIMEOUT_MS = 10000;
 
@@ -10,6 +11,7 @@ export interface ZetoOptions {
 }
 
 const zetoAbi = zetoPrivateJSON.abi;
+const zetoPublicAbi = zetoPublicJSON.abi;
 
 export const zetoConstructorABI = {
   type: "constructor",
@@ -28,6 +30,22 @@ export interface ZetoTransferParams {
   transfers: ZetoTransfer[];
 }
 
+export interface ZetoLockParams {
+  amount: number;
+  delegate: string;
+}
+
+export interface ZetoTransferLockedParams {
+  lockedInputs: string[];
+  delegate: string;
+  transfers: ZetoTransfer[];
+}
+
+export interface ZetoDelegateLockParams {
+  utxos: string[];
+  delegate: string;
+}
+
 export interface ZetoSetERC20Params {
   erc20: string;
 }
@@ -35,6 +53,7 @@ export interface ZetoSetERC20Params {
 export interface ZetoTransfer {
   to: PaladinVerifier;
   amount: string | number;
+  data: string;
 }
 
 export interface ZetoDepositParams {
@@ -130,6 +149,49 @@ export class ZetoInstance {
       },
     });
     return this.paladin.pollForReceipt(txID, this.options.pollTimeout);
+  }
+
+  prepareTransferLocked(from: PaladinVerifier, data: ZetoTransferLockedParams) {
+    return this.paladin.prepareTransaction({
+      type: TransactionType.PRIVATE,
+      abi: zetoAbi,
+      function: "transferLocked",
+      to: this.address,
+      from: from.lookup,
+      data: {
+        lockedInputs: data.lockedInputs,
+        delegate: data.delegate,
+        transfers: data.transfers.map((t) => ({ ...t, to: t.to.lookup })),
+      },
+    });
+  }
+
+  async lock(from: PaladinVerifier, data: ZetoLockParams) {
+    const txID = await this.paladin.sendTransaction({
+      type: TransactionType.PRIVATE,
+      abi: zetoAbi,
+      function: "lock",
+      to: this.address,
+      from: from.lookup,
+      data,
+    });
+    return this.paladin.pollForReceipt(txID, POLL_TIMEOUT_MS);
+  }
+
+  async delegateLock(from: PaladinVerifier, data: ZetoDelegateLockParams) {
+    const txID = await this.paladin.sendTransaction({
+      type: TransactionType.Public,
+      abi: zetoPublicAbi,
+      function: "delegateLock",
+      to: this.address,
+      from: from.lookup,
+      data: {
+        data: "0x",
+        utxos: data.utxos,
+        delegate: data.delegate,
+      },
+    });
+    return this.paladin.pollForReceipt(txID, POLL_TIMEOUT_MS);
   }
 
   async setERC20(from: PaladinVerifier, data: ZetoSetERC20Params) {

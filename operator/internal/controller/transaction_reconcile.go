@@ -22,19 +22,31 @@ import (
 	"strings"
 	"time"
 
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/google/uuid"
+	"github.com/kaleido-io/paladin/config/pkg/confutil"
 	"github.com/kaleido-io/paladin/config/pkg/pldconf"
 	corev1alpha1 "github.com/kaleido-io/paladin/operator/api/v1alpha1"
-	"github.com/kaleido-io/paladin/toolkit/pkg/pldapi"
-	"github.com/kaleido-io/paladin/toolkit/pkg/pldclient"
-	"github.com/kaleido-io/paladin/toolkit/pkg/query"
-	"github.com/kaleido-io/paladin/toolkit/pkg/rpcclient"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldapi"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldclient"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/query"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/rpcclient"
 )
+
+var _ transactionReconcileInterface = &transactionReconcile{}
+
+type transactionReconcileInterface interface {
+	reconcile(ctx context.Context) error
+	isStatusChanged() bool
+	isSucceeded() bool
+	isFailed() bool
+	getReceipt() *pldapi.TransactionReceipt
+}
 
 type transactionReconcile struct {
 	client.Client
@@ -47,14 +59,17 @@ type transactionReconcile struct {
 	statusChanged        bool
 	succeeded            bool
 	failed               bool
+	getPaladinRPCFunc    func(ctx context.Context, c client.Client, nodeName string, namespace string, timeout string) (pldclient.PaladinClient, error)
+	timeout              string
 }
 
 func newTransactionReconcile(c client.Client,
 	idempotencyKeyPrefix,
 	nodeName, namespace string,
 	pStatus *corev1alpha1.TransactionSubmission,
+	timeout string,
 	txFactory func() (bool, *pldapi.TransactionInput, error),
-) *transactionReconcile {
+) transactionReconcileInterface {
 	return &transactionReconcile{
 		Client:               c,
 		idempotencyKeyPrefix: idempotencyKeyPrefix,
@@ -62,8 +77,13 @@ func newTransactionReconcile(c client.Client,
 		namespace:            namespace,
 		txFactory:            txFactory,
 		pStatus:              pStatus,
+		timeout:              timeout,
 	}
 }
+func (r *transactionReconcile) isStatusChanged() bool                  { return r.statusChanged }
+func (r *transactionReconcile) isSucceeded() bool                      { return r.succeeded }
+func (r *transactionReconcile) isFailed() bool                         { return r.failed }
+func (r *transactionReconcile) getReceipt() *pldapi.TransactionReceipt { return r.receipt }
 
 func (r *transactionReconcile) reconcile(ctx context.Context) error {
 
@@ -85,8 +105,11 @@ func (r *transactionReconcile) reconcile(ctx context.Context) error {
 		return nil
 	}
 
+	if r.getPaladinRPCFunc == nil {
+		r.getPaladinRPCFunc = getPaladinRPC
+	}
 	// Check availability of the Paladin node and deploy
-	paladinRPC, err := getPaladinRPC(ctx, r.Client, r.nodeName, r.namespace)
+	paladinRPC, err := getPaladinRPC(ctx, r.Client, r.nodeName, r.namespace, r.timeout)
 	if err != nil || paladinRPC == nil {
 		return err
 	}
@@ -157,36 +180,44 @@ func (r *transactionReconcile) trackTransactionAndRequeue(ctx context.Context, p
 	}
 	if r.receipt.Success {
 		r.pStatus.TransactionStatus = corev1alpha1.TransactionStatusSuccess
+		r.succeeded = true
 	} else {
 		r.pStatus.TransactionStatus = corev1alpha1.TransactionStatusFailed
 		r.pStatus.FailureMessage = r.receipt.FailureMessage
+		r.failed = true
 	}
 	r.statusChanged = true
 	return nil
 }
 
-func getPaladinRPC(ctx context.Context, c client.Client, nodeName, namespace string) (pldclient.PaladinClient, error) {
+var getPaladinURLEndpointFunc = getPaladinURLEndpoint
+
+func getPaladinRPC(ctx context.Context, c client.Client, nodeName, namespace string, timeout string) (pldclient.PaladinClient, error) {
 
 	log := log.FromContext(ctx)
-	var node corev1alpha1.Paladin
-	if err := c.Get(ctx, types.NamespacedName{Name: nodeName, Namespace: namespace}, &node); err != nil {
+	pName := generatePaladinName(nodeName)
+	var pNode appsv1.StatefulSet
+	if err := c.Get(ctx, types.NamespacedName{Name: pName, Namespace: namespace}, &pNode); err != nil {
 		if errors.IsNotFound(err) {
-			log.Info(fmt.Sprintf("Waiting for paladin node '%s' to be created to deploy", nodeName))
+			log.Info(fmt.Sprintf("Waiting for paladin node '%s' to be created to deploy", pName))
 			return nil, nil
 		}
-		log.Info(fmt.Sprintf("Waiting for paladin node '%s' to become available to deploy", nodeName))
+		log.Info(fmt.Sprintf("Waiting for paladin node '%s' to become available to deploy", pName))
 		return nil, nil
 	}
-	ready := node.Status.Phase == corev1alpha1.StatusPhaseReady
+	ready := pNode.Status.ReadyReplicas == pNode.Status.Replicas
 	if !ready {
-		log.Info(fmt.Sprintf("Waiting for paladin node '%s' to reach completed phase (%s)", nodeName, node.Status.Phase))
+		log.Info(fmt.Sprintf("Waiting for paladin node '%s' to reach ready state (%d)", pName, pNode.Status.ReadyReplicas))
 		return nil, nil
 	}
 
-	url, err := getPaladinURLEndpoint(ctx, c, nodeName, namespace)
+	url, err := getPaladinURLEndpointFunc(ctx, c, nodeName, namespace)
 	if err != nil {
 		return nil, err
 	}
-	return pldclient.New().HTTP(ctx, &pldconf.HTTPClientConfig{URL: url})
-
+	return pldclient.New().HTTP(ctx, &pldconf.HTTPClientConfig{
+		URL:               url,
+		ConnectionTimeout: confutil.P(timeout),
+		RequestTimeout:    confutil.P(timeout),
+	})
 }

@@ -35,12 +35,14 @@ title: TransactionFull
 | `dependsOn` | Transactions registered as dependencies when the transaction was created | [`UUID[]`](simpletypes.md#uuid) |
 | `receipt` | Transaction receipt data - available if the transaction has reached a final state | [`TransactionReceiptData`](#transactionreceiptdata) |
 | `public` | List of public transactions associated with this transaction | [`PublicTx[]`](publictx.md#publictx) |
+| `history` | List of values that have previously been provided for this transaction | [`TransactionHistory[]`](#transactionhistory) |
 
 ## TransactionReceiptData
 
 | Field Name | Description | Type |
 |------------|-------------|------|
 | `indexed` | The time when this receipt was indexed by the node, providing a relative order of transaction receipts within this node (might be significantly after the timestamp of the block) | [`Timestamp`](simpletypes.md#timestamp) |
+| `sequence` | A local order of this receipt compared to other receipts on the node, used for ordering of receipts when delivering to receipt listeners | `uint64` |
 | `domain` | The domain that executed the transaction, for private transactions only | `string` |
 | `success` | Transaction success status | `bool` |
 | `transactionHash` | Transaction hash | [`Bytes32`](simpletypes.md#bytes32) |
@@ -51,5 +53,8 @@ title: TransactionFull
 | `failureMessage` | Failure message - set if transaction reverted | `string` |
 | `revertData` | Encoded revert data - if available | [`HexBytes`](simpletypes.md#hexbytes) |
 | `contractAddress` | New contract address - to be used in the 'To' field for subsequent invoke transactions | [`EthAddress`](simpletypes.md#ethaddress) |
+
+
+## TransactionHistory
 
 

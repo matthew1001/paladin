@@ -24,12 +24,12 @@ import (
 	"github.com/kaleido-io/paladin/config/pkg/confutil"
 	"github.com/kaleido-io/paladin/config/pkg/pldconf"
 	"github.com/kaleido-io/paladin/core/pkg/blockindexer"
-	"gorm.io/gorm"
+	"github.com/kaleido-io/paladin/core/pkg/persistence"
 
+	"github.com/kaleido-io/paladin/common/go/pkg/log"
 	"github.com/kaleido-io/paladin/core/pkg/ethclient"
-	"github.com/kaleido-io/paladin/toolkit/pkg/log"
-	"github.com/kaleido-io/paladin/toolkit/pkg/retry"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/retry"
 )
 
 const (
@@ -115,9 +115,9 @@ type orchestrator struct {
 	transactionSubmissionRetry *retry.Retry
 
 	// each transaction orchestrator has its own go routine
-	orchestratorBirthTime       time.Time          // when transaction orchestrator is created
-	orchestratorPollingInterval time.Duration      // between how long the transaction orchestrator will do a poll and trigger none-event driven transaction process actions
-	signingAddress              tktypes.EthAddress // the signing address of the transaction managed by the current transaction orchestrator
+	orchestratorBirthTime       time.Time           // when transaction orchestrator is created
+	orchestratorPollingInterval time.Duration       // between how long the transaction orchestrator will do a poll and trigger none-event driven transaction process actions
+	signingAddress              pldtypes.EthAddress // the signing address of the transaction managed by the current transaction orchestrator
 
 	// balance check settings
 	hasZeroGasPrice                    bool
@@ -143,19 +143,25 @@ type orchestrator struct {
 
 	lastNonceAlloc time.Time
 	nextNonce      *uint64
+
+	// updates
+	updates   []*transactionUpdate
+	updateMux sync.Mutex
+
+	timeLineLoggingMaxEntries int
 }
 
 const veryShortMinimum = 50 * time.Millisecond
 
 func NewOrchestrator(
-	ble *pubTxManager,
-	signingAddress tktypes.EthAddress,
+	ptm *pubTxManager,
+	signingAddress pldtypes.EthAddress,
 	conf *pldconf.PublicTxManagerConfig,
 ) *orchestrator {
-	ctx := ble.ctx
+	ctx := ptm.ctx
 
 	newOrchestrator := &orchestrator{
-		pubTxManager:                ble,
+		pubTxManager:                ptm,
 		orchestratorBirthTime:       time.Now(),
 		orchestratorPollingInterval: confutil.DurationMin(conf.Orchestrator.Interval, veryShortMinimum, *pldconf.PublicTxManagerDefaults.Orchestrator.Interval),
 		maxInFlightTxs:              confutil.IntMin(conf.Orchestrator.MaxInFlight, 1, *pldconf.PublicTxManagerDefaults.Orchestrator.MaxInFlight),
@@ -173,11 +179,12 @@ func NewOrchestrator(
 		// submission retry
 		transactionSubmissionRetry: retry.NewRetryLimited(&conf.Orchestrator.SubmissionRetry),
 		staleTimeout:               confutil.DurationMin(conf.Orchestrator.StaleTimeout, 0, *pldconf.PublicTxManagerDefaults.Orchestrator.StaleTimeout),
-		hasZeroGasPrice:            ble.gasPriceClient.HasZeroGasPrice(ctx),
+		hasZeroGasPrice:            ptm.gasPriceClient.HasZeroGasPrice(ctx),
 		InFlightTxsStale:           make(chan bool, 1),
 		stopProcess:                make(chan bool, 1),
-		ethClient:                  ble.ethClient,
-		bIndexer:                   ble.bIndexer,
+		ethClient:                  ptm.ethClient,
+		bIndexer:                   ptm.bIndexer,
+		timeLineLoggingMaxEntries:  conf.Orchestrator.TimeLineLoggingMaxEntries,
 	}
 
 	log.L(ctx).Debugf("NewOrchestrator for signing address %s created: %+v", newOrchestrator.signingAddress, newOrchestrator)
@@ -213,10 +220,31 @@ func (oc *orchestrator) orchestratorLoop() {
 			oc.MarkInFlightOrchestratorsStale() // trigger engine loop for removal
 			return
 		}
+		oc.handleUpdates(ctx)
 		polled, total := oc.pollAndProcess(ctx)
 		log.L(ctx).Debugf("Orchestrator loop polled %d txs, there are %d txs in total", polled, total)
 	}
 
+}
+
+func (oc *orchestrator) handleUpdates(ctx context.Context) {
+	oc.updateMux.Lock()
+	updates := oc.updates
+	oc.updates = nil
+	oc.updateMux.Unlock()
+
+	oc.inFlightTxsMux.Lock()
+	defer oc.inFlightTxsMux.Unlock()
+
+	for _, update := range updates {
+		for _, inflight := range oc.inFlightTxs {
+			if inflight.stateManager.GetPubTxnID() == update.pubTXID {
+				inflight.UpdateTransaction(ctx, update.newPtx)
+				oc.MarkInFlightTxStale()
+				break
+			}
+		}
+	}
 }
 
 // Used in unit tests
@@ -250,13 +278,13 @@ func (oc *orchestrator) initNextNonceFromDB(ctx context.Context) error {
 	}
 	nextNonce := *txns[0].Nonce + 1
 	oc.nextNonce = &nextNonce
-	log.L(ctx).Infof("Next nonce initialized from DB fro %s: %d", oc.signingAddress, nextNonce)
+	log.L(ctx).Infof("Next nonce initialized from DB from %s: %d", oc.signingAddress, nextNonce)
 	return nil
 }
 
 func (oc *orchestrator) allocateNonces(ctx context.Context, txns []*DBPublicTxn) error {
 
-	// Of the the transactions might have nonces already
+	// Some of the the transactions might have nonces already
 	toAlloc := make([]*DBPublicTxn, 0, len(txns))
 	for _, tx := range txns {
 		if tx.Nonce == nil {
@@ -294,7 +322,7 @@ func (oc *orchestrator) allocateNonces(ctx context.Context, txns []*DBPublicTxn)
 	}
 
 	// Run the DB TXN using a VALUES temp table to update multiple rows in a single operation
-	err := oc.p.DB().Transaction(func(dbTX *gorm.DB) error {
+	err := oc.p.Transaction(ctx, func(ctx context.Context, dbTX persistence.DBTX) error {
 		sqlQuery := `WITH nonce_updates ("pub_txn_id", "nonce") AS ( VALUES `
 		values := make([]any, 0, len(toAlloc)*2)
 		for i, tx := range toAlloc {
@@ -308,7 +336,7 @@ func (oc *orchestrator) allocateNonces(ctx context.Context, txns []*DBPublicTxn)
 		}
 		sqlQuery += ` ) UPDATE "public_txns" SET "nonce" = nu."nonce" FROM ( SELECT "pub_txn_id", "nonce" FROM nonce_updates ) AS nu ` +
 			`WHERE "public_txns"."pub_txn_id" = nu."pub_txn_id";`
-		return dbTX.WithContext(ctx).Exec(sqlQuery, values...).Error
+		return dbTX.DB().WithContext(ctx).Exec(sqlQuery, values...).Error
 	})
 	if err != nil {
 		return err
@@ -351,6 +379,7 @@ func (oc *orchestrator) pollAndProcess(ctx context.Context) (polled int, total i
 			oc.totalCompleted = oc.totalCompleted + 1
 			queueUpdated = true
 			log.L(ctx).Debugf("Orchestrator poll and process, marking %s as complete after: %s", p.stateManager.GetSignerNonce(), time.Since(p.stateManager.GetCreatedTime().Time()))
+			p.PrintTimeline()
 		} else {
 			log.L(ctx).Debugf("Orchestrator poll and process, continuing tx %s after: %s", p.stateManager.GetSignerNonce(), time.Since(p.stateManager.GetCreatedTime().Time()))
 			oc.inFlightTxs = append(oc.inFlightTxs, p)
@@ -392,7 +421,7 @@ func (oc *orchestrator) pollAndProcess(ctx context.Context) (polled int, total i
 			// as we are the only thread that writes to the submissions table, for
 			// inflight transactions we have in memory that would not be overwritten
 			// by this query.
-			additional, err = oc.runTransactionQuery(ctx, oc.p.DB(), false /* just the individual transactions - no duplication for bindings */, nil, q)
+			additional, err = oc.runTransactionQuery(ctx, oc.p.NOTX(), false /* just the individual transactions - no duplication for bindings */, nil, q)
 			return true, err
 		})
 		if err != nil {

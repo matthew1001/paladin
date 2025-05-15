@@ -24,6 +24,7 @@ type PublicTxManagerConfig struct {
 	Orchestrator   PublicTxManagerOrchestratorConfig `json:"orchestrator"`
 	GasPrice       GasPriceConfig                    `json:"gasPrice"`
 	BalanceManager BalanceManagerConfig              `json:"balanceManager"`
+	GasLimit       GasLimitConfig                    `json:"gasLimit"`
 }
 
 var PublicTxManagerDefaults = &PublicTxManagerConfig{
@@ -100,6 +101,9 @@ var PublicTxManagerDefaults = &PublicTxManagerConfig{
 			MinThreshold:                     nil,
 		},
 	},
+	GasLimit: GasLimitConfig{
+		GasEstimateFactor: confutil.P(1.5),
+	},
 }
 
 type PublicTxManagerManagerConfig struct {
@@ -150,6 +154,10 @@ type GasPriceConfig struct {
 	Cache              CacheConfig        `json:"cache"`
 }
 
+type GasLimitConfig struct {
+	GasEstimateFactor *float64 `json:"gasEstimateFactor"`
+}
+
 type GasOracleAPIConfig struct {
 	URL      string `json:"url"`
 	Template string `json:"template"`
@@ -164,4 +172,5 @@ type PublicTxManagerOrchestratorConfig struct {
 	PersistenceRetryTime      *string            `json:"persistenceRetryTime"`
 	UnavailableBalanceHandler *string            `json:"unavailableBalanceHandler"`
 	SubmissionRetry           RetryConfigWithMax `json:"submissionRetry"`
+	TimeLineLoggingMaxEntries int                `json:"timelineMaxEntries"`
 }

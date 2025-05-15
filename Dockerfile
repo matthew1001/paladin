@@ -2,8 +2,8 @@
 ARG JAVA_VERSION=21.0.4+7
 ARG NODE_VERSION=20.17.0
 ARG PROTO_VERSION=28.2
-ARG GO_VERSION=1.22.7
-ARG GO_MIGRATE_VERSION=4.18.1
+ARG GO_VERSION=1.23.7
+ARG GO_MIGRATE_VERSION=4.18.3
 ARG GRADLE_VERSION=8.5
 ARG WASMER_VERSION=4.3.7
 
@@ -41,7 +41,7 @@ RUN apt-get update && apt-get install -y \
     libgomp1 \
     xz-utils \
     && apt-get clean
-
+  
 # Install JDK
 RUN JAVA_ARCH=$( if [ "$TARGETARCH" = "arm64" ]; then echo -n "aarch64"; else echo -n "x64"; fi ) && \
     curl -sLo - https://api.adoptium.net/v3/binary/version/jdk-${JAVA_VERSION}/${TARGETOS}/${JAVA_ARCH}/jdk/${JVM_TYPE}/${JVM_HEAP}/eclipse | \
@@ -99,6 +99,8 @@ RUN gradle --no-daemon --parallel :buildSrc:jar
 # Copy in a set of thing before the first gradle command that are less likely to change
 COPY solidity solidity
 COPY config config
+COPY common/go common/go
+COPY sdk/go sdk/go
 COPY toolkit/proto toolkit/proto
 COPY toolkit toolkit
 COPY go.work.sum ./
@@ -131,9 +133,10 @@ COPY registries/static registries/static
 COPY registries/evm registries/evm
 COPY transports/grpc transports/grpc
 COPY ui/client ui/client
-# No build of these two, but we need to go.mod to make the go.work valid
+# No build of these three, but we need to go.mod to make the go.work valid
 COPY testinfra/go.mod testinfra/go.mod
 COPY operator/go.mod operator/go.mod
+COPY perf/go.mod perf/go.mod
 RUN gradle --no-daemon --parallel assemble
 
 # Stage 3: Pull together runtime
@@ -150,6 +153,7 @@ ARG GO_MIGRATE_VERSION
 RUN apt-get update && apt-get install -y \
     libgomp1 \
     curl \
+    postgresql-client \
     && apt-get clean
 
 # Set environment variables
@@ -168,7 +172,8 @@ RUN JAVA_ARCH=$( if [ "$TARGETARCH" = "arm64" ]; then echo -n "aarch64"; else ec
 # Install DB migration tool
 RUN GO_MIRGATE_ARCH=$( if [ "$TARGETARCH" = "arm64" ]; then echo -n "arm64"; else echo -n "amd64"; fi ) && \
     curl -sLo - https://github.com/golang-migrate/migrate/releases/download/v$GO_MIGRATE_VERSION/migrate.${TARGETOS}-${GO_MIRGATE_ARCH}.tar.gz | \
-    tar -C /usr/local/bin -xzf - migrate
+    tar -C /usr/local/bin -xzf - migrate && \
+    chmod 755 /usr/local/bin/migrate
 
 # Copy Wasmer shared libraries to the runtime container
 COPY --from=full-builder /usr/local/wasmer/lib/libwasmer.so /usr/local/wasmer/lib/libwasmer.so
@@ -185,8 +190,11 @@ ENV PATH=$PATH:/usr/local/java/bin
 # Define the entry point for running the application
 ENTRYPOINT [                         \
     "java",                          \
+    "--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED", \
+    "--add-opens", "java.base/sun.nio.ch=ALL-UNNAMED", \
+    "--add-opens", "java.base/java.nio=ALL-UNNAMED", \
+    "-Dio.netty.tryReflectionSetAccessible=true", \
     "-Djna.library.path=/app/libs",  \
     "-jar",                          \
     "/app/libs/paladin.jar"          \
 ]
- 

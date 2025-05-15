@@ -22,7 +22,7 @@ def transports = [
 def uiClient = [
     'ui/client/dist',
 ]
- 
+
 def assembleSubprojects = [
     ':core:go',
     ':core:java',
@@ -48,16 +48,14 @@ ext {
         },
 
         dumpLogsOnFailure: { task, dockerTaskPath ->
-            // If invoked with -PcomposeLogs=true and the given Exec task fails, look up the
-            // DockerCompose task specified, and ask it to dump logs.
+            // If the given Exec task fails, look up the DockerCompose task specified, and ask it to dump logs.
             task.ignoreExitValue(true)
             task.doLast {
                 def execResult = getExecutionResult().get()
-                def composeLogs = project.findProperty('composeLogs')
-                if (execResult.exitValue != 0 && composeLogs == "true") {
+                if (execResult.exitValue != 0) {
                     def docker = project.tasks.getByPath(dockerTaskPath)
                     println "\nTask '${task.path}' failed. Dumping Docker logs from '${dockerTaskPath}'."
-                    docker.dumpLogs()
+                    docker.dumpLogs(project.file('build/docker-compose.log'))
                 }
                 execResult.assertNormalExitValue()
             }
@@ -211,30 +209,30 @@ task copyZetoZKPFiles(type: Copy) {
         include 'anon_enc_batch-vkey.json'
         include 'anon_enc_batch_js/anon_enc_batch.wasm'
         // anon_nullifier
-        include 'anon_nullifier.zkey'
-        include 'anon_nullifier-vkey.json'
-        include 'anon_nullifier_js/anon_nullifier.wasm'
-        include 'anon_nullifier_batch.zkey'
-        include 'anon_nullifier_batch-vkey.json'
-        include 'anon_nullifier_batch_js/anon_nullifier_batch.wasm'
+        include 'anon_nullifier_transfer.zkey'
+        include 'anon_nullifier_transfer-vkey.json'
+        include 'anon_nullifier_transfer_js/anon_nullifier_transfer.wasm'
+        include 'anon_nullifier_transfer_batch.zkey'
+        include 'anon_nullifier_transfer_batch-vkey.json'
+        include 'anon_nullifier_transfer_batch_js/anon_nullifier_transfer_batch.wasm'
         // deposit
-        include 'check_hashes_value.zkey'
-        include 'check_hashes_value-vkey.json'
-        include 'check_hashes_value_js/check_hashes_value.wasm'
+        include 'deposit.zkey'
+        include 'deposit-vkey.json'
+        include 'deposit_js/deposit.wasm'
         // withdraw
-        include 'check_inputs_outputs_value.zkey'
-        include 'check_inputs_outputs_value-vkey.json'
-        include 'check_inputs_outputs_value_js/check_inputs_outputs_value.wasm'
-        include 'check_inputs_outputs_value_batch.zkey'
-        include 'check_inputs_outputs_value_batch-vkey.json'
-        include 'check_inputs_outputs_value_batch_js/check_inputs_outputs_value_batch.wasm'
+        include 'withdraw.zkey'
+        include 'withdraw-vkey.json'
+        include 'withdraw_js/withdraw.wasm'
+        include 'withdraw_batch.zkey'
+        include 'withdraw_batch-vkey.json'
+        include 'withdraw_batch_js/withdraw_batch.wasm'
         // withdraw_nullifier
-        include 'check_nullifier_value.zkey'
-        include 'check_nullifier_value-vkey.json'
-        include 'check_nullifier_value_js/check_nullifier_value.wasm'
-        include 'check_nullifier_value_batch.zkey'
-        include 'check_nullifier_value_batch-vkey.json'
-        include 'check_nullifier_value_batch_js/check_nullifier_value_batch.wasm'
+        include 'withdraw_nullifier.zkey'
+        include 'withdraw_nullifier-vkey.json'
+        include 'withdraw_nullifier_js/withdraw_nullifier.wasm'
+        include 'withdraw_nullifier_batch.zkey'
+        include 'withdraw_nullifier_batch-vkey.json'
+        include 'withdraw_nullifier_batch_js/withdraw_nullifier_batch.wasm'
     }
     into zetoZkpDir
 

@@ -20,18 +20,18 @@ import (
 	"math/big"
 	"sync"
 
-	"github.com/hyperledger/firefly-common/pkg/i18n"
+	"github.com/kaleido-io/paladin/common/go/pkg/i18n"
 	"github.com/kaleido-io/paladin/config/pkg/confutil"
 	"github.com/kaleido-io/paladin/config/pkg/pldconf"
 	"github.com/kaleido-io/paladin/core/internal/components"
 	"github.com/kaleido-io/paladin/core/internal/msgs"
+	"github.com/kaleido-io/paladin/toolkit/pkg/verifiers"
 
+	"github.com/kaleido-io/paladin/common/go/pkg/log"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldapi"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 	"github.com/kaleido-io/paladin/toolkit/pkg/algorithms"
 	"github.com/kaleido-io/paladin/toolkit/pkg/cache"
-	"github.com/kaleido-io/paladin/toolkit/pkg/log"
-	"github.com/kaleido-io/paladin/toolkit/pkg/pldapi"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
-	"github.com/kaleido-io/paladin/toolkit/pkg/verifiers"
 )
 
 // Balance manager is a component that provides the following services
@@ -43,13 +43,13 @@ type BalanceManagerWithInMemoryTracking struct {
 	pubTxMgr *pubTxManager
 
 	// balance cache is used to store cached balances of any address
-	balanceCache cache.Cache[tktypes.EthAddress, *big.Int]
+	balanceCache cache.Cache[pldtypes.EthAddress, *big.Int]
 
 	// the unresolved signer to use when submitting transactions
 	source string
 
 	// if set to a valid ethereum address, autofueling is turned on
-	sourceAddress *tktypes.EthAddress
+	sourceAddress *pldtypes.EthAddress
 
 	// reject autofueling when the source address below this balance
 	minSourceBalance *big.Int
@@ -75,13 +75,14 @@ type BalanceManagerWithInMemoryTracking struct {
 	// When the mutex is not set, balance manager will query transaction persistence to fetch the in-flight
 	// fueling transactions by search for the latest transfer type transaction to the destination address. (this involves
 	//  read from database and is necessary to recover balance manager from crashes)
-	destinationAddressesFuelingTracked    map[tktypes.EthAddress]*sync.Mutex
-	trackedFuelingTransactions            map[tktypes.EthAddress]*pldapi.PublicTx
 	destinationAddressesFuelingTrackedMux sync.Mutex
+	destinationAddressesFuelingTracked    map[pldtypes.EthAddress]*sync.Mutex // use a map of mutex to achieve concurrent balance tracking for different destination addresses but single threaded tracking for the same address
+	trackedFuelingTransactionsMux         sync.RWMutex                        // a mutex to avoid concurrent writes to the trackedFuelingTransactions map
+	trackedFuelingTransactions            map[pldtypes.EthAddress]*pldapi.PublicTx
 
 	// a map of signing addresses and a boolean to indicate whether balance manager should fetch
 	// the balance of the signing address from the chain
-	addressBalanceChangedMap    map[tktypes.EthAddress]bool
+	addressBalanceChangedMap    map[pldtypes.EthAddress]bool
 	addressBalanceChangedMapMux sync.Mutex
 }
 
@@ -158,7 +159,7 @@ func (af *BalanceManagerWithInMemoryTracking) TopUpAccount(ctx context.Context, 
 	return nil, nil
 }
 
-func (af *BalanceManagerWithInMemoryTracking) NotifyAddressBalanceChanged(ctx context.Context, address tktypes.EthAddress) {
+func (af *BalanceManagerWithInMemoryTracking) NotifyAddressBalanceChanged(ctx context.Context, address pldtypes.EthAddress) {
 	af.addressBalanceChangedMapMux.Lock()
 	defer af.addressBalanceChangedMapMux.Unlock()
 	af.addressBalanceChangedMap[address] = true
@@ -168,7 +169,7 @@ func (af *BalanceManagerWithInMemoryTracking) IsAutoFuelingEnabled(ctx context.C
 	return af.sourceAddress != nil
 }
 
-func (af *BalanceManagerWithInMemoryTracking) GetAddressBalance(ctx context.Context, address tktypes.EthAddress) (*AddressAccount, error) {
+func (af *BalanceManagerWithInMemoryTracking) GetAddressBalance(ctx context.Context, address pldtypes.EthAddress) (*AddressAccount, error) {
 	af.addressBalanceChangedMapMux.Lock()
 	defer af.addressBalanceChangedMapMux.Unlock()
 	log.L(ctx).Debugf("Retrieving balance for address %s ", address)
@@ -204,13 +205,13 @@ func (af *BalanceManagerWithInMemoryTracking) GetAddressBalance(ctx context.Cont
 	}, nil
 }
 
-func (af *BalanceManagerWithInMemoryTracking) TransferGasFromAutoFuelingSource(ctx context.Context, destAddress tktypes.EthAddress, value *big.Int) (fuelingTx *pldapi.PublicTx, err error) {
+func (af *BalanceManagerWithInMemoryTracking) TransferGasFromAutoFuelingSource(ctx context.Context, destAddress pldtypes.EthAddress, value *big.Int) (fuelingTx *pldapi.PublicTx, err error) {
 	// check whether there is a pending fueling transaction already
 	// check whether the current balance manager already tracking the existing in-flight fueling transactions
 	log.L(ctx).Tracef("TransferGasFromAutoFuelingSource entry, source address: %s, destination address: %s, amount: %s", af.sourceAddress, destAddress, value.String())
 
 	af.destinationAddressesFuelingTrackedMux.Lock()
-	perAddressMux, ok := af.destinationAddressesFuelingTracked[destAddress] // there is no lock here as the map of tracked transactions is the one that is critical to get right
+	perAddressMux, ok := af.destinationAddressesFuelingTracked[destAddress]
 	if !ok {
 		perAddressMux = &sync.Mutex{}
 		af.destinationAddressesFuelingTracked[destAddress] = perAddressMux
@@ -218,7 +219,11 @@ func (af *BalanceManagerWithInMemoryTracking) TransferGasFromAutoFuelingSource(c
 	perAddressMux.Lock()
 	defer perAddressMux.Unlock()
 	af.destinationAddressesFuelingTrackedMux.Unlock()
+
+	af.trackedFuelingTransactionsMux.RLock()
 	fuelingTx = af.trackedFuelingTransactions[destAddress]
+	af.trackedFuelingTransactionsMux.RUnlock()
+
 	if fuelingTx == nil {
 		log.L(ctx).Debugf("TransferGasFromAutoFuelingSource no existing tracking fueling request for  destination address: %s", destAddress)
 		// there is no tracked fueling transaction for this address, do a lookup in the db in case we've restarted or couldn't record the last one submitted
@@ -230,7 +235,9 @@ func (af *BalanceManagerWithInMemoryTracking) TransferGasFromAutoFuelingSource(c
 			return nil, err
 		}
 		if fuelingTx != nil {
+			af.trackedFuelingTransactionsMux.Lock()
 			af.trackedFuelingTransactions[destAddress] = fuelingTx
+			af.trackedFuelingTransactionsMux.Unlock()
 		}
 	}
 	if fuelingTx != nil {
@@ -248,7 +255,9 @@ func (af *BalanceManagerWithInMemoryTracking) TransferGasFromAutoFuelingSource(c
 	// otherwise, new fueling tx is required
 
 	// clean up the existing tracked transaction
+	af.trackedFuelingTransactionsMux.Lock()
 	delete(af.trackedFuelingTransactions, destAddress)
+	af.trackedFuelingTransactionsMux.Unlock()
 
 	// 1) Check balance of source address to ensure we have enough to transfer
 	sourceAccount, err := af.GetAddressBalance(ctx, *af.sourceAddress)
@@ -281,7 +290,7 @@ func (af *BalanceManagerWithInMemoryTracking) TransferGasFromAutoFuelingSource(c
 			From: af.sourceAddress,
 			To:   &destAddress,
 			PublicTxOptions: pldapi.PublicTxOptions{
-				Value: (*tktypes.HexUint256)(value),
+				Value: (*pldtypes.HexUint256)(value),
 			},
 		},
 	})
@@ -292,7 +301,9 @@ func (af *BalanceManagerWithInMemoryTracking) TransferGasFromAutoFuelingSource(c
 	}
 	log.L(ctx).Debugf("TransferGasFromAutoFuelingSource tracking fueling tx with from=%s nonce=%d, for destination address: %s ", fuelingTx.From, fuelingTx.Nonce, destAddress)
 	// start tracking the new transactions
+	af.trackedFuelingTransactionsMux.Lock()
 	af.trackedFuelingTransactions[destAddress] = fuelingTx
+	af.trackedFuelingTransactionsMux.Unlock()
 	return fuelingTx, nil
 }
 
@@ -316,13 +327,13 @@ func NewBalanceManagerWithInMemoryTracking(ctx context.Context, conf *pldconf.Pu
 			return nil, i18n.NewError(ctx, msgs.MsgMaxBelowMinThreshold, "maxDestBalance")
 		}
 	}
-	var autoFuelingSourceAddress *tktypes.EthAddress
+	var autoFuelingSourceAddress *pldtypes.EthAddress
 	autoFuelingSource := confutil.StringOrEmpty(conf.BalanceManager.AutoFueling.Source, "")
 	if autoFuelingSource != "" {
 		// We must be able to resolve the supplied auto fueling source at startup, so we can check its balance
 		resolved, err := publicTxMgr.keymgr.ResolveKeyNewDatabaseTX(ctx, autoFuelingSource, algorithms.ECDSA_SECP256K1, verifiers.ETH_ADDRESS)
 		if err == nil {
-			autoFuelingSourceAddress, err = tktypes.ParseEthAddress(resolved.Verifier.Verifier)
+			autoFuelingSourceAddress, err = pldtypes.ParseEthAddress(resolved.Verifier.Verifier)
 		}
 		if err != nil {
 			return nil, i18n.WrapError(ctx, err, msgs.MsgInvalidAutoFuelSource, autoFuelingSource)
@@ -334,16 +345,16 @@ func NewBalanceManagerWithInMemoryTracking(ctx context.Context, conf *pldconf.Pu
 		source:                             autoFuelingSource,
 		sourceAddress:                      autoFuelingSourceAddress,
 		pubTxMgr:                           publicTxMgr,
-		balanceCache:                       cache.NewCache[tktypes.EthAddress, *big.Int](&conf.BalanceManager.Cache, &pldconf.PublicTxManagerDefaults.BalanceManager.Cache),
+		balanceCache:                       cache.NewCache[pldtypes.EthAddress, *big.Int](&conf.BalanceManager.Cache, &pldconf.PublicTxManagerDefaults.BalanceManager.Cache),
 		minSourceBalance:                   minSourceBalance,
 		proactiveFuelingTransactionTotal:   confutil.IntMin(conf.BalanceManager.AutoFueling.ProactiveFuelingTransactionTotal, 0, *pldconf.PublicTxManagerDefaults.BalanceManager.AutoFueling.ProactiveFuelingTransactionTotal),
 		proactiveFuelingCalcMethod:         pldconf.ProactiveAutoFuelingCalcMethod(calcMethod),
 		minDestBalance:                     minDestBalance,
 		maxDestBalance:                     maxDestBalance,
 		minThreshold:                       minThreshold,
-		destinationAddressesFuelingTracked: make(map[tktypes.EthAddress]*sync.Mutex),
-		trackedFuelingTransactions:         make(map[tktypes.EthAddress]*pldapi.PublicTx),
-		addressBalanceChangedMap:           make(map[tktypes.EthAddress]bool),
+		destinationAddressesFuelingTracked: make(map[pldtypes.EthAddress]*sync.Mutex),
+		trackedFuelingTransactions:         make(map[pldtypes.EthAddress]*pldapi.PublicTx),
+		addressBalanceChangedMap:           make(map[pldtypes.EthAddress]bool),
 	}
 	return bm, nil
 }

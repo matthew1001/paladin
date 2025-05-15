@@ -20,17 +20,17 @@ import (
 	"encoding/json"
 
 	"github.com/google/uuid"
+	"github.com/kaleido-io/paladin/common/go/pkg/log"
 	"github.com/kaleido-io/paladin/core/internal/components"
 	engineProto "github.com/kaleido-io/paladin/core/pkg/proto/engine"
 	pb "github.com/kaleido-io/paladin/core/pkg/proto/engine"
-	"github.com/kaleido-io/paladin/toolkit/pkg/log"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 	"github.com/kaleido-io/paladin/toolkit/pkg/prototk"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
-func NewTransportWriter(domainName string, contractAddress *tktypes.EthAddress, nodeID string, transportManager components.TransportManager) *transportWriter {
+func NewTransportWriter(domainName string, contractAddress *pldtypes.EthAddress, nodeID string, transportManager components.TransportManager) *transportWriter {
 	return &transportWriter{
 		nodeID:           nodeID,
 		transportManager: transportManager,
@@ -43,7 +43,7 @@ type transportWriter struct {
 	nodeID           string
 	transportManager components.TransportManager
 	domainName       string
-	contractAddress  *tktypes.EthAddress
+	contractAddress  *pldtypes.EthAddress
 }
 
 func (tw *transportWriter) SendDelegationRequest(
@@ -73,12 +73,11 @@ func (tw *transportWriter) SendDelegationRequest(
 		return err
 	}
 
-	if err = tw.transportManager.Send(ctx, &components.TransportMessage{
+	if err = tw.transportManager.Send(ctx, &components.FireAndForgetMessageSend{
 		MessageType: "DelegationRequest",
 		Payload:     delegationRequestBytes,
-		Component:   components.PRIVATE_TX_MANAGER_DESTINATION,
+		Component:   prototk.PaladinMsg_TRANSACTION_ENGINE,
 		Node:        delegateNodeId,
-		ReplyTo:     tw.nodeID,
 	}); err != nil {
 		return err
 	}
@@ -106,12 +105,11 @@ func (tw *transportWriter) SendDelegationRequestAcknowledgment(
 		return err
 	}
 
-	if err = tw.transportManager.Send(ctx, &components.TransportMessage{
+	if err = tw.transportManager.Send(ctx, &components.FireAndForgetMessageSend{
 		MessageType: "DelegationRequestAcknowledgment",
 		Payload:     delegationRequestAcknowledgmentBytes,
-		Component:   components.PRIVATE_TX_MANAGER_DESTINATION,
+		Component:   prototk.PaladinMsg_TRANSACTION_ENGINE,
 		Node:        delegatingNodeName,
-		ReplyTo:     tw.nodeID,
 	}); err != nil {
 		return err
 	}
@@ -202,11 +200,10 @@ func (tw *transportWriter) SendEndorsementRequest(ctx context.Context, idempoten
 		log.L(ctx).Error("Error marshalling endorsement request", err)
 		return err
 	}
-	err = tw.transportManager.Send(ctx, &components.TransportMessage{
+	err = tw.transportManager.Send(ctx, &components.FireAndForgetMessageSend{
 		MessageType: "EndorsementRequest",
 		Node:        targetNode,
-		Component:   components.PRIVATE_TX_MANAGER_DESTINATION,
-		ReplyTo:     tw.nodeID,
+		Component:   prototk.PaladinMsg_TRANSACTION_ENGINE,
 		Payload:     endorsementRequestBytes,
 	})
 	return err
@@ -233,11 +230,10 @@ func (tw *transportWriter) SendAssembleRequest(ctx context.Context, assemblingNo
 		log.L(ctx).Error("Error marshalling assemble request", err)
 		return err
 	}
-	err = tw.transportManager.Send(ctx, &components.TransportMessage{
+	err = tw.transportManager.Send(ctx, &components.FireAndForgetMessageSend{
 		MessageType: "AssembleRequest",
 		Node:        assemblingNode,
-		Component:   components.PRIVATE_TX_MANAGER_DESTINATION,
-		ReplyTo:     tw.nodeID,
+		Component:   prototk.PaladinMsg_TRANSACTION_ENGINE,
 		Payload:     assembleRequestBytes,
 	})
 	return err

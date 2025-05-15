@@ -37,14 +37,18 @@ import (
 	"github.com/Masterminds/sprig/v3"
 	"github.com/hyperledger/firefly-signer/pkg/abi"
 	corev1alpha1 "github.com/kaleido-io/paladin/operator/api/v1alpha1"
-	"github.com/kaleido-io/paladin/toolkit/pkg/pldapi"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldapi"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 )
 
 // TransactionInvokeReconciler reconciles a TransactionInvoke object
 type TransactionInvokeReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+
+	// Injected dependencies for testing
+	checkDepsFunc               func(ctx context.Context, c client.Client, namespace string, requiredContractDeployments []string, pStatus *corev1alpha1.ContactDependenciesStatus) (bool, bool, error)
+	newTransactionReconcileFunc func(c client.Client, idempotencyKeyPrefix string, nodeName string, namespace string, pStatus *corev1alpha1.TransactionSubmission, timeout string, txFactory func() (bool, *pldapi.TransactionInput, error)) transactionReconcileInterface
 }
 
 // allows generic functions by giving a mapping between the types and interfaces for the CR
@@ -73,8 +77,11 @@ func (r *TransactionInvokeReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, err
 	}
 
-	// Check all our deps are resolved
-	depsChanged, ready, err := checkSmartContractDeps(ctx, r.Client, txi.Namespace, txi.Spec.ContractDeploymentDeps, &txi.Status.ContactDependenciesStatus)
+	// Use injected dependency for checking smart contract dependencies
+	if r.checkDepsFunc == nil {
+		r.checkDepsFunc = checkSmartContractDeps
+	}
+	depsChanged, ready, err := r.checkDepsFunc(ctx, r.Client, txi.Namespace, txi.Spec.ContractDeploymentDeps, &txi.Status.ContactDependenciesStatus)
 	if err != nil {
 		return ctrl.Result{}, err
 	} else if depsChanged {
@@ -83,11 +90,15 @@ func (r *TransactionInvokeReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 	}
 
-	// Reconcile the deployment transaction
-	txReconcile := newTransactionReconcile(r.Client,
+	// Use injected dependency for transaction reconcile
+	if r.newTransactionReconcileFunc == nil {
+		r.newTransactionReconcileFunc = newTransactionReconcile
+	}
+	txReconcile := r.newTransactionReconcileFunc(r.Client,
 		"txinvoke."+txi.Name,
 		txi.Spec.Node, txi.Namespace,
 		&txi.Status.TransactionSubmission,
+		"5s",
 		func() (bool, *pldapi.TransactionInput, error) { return r.buildDeployTransaction(&txi) },
 	)
 	err = txReconcile.reconcile(ctx)
@@ -95,9 +106,9 @@ func (r *TransactionInvokeReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		// There's nothing to notify us when the world changes other than polling, so we keep re-trying at
 		// a fixed rate (matching the readiness probe period of Paladin) to avoid any exponential backoff
 		return ctrl.Result{RequeueAfter: 5 * time.Second}, err
-	} else if txReconcile.statusChanged {
+	} else if txReconcile.isStatusChanged() {
 		return r.updateStatusAndRequeue(ctx, &txi)
-	} else if !txReconcile.failed && !txReconcile.succeeded {
+	} else if !txReconcile.isFailed() && !txReconcile.isSucceeded() {
 		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 	}
 	// Nothing left to do - we succeeded or failed
@@ -105,11 +116,11 @@ func (r *TransactionInvokeReconciler) Reconcile(ctx context.Context, req ctrl.Re
 }
 
 func (r *TransactionInvokeReconciler) updateStatusAndRequeue(ctx context.Context, txi *corev1alpha1.TransactionInvoke) (ctrl.Result, error) {
-	if err := r.Status().Update(ctx, txi); err != nil {
+	if err := r.Status().Update(ctx, txi); err != nil && !errors.IsConflict(err) {
 		log.FromContext(ctx).Error(err, "Failed to update smart contract deployment status")
 		return ctrl.Result{}, err
 	}
-	return ctrl.Result{Requeue: true}, nil // Run again immediately to submit
+	return ctrl.Result{RequeueAfter: 50 * time.Millisecond}, nil // Run again immediately to submit
 }
 
 func (r *TransactionInvokeReconciler) buildDeployTransaction(txi *corev1alpha1.TransactionInvoke) (bool, *pldapi.TransactionInput, error) {
@@ -136,7 +147,7 @@ func (r *TransactionInvokeReconciler) buildDeployTransaction(txi *corev1alpha1.T
 	if err = toTemplate.Execute(toBuff, crMap); err != nil {
 		return false, nil, fmt.Errorf("toTemplate failed: %s", err)
 	}
-	to, err := tktypes.ParseEthAddress(toBuff.String())
+	to, err := pldtypes.ParseEthAddress(toBuff.String())
 	if err != nil {
 		return false, nil, fmt.Errorf("toTemplate result '%s' not a valid address: %s", toBuff, err)
 	}
@@ -153,7 +164,7 @@ func (r *TransactionInvokeReconciler) buildDeployTransaction(txi *corev1alpha1.T
 
 	return true, &pldapi.TransactionInput{
 		TransactionBase: pldapi.TransactionBase{
-			Type:   tktypes.Enum[pldapi.TransactionType](txi.Spec.TxType),
+			Type:   pldtypes.Enum[pldapi.TransactionType](txi.Spec.TxType),
 			Domain: txi.Spec.Domain,
 			From:   txi.Spec.From,
 			To:     to,
