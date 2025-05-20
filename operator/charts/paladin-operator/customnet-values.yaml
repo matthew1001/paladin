@@ -1,12 +1,28 @@
-# Installation mode. This setting determines which Custom Resources (CRs) will be installed by default when deploying this chart.
-# Supported modes:
-# - devnet: Installs a default Paladin network (3 nodes) along with the related Domains and Smart Contracts CRs.
-# - basenet: Deploys the Domains and Smart Contracts CRs without installing the Paladin network.
-# - none/operator-only (or left empty): Only the operator will be installed.
-mode: devnet
+# This is the custom values.yaml file for the Paladin Operator Helm chart.
+# It is meant for installing the Paladin Operator when the PaladinNode needs to be highly costumized.
+mode: customnet
+ 
+paladinNodes:
 
-# Number of Paladin and besu nodes to deploy. This setting is only relevant when mode is set to "devnet".
-nodeCount: 3
+paladin:
+  image:
+    repository: ghcr.io/lf-decentralized-trust-labs/paladin
+    tag: main
+    pullPolicy: Always
+  labels:
+    app: paladin
+  baseNodePort: 31548
+   
+postgres: # the postgres container runs as a sidecar to the paladin container
+  image:
+    repository: postgres
+    tag: latest
+    pullPolicy: Always
+
+
+# ==============================================
+# From here on, the values are the same as in the default values.yaml file
+# ==============================================
 
 # Default values for paladin-operator
 operator:
@@ -91,46 +107,6 @@ prometheus:
     enabled: false
   pushgateway:
     enabled: false  # Enable if you need the push gateway
-
-smartContractsReferences:
-  notoFactory:
-    address: ""
-    deployment: noto-factory
-  zetoFactory:
-    address: ""
-    deployment: zeto-factory
-  penteFactory:
-    address: ""
-    deployment: pente-factory
-  registry:
-    address: ""
-    deployment: registry
-
-paladin:
-  nodeNamePrefix: node
-  image:
-    repository: ghcr.io/lf-decentralized-trust-labs/paladin
-    tag: main
-    pullPolicy: Always
-  labels:
-    app: paladin
-  baseNodePort: 31548
-  
-besu:
-  nodeNamePrefix: node
-  image:
-    repository: hyperledger/besu
-    tag: latest
-    pullPolicy: Always
-  labels:
-    app: besu
-  baseNodePort: 31545
-  
-postgres: # the postgres container runs as a sidecar to the paladin container
-  image:
-    repository: postgres
-    tag: latest
-    pullPolicy: Always
 
 # Install CRDs as part of the chart installation
 # When this is set to false, the CRDs are expected to be installed separately

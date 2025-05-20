@@ -1,0 +1,21 @@
+{{- if eq .Values.mode "devnet" }}
+
+apiVersion: core.paladin.io/v1alpha1
+kind: PaladinRegistry
+metadata:
+  labels:
+    app.kubernetes.io/name: {{ .Values.network }}-evm-registry
+    paladin.io/registry-name: {{ .Values.network }}-evm-registry
+    paladin.io/network: {{ .Values.network }}
+  name: {{ .Values.network }}-evm-registry
+spec:
+  type: evm
+  evm:
+    smartContractDeployment: {{ .Values.network }}-{{ .Values.smartContractsReferences.penteFactory.deployment }}
+    registryAddress: {{ .Values.network }}-{{ .Values.smartContractsReferences.penteFactory.address }}
+  plugin:
+    type: c-shared
+    library: /app/registries/libevm.so
+  configJSON: |
+    {}
+{{ end }}

@@ -4,6 +4,10 @@ apiVersion: core.paladin.io/v1alpha1
 kind: BesuGenesis
 metadata:
   labels:
+    app.kubernetes.io/name: testnet
+    paladin.io/network: {{ .Values.network }}
+  name: {{ .Values.network }}-testnet
+  labels:
     app.kubernetes.io/name: operator-go
     app.kubernetes.io/managed-by: kustomize
   name: testnet

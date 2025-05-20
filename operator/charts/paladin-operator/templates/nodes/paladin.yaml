@@ -14,9 +14,10 @@
 apiVersion: core.paladin.io/v1alpha1
 kind: Paladin
 metadata:
-  name: {{ $name }}
+  name: {{ .Values.network }}-{{ $name }}
   labels:
-    app.kubernetes.io/name: {{ $name }}
+    app.kubernetes.io/name: {{ .Values.network }}-{{ $name }}
+    paladin.io/network: {{ .Values.network }}
 spec:
   config: |
     log:

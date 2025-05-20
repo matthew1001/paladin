@@ -1,0 +1,21 @@
+{{- if eq .Values.mode "devnet" }}
+
+apiVersion: core.paladin.io/v1alpha1
+kind: PaladinDomain
+metadata:
+  name: {{ .Values.network }}-pente
+  labels:
+    app.kubernetes.io/name: {{ .Values.network }}-pente
+    paladin.io/domain-name: pente
+    paladin.io/network: {{ .Values.network }}
+spec:
+  smartContractDeployment: {{ .Values.network }}-{{ .Values.smartContractsReferences.penteFactory.deployment }}
+  registryAddress: {{ .Values.network }}-{{ .Values.smartContractsReferences.penteFactory.address }}
+  plugin:
+    type: jar
+    library: /app/domains/pente.jar
+    class: io.kaleido.paladin.pente.domain.PenteDomainFactory
+  configJSON: |
+    {}
+    
+{{ end }}

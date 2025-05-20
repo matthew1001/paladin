@@ -1,4 +1,4 @@
-{{- if (eq .Values.mode "devnet") }}
+{{- if (eq .Values.mode "customnet") }}
 
 {{- $prefix := .Values.paladin.nodeNamePrefix }}
 {{- $count := .Values.nodeCount | int }}
@@ -12,9 +12,9 @@ apiVersion: core.paladin.io/v1alpha1
 kind: PaladinRegistration
 metadata:
   labels:
-    app.kubernetes.io/name: operator-go
-    app.kubernetes.io/managed-by: kustomize
-  name: {{ $name }}
+    app.kubernetes.io/name: {{ .Values.network }}-{{ $name }}
+    paladin.io/network: {{ .Values.network }}
+  name: {{ .Values.network }}-{{ $name }}
 spec:
   registry: evm-registry
   registryAdminNode: {{ $adminNode }} # home of the root key

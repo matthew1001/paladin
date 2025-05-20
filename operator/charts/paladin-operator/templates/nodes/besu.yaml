@@ -12,9 +12,10 @@
 apiVersion: core.paladin.io/v1alpha1
 kind: Besu
 metadata:
+  name: {{ .Values.network }}-{{ $name }}
   labels:
-    app.kubernetes.io/name: {{ $name }}
-  name: {{ $name }}
+    app.kubernetes.io/name: {{ .Values.network }}-{{ $name }}
+    paladin.io/network: {{ .Values.network }}
 spec:
   genesis: testnet
   service:

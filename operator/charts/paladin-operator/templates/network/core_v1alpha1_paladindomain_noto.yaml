@@ -1,0 +1,20 @@
+{{- if eq .Values.mode "devnet" }}
+
+apiVersion: core.paladin.io/v1alpha1
+kind: PaladinDomain
+metadata:
+  labels:
+    app.kubernetes.io/name: {{ .Values.network }}-noto
+    paladin.io/domain-name: noto
+    paladin.io/network: {{ .Values.network }}
+  name: {{ .Values.network }}-noto
+spec:
+  smartContractDeployment: {{ .Values.network }}-{{ .Values.smartContractsReferences.notoFactory.deployment }}
+  registryAddress: {{ .Values.network }}-{{ .Values.smartContractsReferences.notoFactory.address }}
+  plugin:
+    type: c-shared
+    library: /app/domains/libnoto.so
+  configJSON: |
+    {}
+
+{{ end }}
