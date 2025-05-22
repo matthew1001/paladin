@@ -19,6 +19,7 @@ import (
 	"context"
 	"database/sql/driver"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -315,7 +316,7 @@ func TestSubmitEthAddrOK(t *testing.T) {
 	_, err = txm.sendTransactionNewDBTX(ctx, &pldapi.TransactionInput{
 		TransactionBase: pldapi.TransactionBase{
 			Type:     pldapi.TransactionTypePublic.Enum(),
-			From:     addr.String(),
+			From:     fmt.Sprintf("verifier:%s", addr.String()),
 			Function: "doIt",
 			To:       pldtypes.MustEthAddress(pldtypes.RandHex(20)),
 			Data:     pldtypes.JSONString(pldtypes.HexBytes(callData)),
@@ -323,6 +324,58 @@ func TestSubmitEthAddrOK(t *testing.T) {
 		ABI: exampleABI,
 	})
 	assert.NoError(t, err)
+}
+
+func TestSubmitVerifierNotEthAddr(t *testing.T) {
+	ctx, txm, done := newTestTransactionManager(t, false,
+		mockEmptyReceiptListeners,
+		mockInsertABI,
+	)
+	defer done()
+
+	exampleABI := abi.ABI{{Type: abi.Function, Name: "doIt"}}
+	callData, err := exampleABI[0].EncodeCallDataJSON([]byte(`[]`))
+	require.NoError(t, err)
+
+	_, err = txm.sendTransactionNewDBTX(ctx, &pldapi.TransactionInput{
+		TransactionBase: pldapi.TransactionBase{
+			Type:     pldapi.TransactionTypePublic.Enum(),
+			From:     "verifier:banana",
+			Function: "doIt",
+			To:       pldtypes.MustEthAddress(pldtypes.RandHex(20)),
+			Data:     pldtypes.JSONString(pldtypes.HexBytes(callData)),
+		},
+		ABI: exampleABI,
+	})
+	assert.ErrorContains(t, err, "PD012253")
+}
+
+func TestSubmitVerifierNotFound(t *testing.T) {
+	addr := pldtypes.RandAddress()
+	ctx, txm, done := newTestTransactionManager(t, false,
+		mockEmptyReceiptListeners,
+		mockInsertABI,
+		func(conf *pldconf.TxManagerConfig, mc *mockComponents) {
+			mc.keyManager.On("ReverseKeyLookup", mock.Anything, mock.Anything, algorithms.ECDSA_SECP256K1, verifiers.ETH_ADDRESS, addr.String()).Return(nil, errors.New("not found"))
+		},
+	)
+	defer done()
+
+	exampleABI := abi.ABI{{Type: abi.Function, Name: "doIt"}}
+	callData, err := exampleABI[0].EncodeCallDataJSON([]byte(`[]`))
+	require.NoError(t, err)
+
+	_, err = txm.sendTransactionNewDBTX(ctx, &pldapi.TransactionInput{
+		TransactionBase: pldapi.TransactionBase{
+			Type:     pldapi.TransactionTypePublic.Enum(),
+			From:     fmt.Sprintf("verifier:%s", addr.String()),
+			Function: "doIt",
+			To:       pldtypes.MustEthAddress(pldtypes.RandHex(20)),
+			Data:     pldtypes.JSONString(pldtypes.HexBytes(callData)),
+		},
+		ABI: exampleABI,
+	})
+	assert.ErrorContains(t, err, "not found")
 }
 
 func TestSendTransactionPrivateDeploy(t *testing.T) {
