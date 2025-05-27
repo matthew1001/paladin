@@ -139,14 +139,25 @@ The architecture has the following core concepts:
 
 ### 1. Key Identifiers
 
-When applications and configuration refer to keys, they can do so via string identifiers.
+When applications and configuration refer to keys, they can do so in one of two ways:
+
+1. Using a friendly string Key identifier
+    - Described in this section
+    - By default the `from` string of a transaction is assumed to be such as key identifier
+1. Using the Ethereum Address, or another cryptographic representation derived identifier from the public key
+    - Referred to in Paladin as a `Verifier`, described in detail in the [Public Verifiers and Algorithms](#3-public-identifiers-and-algorithms) section below
+    - The `from` string of a transaction must be prefixed with `verifier:`
+    - Example: `"from": "verifier:0xf8f3fcf26a437cac6f8bdc92257f3b03e2f5c546`
+    - The syntax is case sensitive, and Ethereum Addresses are stored in lower case
+
+> Note that resolving a key in a backend key storage system by verifier (derived from the public key) is only possible in Paladin, after that verifier has been resolved at least once for the correct `algorithm` and `verifierType`. Otherwise Paladin does not have a reverse-lookup mapping stored in the database to be able to perform the resolution.
+
+Key identifiers can be human/application friendly strings describing the **purpose** of the key,
+rather than needing to be one of the public-key verifiers (like an Eth `address`) that
+represents that key with a particular signing algorithm (like `secp256k1`).
 
 > See [Data & Registry](./data_and_registry.md) for details about the format of these identifiers
 > and how they are resolved across separate Paladin runtimes. 
-
-These identifiers can be human/application friendly strings describing the **purpose** of the key,
-rather than needing to be one of the public-key identifiers (like an Eth `address`) that
-represents that key with a particular signing algorithm (like `secp256k1`).
 
 Key identifiers can be organized into folders, using a `/` character within the identifier.
 
@@ -171,7 +182,7 @@ Every `key mapping` and `folder` gets two attributes automatically:
 - `name`: the part of the `key identifier` representing this key / folder
 - `index`: a numeric identifier, assured to be unique at this folder level
 
-### 3. Public identifiers and algorithms
+### 3. Public verifiers and algorithms
 
 In Paladin transaction signing can be complex, requiring multiple signatures, using
 different algorithms, at different stages in the assembly, endorsement/proof and
@@ -184,11 +195,11 @@ An algorithm might be domain specific, such as usage of a ZKP friendly cryptogra
 inside of the proof generator of a specific circuit generated in a toolkit like Circom.
 
 Some of these algorithms have different ways to represent the same key materials,
-and require distribution of those public identifiers to multiple parties during
+and require distribution of those public verifiers to multiple parties during
 the creation of endorsements/proofs of the transaction.
 
 So Paladin has a scheme for identification of the `algorithm` for a signing/proof
-generation request, and associating multiple `public identifiers` to the same
+generation request, and associating multiple `public verifiers` to the same
 key materials.
 
 ### 4. Signing Modules
