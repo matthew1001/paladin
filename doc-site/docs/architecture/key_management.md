@@ -182,7 +182,19 @@ Every `key mapping` and `folder` gets two attributes automatically:
 - `name`: the part of the `key identifier` representing this key / folder
 - `index`: a numeric identifier, assured to be unique at this folder level
 
-### 3. Public verifiers and algorithms
+### 3. Public key identifiers (or "verifiers") and algorithms
+
+Cryptographic keys use public/private cryptography, meaning every key can be identified publicly in a way that does not leak the key information itself.
+
+Any party can _verify_ that a transaction was signed with a particular private key, by _recovering_ the public key used to sign that transaction.
+
+However, to do this we need a standard way to represent a public key so that it can be verified in a standard way against a transaction. Each cryptographic ecosystem actually does this differently, even when using the same private key, and the same _algorithm_ (such as SECP256K1).
+
+The most obvious example of this is the Ethereum address. This is a 20 byte compressed representation of a SECP256K1 public key, derived using a well documented algorithm. It looks like `0xfdcba455d748cb3e085472cc6f49b4ae86ee4d1f` in hex, and sometimes is represented in a case-sensitive way to provide a checksum and avoid copy/paste errors like `0xFdcBa455D748cB3e085472CC6F49B4AE86eE4d1F` per the EIP-55 standard.
+
+Paladin supports multiple of these "verifiers" to be calculated, and stored, for public keys. This is fully pluggable, so all the different types of cryptography used in Paladin.
+
+For example the IDEN3 standards for representing public keys with Baby JubJub are plugged in by the Zeto domain that implements signing proofs within zero-knowledge proof (ZKP) circuits.
 
 In Paladin transaction signing can be complex, requiring multiple signatures, using
 different algorithms, at different stages in the assembly, endorsement/proof and
