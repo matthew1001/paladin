@@ -20,15 +20,15 @@ import (
 	"encoding/json"
 	"math/big"
 
+	"github.com/kaleido-io/paladin/common/go/pkg/i18n"
 	"github.com/kaleido-io/paladin/domains/noto/internal/msgs"
 	"github.com/kaleido-io/paladin/domains/noto/pkg/types"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldapi"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 	"github.com/kaleido-io/paladin/toolkit/pkg/algorithms"
 	"github.com/kaleido-io/paladin/toolkit/pkg/domain"
-	"github.com/kaleido-io/paladin/toolkit/pkg/i18n"
-	"github.com/kaleido-io/paladin/toolkit/pkg/pldapi"
 	"github.com/kaleido-io/paladin/toolkit/pkg/prototk"
 	"github.com/kaleido-io/paladin/toolkit/pkg/signpayloads"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
 	"github.com/kaleido-io/paladin/toolkit/pkg/verifiers"
 )
 
@@ -55,13 +55,7 @@ func (h *delegateLockHandler) ValidateParams(ctx context.Context, config *types.
 
 func (h *delegateLockHandler) Init(ctx context.Context, tx *types.ParsedTransaction, req *prototk.InitTransactionRequest) (*prototk.InitTransactionResponse, error) {
 	return &prototk.InitTransactionResponse{
-		RequiredVerifiers: []*prototk.ResolveVerifierRequest{
-			{
-				Lookup:       tx.Transaction.From,
-				Algorithm:    algorithms.ECDSA_SECP256K1,
-				VerifierType: verifiers.ETH_ADDRESS,
-			},
-		},
+		RequiredVerifiers: h.noto.ethAddressVerifiers(tx.Transaction.From),
 	}, nil
 }
 
@@ -139,7 +133,7 @@ func (h *delegateLockHandler) decodeStates(states []*pldapi.StateEncoded) []*pro
 		result[i] = &prototk.EndorsableState{
 			Id:            state.ID.String(),
 			SchemaId:      state.Schema.String(),
-			StateDataJson: tktypes.RawJSON(state.Data).String(),
+			StateDataJson: pldtypes.RawJSON(state.Data).String(),
 		}
 	}
 	return result
@@ -191,7 +185,7 @@ func (h *delegateLockHandler) baseLedgerInvoke(ctx context.Context, tx *types.Pa
 		return nil, err
 	}
 	params := &NotoDelegateLockParams{
-		UnlockHash: tktypes.Bytes32(unlockHash),
+		UnlockHash: pldtypes.Bytes32(unlockHash),
 		Delegate:   inParams.Delegate,
 		Signature:  sender.Payload,
 		Data:       data,
@@ -224,7 +218,7 @@ func (h *delegateLockHandler) hookInvoke(ctx context.Context, tx *types.ParsedTr
 		Delegate: inParams.Delegate,
 		Data:     inParams.Data,
 		Prepared: PreparedTransaction{
-			ContractAddress: (*tktypes.EthAddress)(tx.ContractAddress),
+			ContractAddress: (*pldtypes.EthAddress)(tx.ContractAddress),
 			EncodedCall:     encodedCall,
 		},
 	}

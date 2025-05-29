@@ -25,13 +25,26 @@ import (
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 	"github.com/hyperledger/firefly-signer/pkg/secp256k1"
 	"github.com/kaleido-io/paladin/domains/noto/pkg/types"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 	"github.com/kaleido-io/paladin/toolkit/pkg/algorithms"
 	"github.com/kaleido-io/paladin/toolkit/pkg/prototk"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
 	"github.com/kaleido-io/paladin/toolkit/pkg/verifiers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+var pTrue = true
+var notoBasicConfig = &types.NotoParsedConfig{
+	NotaryMode:   types.NotaryModeBasic.Enum(),
+	NotaryLookup: "notary@node1",
+	Options: types.NotoOptions{
+		Basic: &types.NotoBasicOptions{
+			RestrictMint: &pTrue,
+			AllowBurn:    &pTrue,
+			AllowLock:    &pTrue,
+		},
+	},
+}
 
 func TestTransfer(t *testing.T) {
 	n := &Noto{
@@ -48,10 +61,10 @@ func TestTransfer(t *testing.T) {
 	require.NoError(t, err)
 
 	inputCoin := &types.NotoCoinState{
-		ID: tktypes.RandBytes32(),
+		ID: pldtypes.RandBytes32(),
 		Data: types.NotoCoin{
-			Owner:  (*tktypes.EthAddress)(&senderKey.Address),
-			Amount: tktypes.Int64ToInt256(100),
+			Owner:  (*pldtypes.EthAddress)(&senderKey.Address),
+			Amount: pldtypes.Int64ToInt256(100),
 		},
 	}
 	mockCallbacks.MockFindAvailableStates = func() (*prototk.FindAvailableStatesResponse, error) {
@@ -71,16 +84,14 @@ func TestTransfer(t *testing.T) {
 		TransactionId: "0x015e1881f2ba769c22d05c841f06949ec6e1bd573f5e1e0328885494212f077d",
 		From:          "sender@node1",
 		ContractInfo: &prototk.ContractInfo{
-			ContractAddress: contractAddress,
-			ContractConfigJson: mustParseJSON(&types.NotoParsedConfig{
-				NotaryLookup: "notary@node1",
-			}),
+			ContractAddress:    contractAddress,
+			ContractConfigJson: mustParseJSON(notoBasicConfig),
 		},
 		FunctionAbiJson:   mustParseJSON(fn),
 		FunctionSignature: fn.SolString(),
 		FunctionParamsJson: `{
 			"to": "receiver@node2",
-			"amount": 100,
+			"amount": 75,
 			"data": "0x1234"
 		}`,
 	}
@@ -122,23 +133,36 @@ func TestTransfer(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, prototk.AssembleTransactionResponse_OK, assembleRes.AssemblyResult)
 	require.Len(t, assembleRes.AssembledTransaction.InputStates, 1)
-	require.Len(t, assembleRes.AssembledTransaction.OutputStates, 1)
+	require.Len(t, assembleRes.AssembledTransaction.OutputStates, 2)
 	require.Len(t, assembleRes.AssembledTransaction.ReadStates, 0)
 	require.Len(t, assembleRes.AssembledTransaction.InfoStates, 1)
 	assert.Equal(t, inputCoin.ID.String(), assembleRes.AssembledTransaction.InputStates[0].Id)
+
 	outputCoin, err := n.unmarshalCoin(assembleRes.AssembledTransaction.OutputStates[0].StateDataJson)
 	require.NoError(t, err)
 	assert.Equal(t, receiverAddress, outputCoin.Owner.String())
-	assert.Equal(t, "100", outputCoin.Amount.Int().String())
+	assert.Equal(t, "75", outputCoin.Amount.Int().String())
+	assert.Equal(t, []string{"notary@node1", "sender@node1", "receiver@node2"}, assembleRes.AssembledTransaction.OutputStates[0].DistributionList)
+
+	remainderCoin, err := n.unmarshalCoin(assembleRes.AssembledTransaction.OutputStates[1].StateDataJson)
+	require.NoError(t, err)
+	assert.Equal(t, senderKey.Address.String(), remainderCoin.Owner.String())
+	assert.Equal(t, "25", remainderCoin.Amount.Int().String())
+	assert.Equal(t, []string{"notary@node1", "sender@node1"}, assembleRes.AssembledTransaction.OutputStates[1].DistributionList)
+
 	outputInfo, err := n.unmarshalInfo(assembleRes.AssembledTransaction.InfoStates[0].StateDataJson)
 	require.NoError(t, err)
 	assert.Equal(t, "0x1234", outputInfo.Data.String())
+	assert.Equal(t, []string{"notary@node1", "sender@node1", "receiver@node2"}, assembleRes.AssembledTransaction.InfoStates[0].DistributionList)
 
-	encodedTransfer, err := n.encodeTransferUnmasked(ctx, ethtypes.MustNewAddress(contractAddress), []*types.NotoCoin{&inputCoin.Data}, []*types.NotoCoin{outputCoin})
+	encodedTransfer, err := n.encodeTransferUnmasked(ctx, ethtypes.MustNewAddress(contractAddress),
+		[]*types.NotoCoin{&inputCoin.Data},
+		[]*types.NotoCoin{outputCoin, remainderCoin},
+	)
 	require.NoError(t, err)
 	signature, err := senderKey.SignDirect(encodedTransfer)
 	require.NoError(t, err)
-	signatureBytes := tktypes.HexBytes(signature.CompactRSV())
+	signatureBytes := pldtypes.HexBytes(signature.CompactRSV())
 
 	inputStates := []*prototk.EndorsableState{
 		{
@@ -150,14 +174,19 @@ func TestTransfer(t *testing.T) {
 	outputStates := []*prototk.EndorsableState{
 		{
 			SchemaId:      "coin",
-			Id:            "0x26b394af655bdc794a6d7cd7f8004eec20bffb374e4ddd24cdaefe554878d945",
+			Id:            "0x0000000000000000000000000000000000000000000000000000000000000001",
 			StateDataJson: assembleRes.AssembledTransaction.OutputStates[0].StateDataJson,
+		},
+		{
+			SchemaId:      "coin",
+			Id:            "0x0000000000000000000000000000000000000000000000000000000000000002",
+			StateDataJson: assembleRes.AssembledTransaction.OutputStates[1].StateDataJson,
 		},
 	}
 	infoStates := []*prototk.EndorsableState{
 		{
 			SchemaId:      "data",
-			Id:            "0x4cc7840e186de23c4127b4853c878708d2642f1942959692885e098f1944547d",
+			Id:            "0x0000000000000000000000000000000000000000000000000000000000000003",
 			StateDataJson: assembleRes.AssembledTransaction.InfoStates[0].StateDataJson,
 		},
 	}
@@ -207,9 +236,9 @@ func TestTransfer(t *testing.T) {
 	assert.Nil(t, prepareRes.Transaction.ContractAddress)
 	assert.JSONEq(t, fmt.Sprintf(`{
 		"inputs": ["%s"],
-		"outputs": ["0x26b394af655bdc794a6d7cd7f8004eec20bffb374e4ddd24cdaefe554878d945"],
+		"outputs": ["0x0000000000000000000000000000000000000000000000000000000000000001","0x0000000000000000000000000000000000000000000000000000000000000002"],
 		"signature": "%s",
-		"data": "0x00010000015e1881f2ba769c22d05c841f06949ec6e1bd573f5e1e0328885494212f077d000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000014cc7840e186de23c4127b4853c878708d2642f1942959692885e098f1944547d"
+		"data": "0x00010000015e1881f2ba769c22d05c841f06949ec6e1bd573f5e1e0328885494212f077d000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000003"
 	}`, inputCoin.ID, signatureBytes), prepareRes.Transaction.ParamsJson)
 
 	var invokeFn abi.Entry
@@ -225,7 +254,7 @@ func TestTransfer(t *testing.T) {
 		NotaryMode:   types.NotaryModeHooks.Enum(),
 		Options: types.NotoOptions{
 			Hooks: &types.NotoHooksOptions{
-				PublicAddress:     tktypes.MustEthAddress(hookAddress),
+				PublicAddress:     pldtypes.MustEthAddress(hookAddress),
 				DevUsePublicHooks: true,
 			},
 		},
@@ -256,11 +285,82 @@ func TestTransfer(t *testing.T) {
 		"sender": "%s",
 		"from": "%s",
 		"to": "0x2000000000000000000000000000000000000000",
-		"amount": "0x64",
+		"amount": "0x4b",
 		"data": "0x1234",
 		"prepared": {
 			"contractAddress": "%s",
 			"encodedCall": "%s"
 		}
-	}`, senderKey.Address, senderKey.Address, contractAddress, tktypes.HexBytes(encodedCall)), prepareRes.Transaction.ParamsJson)
+	}`, senderKey.Address, senderKey.Address, contractAddress, pldtypes.HexBytes(encodedCall)), prepareRes.Transaction.ParamsJson)
+}
+
+func TestTransferAssembleMissingFrom(t *testing.T) {
+	n := &Noto{
+		Callbacks:  mockCallbacks,
+		coinSchema: &prototk.StateSchema{Id: "coin"},
+		dataSchema: &prototk.StateSchema{Id: "data"},
+	}
+	h := transferHandler{noto: n}
+	ctx := context.Background()
+
+	fn := types.NotoABI.Functions()["transfer"]
+	contractAddress := "0xf6a75f065db3cef95de7aa786eee1d0cb1aeafc3"
+	parsedTx := &types.ParsedTransaction{
+		Transaction: &prototk.TransactionSpecification{
+			From: "sender@node1",
+		},
+		FunctionABI:     fn,
+		ContractAddress: ethtypes.MustNewAddress(contractAddress),
+		DomainConfig:    notoBasicConfig,
+		Params: &types.TransferParams{
+			To:     "receiver@node2",
+			Amount: pldtypes.Int64ToInt256(75),
+			Data:   pldtypes.MustParseHexBytes("0x1234"),
+		},
+	}
+	req := &prototk.AssembleTransactionRequest{
+		ResolvedVerifiers: []*prototk.ResolvedVerifier{},
+	}
+
+	_, err := h.Assemble(ctx, parsedTx, req)
+	assert.Regexp(t, "PD200011.*'from'", err)
+}
+
+func TestTransferAssembleMissingTo(t *testing.T) {
+	n := &Noto{
+		Callbacks:  mockCallbacks,
+		coinSchema: &prototk.StateSchema{Id: "coin"},
+		dataSchema: &prototk.StateSchema{Id: "data"},
+	}
+	h := transferHandler{noto: n}
+	ctx := context.Background()
+
+	fn := types.NotoABI.Functions()["transfer"]
+	contractAddress := "0xf6a75f065db3cef95de7aa786eee1d0cb1aeafc3"
+	parsedTx := &types.ParsedTransaction{
+		Transaction: &prototk.TransactionSpecification{
+			From: "sender@node1",
+		},
+		FunctionABI:     fn,
+		ContractAddress: ethtypes.MustNewAddress(contractAddress),
+		DomainConfig:    notoBasicConfig,
+		Params: &types.TransferParams{
+			To:     "receiver@node2",
+			Amount: pldtypes.Int64ToInt256(75),
+			Data:   pldtypes.MustParseHexBytes("0x1234"),
+		},
+	}
+	req := &prototk.AssembleTransactionRequest{
+		ResolvedVerifiers: []*prototk.ResolvedVerifier{
+			{
+				Lookup:       "sender@node1",
+				Algorithm:    algorithms.ECDSA_SECP256K1,
+				VerifierType: verifiers.ETH_ADDRESS,
+				Verifier:     "0x1000000000000000000000000000000000000000",
+			},
+		},
+	}
+
+	_, err := h.Assemble(ctx, parsedTx, req)
+	assert.Regexp(t, "PD200011.*'to'", err)
 }

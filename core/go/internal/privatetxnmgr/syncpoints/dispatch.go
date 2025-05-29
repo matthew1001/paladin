@@ -20,10 +20,11 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/kaleido-io/paladin/common/go/pkg/log"
 	"github.com/kaleido-io/paladin/core/internal/components"
 	"github.com/kaleido-io/paladin/core/pkg/persistence"
-	"github.com/kaleido-io/paladin/toolkit/pkg/log"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldapi"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 	"gorm.io/gorm/clause"
 )
 
@@ -31,14 +32,14 @@ type dispatchOperation struct {
 	publicDispatches     []*PublicDispatch
 	privateDispatches    []*components.ValidatedTransaction
 	localPreparedTxns    []*components.PreparedTransactionWithRefs
-	preparedReliableMsgs []*components.ReliableMessage
+	preparedReliableMsgs []*pldapi.ReliableMessage
 }
 
 type DispatchPersisted struct {
-	ID                       string             `json:"id"`
-	PrivateTransactionID     string             `json:"privateTransactionID"`
-	PublicTransactionAddress tktypes.EthAddress `json:"publicTransactionAddress"`
-	PublicTransactionID      uint64             `json:"publicTransactionID"`
+	ID                       string              `json:"id"`
+	PrivateTransactionID     string              `json:"privateTransactionID"`
+	PublicTransactionAddress pldtypes.EthAddress `json:"publicTransactionAddress"`
+	PublicTransactionID      uint64              `json:"publicTransactionID"`
 }
 
 // A dispatch sequence is a collection of private transactions that are submitted together for a given signing address in order
@@ -57,19 +58,19 @@ type DispatchBatch struct {
 
 // PersistDispatches persists the dispatches to the database and coordinates with the public transaction manager
 // to submit public transactions.
-func (s *syncPoints) PersistDispatchBatch(dCtx components.DomainContext, contractAddress tktypes.EthAddress, dispatchBatch *DispatchBatch, stateDistributions []*components.StateDistribution, preparedTxnDistributions []*components.PreparedTransactionWithRefs) error {
+func (s *syncPoints) PersistDispatchBatch(dCtx components.DomainContext, contractAddress pldtypes.EthAddress, dispatchBatch *DispatchBatch, stateDistributions []*components.StateDistribution, preparedTxnDistributions []*components.PreparedTransactionWithRefs) error {
 
-	preparedReliableMsgs := make([]*components.ReliableMessage, 0,
+	preparedReliableMsgs := make([]*pldapi.ReliableMessage, 0,
 		len(dispatchBatch.PreparedTransactions)+len(stateDistributions))
 
 	var localPreparedTxns []*components.PreparedTransactionWithRefs
 	for _, preparedTxnDistribution := range preparedTxnDistributions {
-		node, _ := tktypes.PrivateIdentityLocator(preparedTxnDistribution.Transaction.From).Node(dCtx.Ctx(), false)
+		node, _ := pldtypes.PrivateIdentityLocator(preparedTxnDistribution.Transaction.From).Node(dCtx.Ctx(), false)
 		if node != s.transportMgr.LocalNodeName() {
-			preparedReliableMsgs = append(preparedReliableMsgs, &components.ReliableMessage{
+			preparedReliableMsgs = append(preparedReliableMsgs, &pldapi.ReliableMessage{
 				Node:        node,
-				MessageType: components.RMTPreparedTransaction.Enum(),
-				Metadata:    tktypes.JSONString(preparedTxnDistribution),
+				MessageType: pldapi.RMTPreparedTransaction.Enum(),
+				Metadata:    pldtypes.JSONString(preparedTxnDistribution),
 			})
 		} else {
 			localPreparedTxns = append(localPreparedTxns, preparedTxnDistribution)
@@ -77,11 +78,11 @@ func (s *syncPoints) PersistDispatchBatch(dCtx components.DomainContext, contrac
 	}
 
 	for _, stateDistribution := range stateDistributions {
-		node, _ := tktypes.PrivateIdentityLocator(stateDistribution.IdentityLocator).Node(dCtx.Ctx(), false)
-		preparedReliableMsgs = append(preparedReliableMsgs, &components.ReliableMessage{
+		node, _ := pldtypes.PrivateIdentityLocator(stateDistribution.IdentityLocator).Node(dCtx.Ctx(), false)
+		preparedReliableMsgs = append(preparedReliableMsgs, &pldapi.ReliableMessage{
 			Node:        node,
-			MessageType: components.RMTState.Enum(),
-			Metadata:    tktypes.JSONString(stateDistribution),
+			MessageType: pldapi.RMTState.Enum(),
+			Metadata:    pldtypes.JSONString(stateDistribution),
 		})
 	}
 

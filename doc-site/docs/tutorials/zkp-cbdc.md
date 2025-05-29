@@ -6,7 +6,7 @@ This shows how to leverage the [Zeto](../../architecture/zeto/) in order to buil
 
 ## Running the example
 
-Follow the [Getting Started](../../getting-started/installation/) instructions to set up a Paldin environment, and
+Follow the [Getting Started](../../getting-started/installation/) instructions to set up a Paladin environment, and
 then follow the example [README](https://github.com/LF-Decentralized-Trust-labs/paladin/blob/main/example/zeto/README.md)
 to run the code.
 
@@ -39,10 +39,12 @@ let receipt = await zetoCBDC.mint(cbdcIssuer, {
     {
       to: bank1,
       amount: 100000,
+      data: "0x",
     },
     {
       to: bank2,
       amount: 100000,
+      data: "0x",
     },
   ],
 });
@@ -58,6 +60,7 @@ receipt = await zetoCBDC.using(paladin1).transfer(bank1, {
     {
       to: bank2,
       amount: 1000,
+      data: "0x",
     },
   ],
 });
@@ -128,6 +131,7 @@ receipt = await zetoCBDC.using(paladin1).transfer(bank1, {
     {
       to: bank2,
       amount: 1000,
+      data: "0x",
     },
   ],
 });
@@ -145,3 +149,9 @@ const result5 = await zetoCBDC.using(paladin1).withdraw(bank1, {
 ```
 
 A participant like `bank1` who has unspent Zeto tokens can call `withdraw` on the Paladin Zeto domain to exchange them for ERC20 balances. Behind the scenes, the requested amount are "burnt" in the Zeto contract, and the corresponding ERC20 amount are released by the Zeto contract, by transferring to the requesting account.
+
+## Next Steps
+
+Next, discover how **Notarized Tokens** and **Privacy Groups** seamlessly integrate to enable a robust bond issuance workflow that balances private collaboration with public transparency.
+
+[Continue to the Bond Issuance Tutorial →](./bond-issuance.md)

@@ -35,9 +35,9 @@ import (
 	"github.com/kaleido-io/paladin/core/pkg/persistence"
 	"github.com/kaleido-io/paladin/core/pkg/persistence/mockpersistence"
 
-	"github.com/kaleido-io/paladin/toolkit/pkg/pldapi"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldapi"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 	"github.com/kaleido-io/paladin/toolkit/pkg/rpcserver"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -85,7 +85,7 @@ func TestInitOK(t *testing.T) {
 								Keys: map[string]pldconf.StaticKeyEntryConfig{
 									"seed": {
 										Encoding: "hex",
-										Inline:   tktypes.RandHex(32),
+										Inline:   pldtypes.RandHex(32),
 									},
 								},
 							},
@@ -127,6 +127,7 @@ func TestInitOK(t *testing.T) {
 	assert.NotNil(t, cm.PrivateTxManager())
 	assert.NotNil(t, cm.PublicTxManager())
 	assert.NotNil(t, cm.TxManager())
+	assert.NotNil(t, cm.GroupManager())
 	assert.NotNil(t, cm.IdentityResolver())
 
 	// Check we can send a request for a javadump - even just after init (not start)
@@ -200,6 +201,11 @@ func TestStartOK(t *testing.T) {
 	mockTxManager := componentmocks.NewTXManager(t)
 	mockTxManager.On("Start").Return(nil)
 	mockTxManager.On("Stop").Return()
+	mockTxManager.On("LoadBlockchainEventListeners").Return(nil)
+
+	mockGroupManager := componentmocks.NewGroupManager(t)
+	mockGroupManager.On("Start").Return(nil)
+	mockGroupManager.On("Stop").Return()
 
 	mockStateManager := componentmocks.NewStateManager(t)
 	mockStateManager.On("Start").Return(nil)
@@ -237,6 +243,7 @@ func TestStartOK(t *testing.T) {
 	cm.publicTxManager = mockPublicTxManager
 	cm.privateTxManager = mockPrivateTxManager
 	cm.txManager = mockTxManager
+	cm.groupManager = mockGroupManager
 	cm.additionalManagers = append(cm.additionalManagers, mockExtraManager)
 
 	err := cm.StartManagers()

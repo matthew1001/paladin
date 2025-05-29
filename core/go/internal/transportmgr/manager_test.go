@@ -22,15 +22,15 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kaleido-io/paladin/config/pkg/pldconf"
-	"github.com/kaleido-io/paladin/core/internal/components"
 	"github.com/kaleido-io/paladin/core/mocks/componentmocks"
 	"github.com/kaleido-io/paladin/core/pkg/persistence"
 	"github.com/kaleido-io/paladin/core/pkg/persistence/mockpersistence"
 	"github.com/sirupsen/logrus"
 
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldapi"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 	"github.com/kaleido-io/paladin/toolkit/pkg/plugintk"
 	"github.com/kaleido-io/paladin/toolkit/pkg/prototk"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -46,6 +46,7 @@ type mockComponents struct {
 	txManager        *componentmocks.TXManager
 	privateTxManager *componentmocks.PrivateTxManager
 	identityResolver *componentmocks.IdentityResolver
+	groupManager     *componentmocks.GroupManager
 }
 
 func newMockComponents(t *testing.T, realDB bool) *mockComponents {
@@ -57,6 +58,7 @@ func newMockComponents(t *testing.T, realDB bool) *mockComponents {
 	mc.txManager = componentmocks.NewTXManager(t)
 	mc.privateTxManager = componentmocks.NewPrivateTxManager(t)
 	mc.identityResolver = componentmocks.NewIdentityResolver(t)
+	mc.groupManager = componentmocks.NewGroupManager(t)
 	if realDB {
 		p, cleanup, err := persistence.NewUnitTestPersistence(context.Background(), "transportmgr")
 		require.NoError(t, err)
@@ -76,6 +78,7 @@ func newMockComponents(t *testing.T, realDB bool) *mockComponents {
 	mc.c.On("TxManager").Return(mc.txManager).Maybe()
 	mc.c.On("PrivateTxManager").Return(mc.privateTxManager).Maybe()
 	mc.c.On("IdentityResolver").Return(mc.identityResolver).Maybe()
+	mc.c.On("GroupManager").Return(mc.groupManager).Maybe()
 	return mc
 }
 
@@ -124,7 +127,7 @@ func TestConfiguredTransports(t *testing.T) {
 		Transports: map[string]*pldconf.TransportConfig{
 			"test1": {
 				Plugin: pldconf.PluginConfig{
-					Type:    string(tktypes.LibraryTypeCShared),
+					Type:    string(pldtypes.LibraryTypeCShared),
 					Library: "some/where",
 				},
 			},
@@ -134,7 +137,7 @@ func TestConfiguredTransports(t *testing.T) {
 
 	assert.Equal(t, map[string]*pldconf.PluginConfig{
 		"test1": {
-			Type:    string(tktypes.LibraryTypeCShared),
+			Type:    string(pldtypes.LibraryTypeCShared),
 			Library: "some/where",
 		},
 	}, dm.ConfiguredTransports())
@@ -196,8 +199,8 @@ func TestSendReliableBadMsg(t *testing.T) {
 	ctx, tm, _, done := newTestTransport(t, false)
 	defer done()
 
-	err := tm.SendReliable(ctx, tm.persistence.NOTX(), &components.ReliableMessage{
-		MessageType: components.RMTReceipt.Enum(),
+	err := tm.SendReliable(ctx, tm.persistence.NOTX(), &pldapi.ReliableMessage{
+		MessageType: pldapi.RMTReceipt.Enum(),
 	})
 	assert.Regexp(t, "PD012015", err)
 }

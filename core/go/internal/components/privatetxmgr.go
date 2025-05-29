@@ -21,7 +21,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/hyperledger/firefly-signer/pkg/abi"
 	"github.com/kaleido-io/paladin/core/pkg/persistence"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 )
 
 type PrivateTxEventSubscriber func(event PrivateTxEvent)
@@ -65,15 +65,15 @@ type StateDistribution struct {
 	Domain                string  `json:"domain"`
 	ContractAddress       string  `json:"contractAddress"`
 	SchemaID              string  `json:"schemaId"`
-	NullifierAlgorithm    *string `json:"nullifierAlgorithm"`
-	NullifierVerifierType *string `json:"nullifierVerifierType"`
-	NullifierPayloadType  *string `json:"nullifierPayloadType"`
+	NullifierAlgorithm    *string `json:"nullifierAlgorithm,omitempty"`
+	NullifierVerifierType *string `json:"nullifierVerifierType,omitempty"`
+	NullifierPayloadType  *string `json:"nullifierPayloadType,omitempty"`
 }
 
 // A StateDistributionWithData is an intent to send private data for a given state to a remote party
 type StateDistributionWithData struct {
 	StateDistribution
-	StateData tktypes.RawJSON `json:"stateData"`
+	StateData pldtypes.RawJSON `json:"stateData"`
 }
 
 type PrivateTxManager interface {

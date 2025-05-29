@@ -1,7 +1,6 @@
 import PaladinClient, {
   INotoDomainReceipt,
   IPreparedTransaction,
-  newGroupSalt,
   NotoFactory,
   PenteFactory,
   ZetoFactory,
@@ -29,7 +28,7 @@ async function encodeZetoTransfer(preparedCashTransfer: IPreparedTransaction) {
     preparedCashTransfer.transaction.abiReference ?? ""
   );
   return new ethers.Interface(zetoTransferAbi.abi).encodeFunctionData(
-    "transfer",
+    "transferLocked",
     [
       preparedCashTransfer.transaction.data.inputs,
       preparedCashTransfer.transaction.data.outputs,
@@ -63,13 +62,9 @@ async function main(): Promise<boolean> {
   // Create a Pente privacy group for the asset issuer only
   logger.log("Creating asset issuer privacy group...");
   const penteFactory = new PenteFactory(paladin1, "pente");
-  const issuerGroup = await penteFactory.newPrivacyGroup(assetIssuer, {
-    group: {
-      salt: newGroupSalt(),
-      members: [assetIssuer],
-    },
+  const issuerGroup = await penteFactory.newPrivacyGroup({
+    members: [assetIssuer],
     evmVersion: "shanghai",
-    endorsementType: "group_scoped_identities",
     externalCallsEnabled: true,
   });
   if (!checkDeploy(issuerGroup)) return false;
@@ -90,7 +85,7 @@ async function main(): Promise<boolean> {
     notaryMode: "hooks",
     options: {
       hooks: {
-        privateGroup: issuerGroup.group,
+        privateGroup: issuerGroup,
         publicAddress: issuerGroup.address,
         privateAddress: tracker.address,
       },
@@ -114,6 +109,7 @@ async function main(): Promise<boolean> {
       {
         to: investor2,
         amount: 10000,
+        data: "0x",
       },
     ],
   });
@@ -155,15 +151,39 @@ async function main(): Promise<boolean> {
   }
 
   // Prepare cash transfer
-  logger.log("Preparing cash transfer to investor1...");
-  const txID = await zetoCash.using(paladin3).prepareTransfer(investor2, {
+  logger.log("Locking cash amount from investor2...");
+  const investor2Address = await investor2.address();
+  receipt = await zetoCash.using(paladin3).lock(investor2, {
+    amount: 10,
+    delegate: investor2Address,
+  });
+  if (!checkReceipt(receipt)) return false;
+  const lockedStates = await paladin3.getStateReceipt(receipt.id);
+  let lockedStateId: string | undefined;
+  lockedStates?.confirmed?.forEach((state) => {
+    if (state.data["locked"]) {
+      lockedStateId = state.id;
+    }
+  });
+  if (lockedStateId === undefined) {
+    logger.error("No locked state found in state receipt");
+    return false;
+  } else {
+    logger.log(`Locked state ID: ${lockedStateId}`);
+  }
+
+  const txID = await zetoCash.using(paladin3).prepareTransferLocked(investor2, {
+    lockedInputs: [lockedStateId],
+    delegate: investor2.lookup,
     transfers: [
       {
         to: investor1,
-        amount: 100,
+        amount: 10,
+        data: "0x",
       },
     ],
   });
+  if (!checkReceipt(receipt)) return false;
   const preparedCashTransfer = await paladin3.pollForPreparedTransaction(
     txID,
     10000
@@ -171,13 +191,6 @@ async function main(): Promise<boolean> {
   if (!preparedCashTransfer) return false;
 
   const encodedCashTransfer = await encodeZetoTransfer(preparedCashTransfer);
-
-  logger.log("Locking transfer proof...");
-  receipt = await zetoCash.using(paladin3).lock(investor2, {
-    call: encodedCashTransfer,
-    delegate: await investor2.address(),
-  });
-  if (!checkReceipt(receipt)) return false;
 
   // Create an atom for the swap
   logger.log("Creating atom...");
@@ -205,13 +218,13 @@ async function main(): Promise<boolean> {
 
   // Approve cash transfer operation
   logger.log("Approving cash leg...");
-  receipt = await zetoCash.using(paladin3).lock(investor2, {
-    call: encodedCashTransfer,
+  receipt = await zetoCash.using(paladin3).delegateLock(investor2, {
+    utxos: [lockedStateId],
     delegate: atom.address,
   });
   if (!checkReceipt(receipt)) return false;
 
-  // Unlock the asset
+  // execute the swap
   logger.log("Performing swap...");
   receipt = await atom.using(paladin3).execute(investor2);
   if (!checkReceipt(receipt)) return false;

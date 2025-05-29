@@ -27,10 +27,10 @@ import (
 	"github.com/kaleido-io/paladin/core/internal/components"
 	"github.com/kaleido-io/paladin/core/mocks/componentmocks"
 
-	"github.com/kaleido-io/paladin/toolkit/pkg/log"
+	"github.com/kaleido-io/paladin/common/go/pkg/log"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 	"github.com/kaleido-io/paladin/toolkit/pkg/plugintk"
 	"github.com/kaleido-io/paladin/toolkit/pkg/prototk"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -93,7 +93,7 @@ func (tp *testDomainManager) mock(t *testing.T) *componentmocks.DomainManager {
 	pluginMap := make(map[string]*pldconf.PluginConfig)
 	for name := range tp.domains {
 		pluginMap[name] = &pldconf.PluginConfig{
-			Type:    string(tktypes.LibraryTypeCShared),
+			Type:    string(pldtypes.LibraryTypeCShared),
 			Library: "/tmp/not/applicable",
 		}
 	}
@@ -242,6 +242,28 @@ func TestDomainRequestsOK(t *testing.T) {
 			assert.Equal(t, "tx1", brr.TransactionId)
 			return &prototk.BuildReceiptResponse{
 				ReceiptJson: `{"receipt":"data"}`,
+			}, nil
+		},
+		ConfigurePrivacyGroup: func(ctx context.Context, cpgr *prototk.ConfigurePrivacyGroupRequest) (*prototk.ConfigurePrivacyGroupResponse, error) {
+			assert.Equal(t, map[string]string{"input": "props"}, cpgr.InputConfiguration)
+			return &prototk.ConfigurePrivacyGroupResponse{
+				Configuration: map[string]string{"finalized": "props"},
+			}, nil
+		},
+		InitPrivacyGroup: func(ctx context.Context, ipgr *prototk.InitPrivacyGroupRequest) (*prototk.InitPrivacyGroupResponse, error) {
+			assert.Equal(t, `pg1`, ipgr.PrivacyGroup.Name)
+			return &prototk.InitPrivacyGroupResponse{
+				Transaction: &prototk.PreparedTransaction{
+					ParamsJson: `{"some":"params"}`,
+				},
+			}, nil
+		},
+		WrapPrivacyGroupEVMTX: func(ctx context.Context, wpgtr *prototk.WrapPrivacyGroupEVMTXRequest) (*prototk.WrapPrivacyGroupEVMTXResponse, error) {
+			assert.Equal(t, `{"orig":"params"}`, *wpgtr.Transaction.InputJson)
+			return &prototk.WrapPrivacyGroupEVMTXResponse{
+				Transaction: &prototk.PreparedTransaction{
+					ParamsJson: `{"wrapped":"params"}`,
+				},
 			}, nil
 		},
 	}
@@ -426,6 +448,28 @@ func TestDomainRequestsOK(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Equal(t, `{"receipt":"data"}`, brr.ReceiptJson)
+
+	cpgr, err := domainAPI.ConfigurePrivacyGroup(ctx, &prototk.ConfigurePrivacyGroupRequest{
+		InputConfiguration: map[string]string{"input": "props"},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, map[string]string{"finalized": "props"}, cpgr.Configuration)
+
+	ipgr, err := domainAPI.InitPrivacyGroup(ctx, &prototk.InitPrivacyGroupRequest{
+		PrivacyGroup: &prototk.PrivacyGroup{
+			Name: "pg1",
+		},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, `{"some":"params"}`, ipgr.Transaction.ParamsJson)
+
+	wpgtr, err := domainAPI.WrapPrivacyGroupEVMTX(ctx, &prototk.WrapPrivacyGroupEVMTXRequest{
+		Transaction: &prototk.PrivacyGroupEVMTX{
+			InputJson: confutil.P(`{"orig":"params"}`),
+		},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, `{"wrapped":"params"}`, wpgtr.Transaction.ParamsJson)
 
 	callbacks := <-waitForCallbacks
 
