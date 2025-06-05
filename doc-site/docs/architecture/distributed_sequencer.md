@@ -1,57 +1,107 @@
 # Distributed sequencer
 
-In domains (such as Pente) where the spending rules for states allow any one of a group of parties to spend the state, then we need to coordinate the assembly of transactions across multiple nodes so that we can maximize the throughput by speculative spending new states and avoid transactions being reverted due to double concurrent spending / state contention.
+In domains (such as Pente) where the spending rules for states allow any one of a group of parties to spend the state, then we need to coordinate the assembly of transactions across multiple nodes so that we can maximize the throughput by speculatively spending new states and avoiding transactions being reverted due to double concurrent spending / state contention.
 
 To achieve this, it is important that we have an algorithm that allows all nodes to agree on which of them should be selected as the coordinator at any given point in time. And all other nodes delegate their transactions to the coordinator.
 
+A node uses 3 key components to coordinate transactions with a domain contract:
+
+### 1 - Sequencer
+
+The sequencer manages the lifecycle of transactions submitted to the node
+
+### 2 - Coordinator
+
+The coordinator determines which contract-wide states should be spent in order to satisfy a transaction's inputs and communicates with senders to instruct them what to submit to the EVM.
+
+### 3 - Sender
+
+The sender is responsible for assembling and submitting transactions to the EVM when instructed to do so by the coordinator
+
+The following diagram provides a high-level view of how these components relate to nodes and private contracts.
+
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'fontSize': '15px'}}}%%
+%%{init: {'theme': 'base', 'themeVariables': { 'fontSize': '40px'}}}%%
 block-beta
-    block:domain
       columns 1
-      block:domains
-        columns 1
-        d["Domains (e.g. Pente, Noto, Zeto)"]
-        space
-      end
       block:domaintokens
         columns 2
         domainContract1["Zeto contract 1"]
         domainContract2["Pente contract 1"]
         space
+        space
       end
-      block:domainnodes
+      block:domaincontracts
         columns 2
-        block:seq1
+        block:zetonodes
           columns 1
-          block:sc1
+          block:zetonodelist
+            columns 2
             c1node1["Node 1"]
             c1node2["Node 2"]
+            space
+            space
           end
-          space
-          block:sc5
+          block:zetosequencercomponents
+            columns 2
             c1node1sequencer["Sequencer"]
             c1node2sequencer["Sequencer"]
+            space
+            space
+            block:seq1componentlist
+              block:seq1components
+                c1node1sender["Sender"]
+                c1node1coordinator["Coordinator"]
+              end
+            end
+            block:seq2componentlist
+              block:seq2components
+                c1node2sender["Sender"]
+                c1node2coordinator["Coordinator"]
+              end
+            end
           end
         end
-        block:seq2
+        block:pentenodes
           columns 1
-          block:sc2
+          block:pentenodelist
+            columns 3
             c2node1["Node 1"]
             c2node2["Node 2"]
             c2node3["Node 3"]
+            space
+            space
+            space
           end
-          space
-          block:sc4
+          block:pentesequencercomponents
+            columns 3
             c2node1sequencer["Sequencer"]
             c2node2sequencer["Sequencer"]
             c2node3sequencer["Sequencer"]
+            space
+            space
+            space
+            block:seq3componentlist
+              block:seq3components
+                c2node1sender["Sender"]
+                c2node1coordinator["Coordinator"]
+              end
+            end
+            block:seq4componentlist
+              block:seq4components
+                c2node2sender["Sender"]
+                c2node2coordinator["Coordinator"]
+              end
+            end
+            block:seq5componentlist
+              block:seq5components
+                c2node3sender["Sender"]
+                c2node3coordinator["Coordinator"]
+              end
+            end
           end
         end
-      end
   end
-  d --> domainContract1
-  d --> domainContract2
   domainContract1 --> c1node1
   domainContract1 --> c1node2
   domainContract2 --> c2node1
@@ -62,11 +112,23 @@ block-beta
   c2node1 --> c2node1sequencer
   c2node2 --> c2node2sequencer
   c2node3 --> c2node3sequencer
-  style c2node2sequencer fill:#eeeeee,stroke:#bbbbbb
-  style c2node3sequencer fill:#eeeeee,stroke:#bbbbbb
+  c1node1sequencer --> c1node1sender
+  c1node2sequencer --> c1node2sender
+  c1node1sequencer --> c1node1coordinator
+  c1node2sequencer --> c1node2coordinator
+  c2node1sequencer --> c2node1sender
+  c2node1sequencer --> c2node1coordinator
+  c2node2sequencer --> c2node2sender
+  c2node2sequencer --> c2node2coordinator
+  c2node3sequencer --> c2node3sender
+  c2node3sequencer --> c2node3coordinator
+  style c2node2coordinator fill:#eeeeee,stroke:#bbbbbb
+  style c2node3coordinator fill:#eeeeee,stroke:#bbbbbb
 ```
 
-For every private contract a node participates in, the node may take one of 3 roles:
+The coordination role varies depending on the type of domain. In some cases there are specific nodes in the network who coordinate all activity relating to a private transaction (e.g. Noto). In other cases the only node who can coordinate transactions is the originator of the transaction (e.g. Zeto).
+
+Therefore, for every private contract a node participates in, the node may take one of 3 roles:
 
 1. Always acts as coordinator for its own transactions relating to the contract, for example when participating in a Zeto token contract.
 2. Never acts as a coordinator for the private contract, for example when particpating in a Noto token but never acting as the notiary for the token
@@ -74,8 +136,10 @@ For every private contract a node participates in, the node may take one of 3 ro
 
 Every Paladin node has one sequencer for every private contract it is participating in. However, if the node never acts as a coordinator for the private contract its sequencer for that contract only serves to submit transactions based on instructions from the coordinator (running on another node).
 
+The following diagram shows the components that are active in a node for 3 types of domain contract:
+
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'fontSize': '15px'}}}%%
+%%{init: {'theme': 'base', 'themeVariables': { 'fontSize': '30px'}}}%%
 block-beta
     block:domain
       columns 1
@@ -100,7 +164,7 @@ block-beta
           sequencer1["Sequencer"]
           space
           block:comp1
-          columns 2
+            columns 2
             sender1["Sender"]
             coordinator1["Always coordinator"]
           end
@@ -112,7 +176,7 @@ block-beta
           block:comp2
           columns 2
             sender2["Sender"]
-            coordinator2["Occasionally coordinator"]
+            coordinator2["Sometimes coordinator"]
           end
         end
         block:seq3
@@ -122,7 +186,7 @@ block-beta
           block:comp3
           columns 2
             sender3["Sender"]
-            coordinator3["(Never coordinator)"]
+            coordinator3["Never coordinator"]
           end
         end
       end
@@ -138,7 +202,6 @@ block-beta
   sequencer2 --> sender2
   sequencer2 --> coordinator2
   sequencer3 --> sender3
-  sequencer3 --> coordinator3
   style coordinator2 fill:#eeeeee,stroke:#bbbbbb
   style coordinator3 fill:#eeeeee,stroke:#bbbbbb,stroke-dasharray: 5 5
 ```
