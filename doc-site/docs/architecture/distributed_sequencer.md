@@ -18,11 +18,11 @@ The sender is responsible for assembling and submitting transactions to the EVM 
 
 The coordinator determines which contract-wide states should be spent in order to satisfy a transaction's inputs and communicates with senders to instruct them what to submit to the EVM.
 
-A coordinator may not always be running on every node participating in the private contract. Different Paladin domains use different coordination models as described later in the topic.
+A coordinator may not always be running on every node participating in the private contract (see below).
 
-The following diagram provides a high-level view of how these components relate to private contracts and nodes:
+## Introduction to transaction coordination
 
-<p id="test" class="test">
+The coordination role varies depending on the type of domain. In some cases there are specific nodes in the network who coordinate all activity relating to a private transaction (for example Noto). In other cases the only node who can coordinate transactions is the originator of the transaction (for example Zeto).
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': { 'fontSize': '25px', 'fill':'#33bb22'}}}%%
@@ -77,18 +77,14 @@ style coordinator2 fill:#fffdee,stroke:#ffca58,stroke-dasharray: 5 5
 
 ```
 
-</p>
-
-The coordination role varies depending on the type of domain. In some cases there are specific nodes in the network who coordinate all activity relating to a private transaction (for example Noto). In other cases the only node who can coordinate transactions is the originator of the transaction (for example Zeto).
-
 Paladin domains use one of the following coordination models:
 
 1. Always local
-   - Always acts as coordinator for its own transactions relating to the contract, for example when participating in a Zeto token contract.
+    - Always acts as coordinator for its own transactions relating to the contract, for example when participating in a Zeto token contract.
 2. Always remote
-   - Never acts as a coordinator for the private contract, for example when particpating in a Noto token but never acting as the notiary for the token
+    - Never acts as a coordinator for the private contract, for example when particpating in a Noto token but never acting as the notiary for the token
 3. Leader elected
-   - May act as a coordinator based on the distributed coordination algorithm, for example when participating in a Pente private contract
+    - May act as a coordinator based on the distributed coordination algorithm, for example when participating in a Pente private contract
 
 The following diagram shows 3 different domain contracts that 2 nodes are participating in. For the 3 domain contracts the nodes play different coordination roles:
 
@@ -360,9 +356,17 @@ block-beta
   style domainContract3 fill:#fffdee,stroke:#ffca58
 ```
 
+## Scope of the distributed sequencing algorithm
+
+The distributed coordination algorithm described in the rest of this topic only applies to *Remotely Coordinated* and *Leader Elected* domains.
+
+*Locally Coordinated* domains always run a coordinator for every participating node. Nodes cannot coordinate other nodes' transactions, even if they are participating in the same private contract.
+
+*Remotely Coordinated* domains could be considered a sub-category of *Leader Elected*. In some cases there will be a single coordinator for all participating nodes. However, in other cases there may be a group of remote coordinators who could use leadership election to determine which coordinator is currently the active one. For this topic the distributed sequencing algorithm applies to *Remotely Coordinated* domains where there is more than 1 possible coordinator for the contract.
+
 ## Objectives
 
-The objective of this algorithm is to maximize efficiency ( reduce probably for revert leading to retry cycles of valid request) and throughput ( allow many transactions to be included in each block). This algorithm does not attempt to provide a guarantee on final data consistency but instead relies on the base ledger contract to do so (e.g. double spend protection, attestation validation, exactly once intent fulfillment).
+The objective of this algorithm is to maximize efficiency (reduce probably for revert leading to retry cycles of valid request) and throughput (allow many transactions to be included in each block). This algorithm does not attempt to provide a guarantee on final data consistency but instead relies on the base ledger contract to do so (e.g. double spend protection, attestation validation, exactly once intent fulfillment).
 
 The desired properties of that algorithm are
 
@@ -371,7 +375,17 @@ The desired properties of that algorithm are
 - **fault tolerant**: Although pente already depends on all nodes being available (because of the 100% endorsement model) the desired algorithm should be future proof and be compatible with <100% endorsement model where network faults and down time of a minority of nodes can bee tolerated.
 
 ## Summary
-The basic premises of the algorithm are:
+
+The 3 basic premises of the algorithm are:
+
+  1. Once a coordinator has been elected, it is possible for it to continue indefinitely as the coordinator
+    - This is an intentional design choice, intended to provide optimal throughput for a contract
+  2. If an elected coordinator fails, another coordinator will take over the role
+    - This ensures high availability of the private contract
+  3. The choice of coordinator is deterministic based on block number and liveness of the existing coordinator
+    - The deterministic choice  of coordinator only needs to take place if the existing coordinator becomes unavailable
+
+Full rules for the the algorithm:
 
  - Ranking of the preference for coordinator selection for any given contract address, for any given point in time ( block height) is a deterministic function that all nodes will agree on given the same awareness of make up of committee 
  - Composition of committee i.e. the set of nodes who are candidates for coordinator is universally agreed (similar to BFT algorithms).
@@ -390,12 +404,6 @@ The basic premises of the algorithm are:
  - If a transaction is successfully assembled and endorsed but subsequently reverted on the base ledger contract, the coordinator is is responsible for retrying at a frequency that does not cause excessive load on the system.
  - The sender node continues to monitor and control the delegation of its transaction until it has received receipt of the transactions' confirmations on the base ledger. This provides an "at least once" quality of service for every transaction at the distributed sequencer layer. As described earlier the blockchain enforces "at most once" semantics, so there is no possibility of duplicate transactions.
  - The handshake between the sender node and the coordinator node(s) attempts to minimize the likelihood of the same transaction intent resulting in 2 valid base ledger transactions but cannot eliminate that possibility completely so there is protection against duplicate intent fulfillment in the base ledger contract
-
-
-**(MRW questions)**
-
- - Can the list of electable coordinators change?
- - Is "deterministic function that all nodes will agree on" compatible with "Coordinators will keep going until they are told otherwise"?
   
 ## Components of a sequencer
 
@@ -435,37 +443,37 @@ classDiagram
 
 The states that a transaction goes through, from the perspective of the transaction sender are:
 
-- Initial: Initial state before anything is calculated
-- Pending: Intent for the transaction has been created in the database and has been assigned a unique ID but is not currently known to be being processed by a coordinator
-- Delegated: the transaction has been sent to the current active coordinator
-- Assembling: the coordinator has sent an assemble request that we have not replied to yet
-- EndorsementGathering: e have responded to an assemble request and are waiting the coordinator to gather endorsements and send us a dispatch confirmation request
-- Signing: we have assembled the transaction and are waiting for the signing module to sign it before we respond to the coordinator with the signed assembled transaction
-- Prepared: we know that the coordinator has got as far as preparing a public transaction and we have sent a positive response to a coordinator's dispatch confirmation request but have not yet received a heartbeat that notifies us that the coordinator has dispatched the transaction to a public transaction manager for submission
-- Dispatched: the active coordinator that this transaction was delegated to has dispatched the transaction to a public transaction manager for submission
-- Sequenced: the transaction has been assigned a nonce by the public transaction manager
-- Submitted: the transaction has been submitted to the blockchain
-- Confirmed: the public transaction has been confirmed by the blockchain as successful
-- Reverted: upon attempting to assemble the transaction, the domain code has determined that the intent is not valid and the transaction is finalized as reverted
-- Parked: upon attempting to assemble the transaction, the domain code has determined that the transaction is not ready to be assembled and it is parked for later processing. All remaining transactions for the current sender can continue - unless they have an explicit dependency on this transaction
+ - Initial:  Initial state before anything is calculated
+ - Pending:              Intent for the transaction has been created in the database and has been assigned a unique ID but is not currently known to be being processed by a coordinator
+ - Delegated:            the transaction has been sent to the current active coordinator
+ - Assembling:           the coordinator has sent an assemble request that we have not replied to yet
+ - EndorsementGathering: e have responded to an assemble request and are waiting the coordinator to gather endorsements and send us a dispatch confirmation request
+ - Signing:              we have assembled the transaction and are waiting for the signing module to sign it before we respond to the coordinator with the signed assembled transaction
+ - Prepared:             we know that the coordinator has got as far as preparing a public transaction and we have sent a positive response to a coordinator's dispatch confirmation request but have not yet received a heartbeat that notifies us that the coordinator has dispatched the transaction to a public transaction manager for submission
+ - Dispatched:           the active coordinator that this transaction was delegated to has dispatched the transaction to a public transaction manager for submission
+ - Sequenced:            the transaction has been assigned a nonce by the public transaction manager
+ - Submitted:            the transaction has been submitted to the blockchain
+ - Confirmed:            the public transaction has been confirmed by the blockchain as successful
+ - Reverted:             upon attempting to assemble the transaction, the domain code has determined that the intent is not valid and the transaction is finalized as reverted
+ - Parked:               upon attempting to assemble the transaction, the domain code has determined that the transaction is not ready to be assembled and it is parked for later processing.  All remaining transactions for the current sender can continue - unless they have an explicit dependency on this transaction
 
 Events that can cause a transition between states and/or trigger an action when the transaction is in a given state are:
 
-- Created: Transaction initially received by the sender or has been loaded from the database after a restart / swap-in
-- ConfirmedSuccess: Confirmation received from the blockchain of base ledge transaction successful completion
-- ConfirmedReverted: Confirmation received from the blockchain of base ledge transaction failure
-- Delegated: Transaction has been delegated to a coordinator
-- AssembleRequestReceived: Coordinator has requested that we assemble the transaction
-- AssembleAndSignSuccess: We have successfully assembled the transaction and signing module has signed the assembled transaction
-- AssembleRevert: We have failed to assemble the transaction
-- AssemblePark: We have parked the transaction
-- AssembleError: An unexpected error occurred while trying to assemble the transaction
-- Dispatched: Coordinator has dispatched the transaction to a public transaction manager
-- DispatchConfirmationRequestReceived: Coordinator has requested confirmation that the transaction has been dispatched
-- Resumed: Received an RPC call to resume a parked transaction
-- NonceAssigned: The public transaction manager has assigned a nonce to the transaction
-- Submitted: The transaction has been submitted to the blockchain
-- CoordinatorChanged: The coordinator has changed
+ - Created: Transaction initially received by the sender or has been loaded from the database after a restart / swap-in
+ - ConfirmedSuccess: Confirmation received from the blockchain of base ledge transaction successful completion
+ - ConfirmedReverted: Confirmation received from the blockchain of base ledge transaction failure
+ - Delegated: Transaction has been delegated to a coordinator
+ - AssembleRequestReceived: Coordinator has requested that we assemble the transaction
+ - AssembleAndSignSuccess: We have successfully assembled the transaction and signing module has signed the assembled transaction
+ - AssembleRevert: We have failed to assemble the transaction
+ - AssemblePark: We have parked the transaction
+ - AssembleError: An unexpected error occurred while trying to assemble the transaction
+ - Dispatched: Coordinator has dispatched the transaction to a public transaction manager
+ - DispatchConfirmationRequestReceived: Coordinator has requested confirmation that the transaction has been dispatched
+ - Resumed: Received an RPC call to resume a parked transaction
+ - NonceAssigned: The public transaction manager has assigned a nonce to the transaction
+ - Submitted: The transaction has been submitted to the blockchain
+ - CoordinatorChanged: The coordinator has changed
 
 ```mermaid
 stateDiagram-v2
