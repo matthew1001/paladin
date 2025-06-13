@@ -10,39 +10,107 @@ A node uses 3 key components to coordinate transactions with a domain contract:
 
 The sequencer manages the lifecycle of transactions submitted to the node
 
-### 2 - Coordinator
-
-The coordinator determines which contract-wide states should be spent in order to satisfy a transaction's inputs and communicates with senders to instruct them what to submit to the EVM.
-
-### 3 - Sender
+### 2 - Sender
 
 The sender is responsible for assembling and submitting transactions to the EVM when instructed to do so by the coordinator
 
-The following diagram provides a high-level view of how these components relate to nodes and private contracts.
+### 3 - Coordinator
+
+The coordinator determines which contract-wide states should be spent in order to satisfy a transaction's inputs and communicates with senders to instruct them what to submit to the EVM.
+
+A coordinator may not always be running on every node participating in the private contract. Different Paladin domains use different coordination models as described later in the topic.
+
+The following diagram provides a high-level view of how these components relate to private contracts and nodes:
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'fontSize': '40px'}}}%%
+block-beta
+  columns 1
+  block:contracts:1
+    columns 1
+    contract["Contract"]
+  end
+  space
+  block:nodes
+    columns 2
+    node1["Node 1"]
+    node2["Node 2"]
+  end
+  space
+  block:sequencers
+    columns 2
+    sequencer1["Sequencer"]
+    sequencer2["Sequencer"]
+  end
+  space
+  block:components1
+    columns 4
+    sender1["Sender"]
+    coordinator1["Coordinator"]
+    sender2["Sender"]
+    coordinator2["Coordinator"]
+  end
+
+  contract --> node1
+  contract --> node2
+  node1 --> sequencer1
+  node2 --> sequencer2
+  sequencer1 --> sender1
+  sequencer1 --> coordinator1
+  sequencer2 --> sender2
+  sequencer2 --> coordinator2
+  style contract fill:#f9f9f9,stroke:#dddddd
+  style node1 fill:#eef0ff,stroke:#7e9dff
+  style node2 fill:#fffdee,stroke:#ffca58
+  style sequencer1 fill:#eef0ff,stroke:#7e9dff
+  style sequencer2 fill:#fffdee,stroke:#ffca58
+  style sender1 fill:#eef0ff,stroke:#7e9dff
+  style sender2 fill:#fffdee,stroke:#ffca58
+  style coordinator1 fill:#eef0ff,stroke:#7e9dff,stroke-dasharray: 5 5
+  style coordinator2 fill:#fffdee,stroke:#ffca58,stroke-dasharray: 5 5
+  style nodes fill:#ffffff,stroke:#ffffff
+  style sequencers fill:#ffffff,stroke:#ffffff
+  style components1 fill:#ffffff,stroke:#ffffff
+  style contracts fill:#ffffff,stroke:#ffffff
+```
+
+The coordination role varies depending on the type of domain. In some cases there are specific nodes in the network who coordinate all activity relating to a private transaction (for example Noto). In other cases the only node who can coordinate transactions is the originator of the transaction (for example Zeto).
+
+Paladin domains use one of the following coordination models:
+
+1. Always local
+   - Always acts as coordinator for its own transactions relating to the contract, for example when participating in a Zeto token contract.
+2. Always remote
+   - Never acts as a coordinator for the private contract, for example when particpating in a Noto token but never acting as the notiary for the token
+3. Leader elected
+   - May act as a coordinator based on the distributed coordination algorithm, for example when participating in a Pente private contract
+
+The following diagram shows 3 different domain contracts that 2 nodes are participating in. For the 3 domain contracts the nodes play different coordination roles:
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'fontSize': '40px', 'fill':'#33bb22'}}}%%
 block-beta
       columns 1
       block:domaintokens
-        columns 2
-        domainContract1["Zeto contract 1"]
-        domainContract2["Pente contract 1"]
+        columns 3
+        domainContract1["Locally Coordinated Contract"]
+        domainContract2["Remotely Coordinated Contract"]
+        domainContract3["Elected Coordinator Contract"]
+        space
         space
         space
       end
       block:domaincontracts
-        columns 2
-        block:zetonodes
+        columns 3
+        block:lcnodes
           columns 1
-          block:zetonodelist
+          block:lcnodelist
             columns 2
             c1node1["Node 1"]
             c1node2["Node 2"]
             space
             space
           end
-          block:zetosequencercomponents
+          block:lcsequencercomponents
             columns 2
             c1node1sequencer["Sequencer"]
             c1node2sequencer["Sequencer"]
@@ -62,23 +130,19 @@ block-beta
             end
           end
         end
-        block:pentenodes
+        block:rcnodes
           columns 1
-          block:pentenodelist
-            columns 3
+          block:rcnodelist
+            columns 2
             c2node1["Node 1"]
             c2node2["Node 2"]
-            c2node3["Node 3"]
-            space
             space
             space
           end
-          block:pentesequencercomponents
-            columns 3
+          block:rcsequencercomponents
+            columns 2
             c2node1sequencer["Sequencer"]
             c2node2sequencer["Sequencer"]
-            c2node3sequencer["Sequencer"]
-            space
             space
             space
             block:seq3componentlist
@@ -90,13 +154,35 @@ block-beta
             block:seq4componentlist
               block:seq4components
                 c2node2sender["Sender"]
-                c2node2coordinator["Coordinator"]
               end
             end
+          end
+        end
+        block:elnodes
+          columns 1
+          block:elnodelist
+            columns 2
+            c3node1["Node 1"]
+            c3node2["Node 2"]
+            space
+            space
+          end
+          block:elsequencercomponents
+            columns 2
+            c3node1sequencer["Sequencer"]
+            c3node2sequencer["Sequencer"]
+            space
+            space
             block:seq5componentlist
               block:seq5components
-                c2node3sender["Sender"]
-                c2node3coordinator["Coordinator"]
+                c3node1sender["Sender"]
+                c3node1coordinator["Coordinator"]
+              end
+            end
+            block:seq6componentlist
+              block:seq6components
+                c3node2sender["Sender"]
+                c3node2coordinator["Coordinator"]
               end
             end
           end
@@ -106,12 +192,14 @@ block-beta
   domainContract1 --> c1node2
   domainContract2 --> c2node1
   domainContract2 --> c2node2
-  domainContract2 --> c2node3
+  domainContract3 --> c3node1
+  domainContract3 --> c3node2
   c1node1 --> c1node1sequencer
   c1node2 --> c1node2sequencer
   c2node1 --> c2node1sequencer
   c2node2 --> c2node2sequencer
-  c2node3 --> c2node3sequencer
+  c3node1 --> c3node1sequencer
+  c3node2 --> c3node2sequencer
   c1node1sequencer --> c1node1sender
   c1node2sequencer --> c1node2sender
   c1node1sequencer --> c1node1coordinator
@@ -119,22 +207,68 @@ block-beta
   c2node1sequencer --> c2node1sender
   c2node1sequencer --> c2node1coordinator
   c2node2sequencer --> c2node2sender
-  c2node2sequencer --> c2node2coordinator
-  c2node3sequencer --> c2node3sender
-  c2node3sequencer --> c2node3coordinator
-  style c2node2coordinator fill:#eeeeee,stroke:#bbbbbb
-  style c2node3coordinator fill:#eeeeee,stroke:#bbbbbb
+  c3node1sequencer --> c3node1sender
+  c3node1sequencer --> c3node1coordinator
+  c3node2sequencer --> c3node2sender
+  c3node2sequencer --> c3node2coordinator
+  style domainContract1 fill:#f9f9f9,stroke:#bbbbbb
+  style domainContract2 fill:#f9f9f9,stroke:#bbbbbb
+  style domainContract3 fill:#f9f9f9,stroke:#bbbbbb
+  style c1node1 fill:#eef0ff,stroke:#7e9dff
+  style c1node2 fill:#fffdee,stroke:#ffca58
+  style c2node1 fill:#eef0ff,stroke:#7e9dff
+  style c2node2 fill:#fffdee,stroke:#ffca58
+  style c3node1 fill:#eef0ff,stroke:#7e9dff
+  style c3node2 fill:#fffdee,stroke:#ffca58
+  style c1node1sequencer fill:#eef0ff,stroke:#7e9dff
+  style c1node2sequencer fill:#fffdee,stroke:#ffca58
+  style c2node1sequencer fill:#eef0ff,stroke:#7e9dff
+  style c2node2sequencer fill:#fffdee,stroke:#ffca58
+  style c3node1sequencer fill:#eef0ff,stroke:#7e9dff
+  style c3node2sequencer fill:#fffdee,stroke:#ffca58
+  style c1node1coordinator fill:#e8eeff,stroke:#a7bcff
+  style c1node2coordinator fill:#fffdee,stroke:#ffca58
+  style c2node1coordinator fill:#e8eeff,stroke:#a7bcff
+  style c3node1coordinator fill:#e8eeff,stroke:#a7bcff
+  style c3node2coordinator fill:#f9f9f9,stroke:#777777,stroke-dasharray: 5 5
+  style c1node1sender fill:#e8eeff,stroke:#a7bcff
+  style c1node2sender fill:#fffdee,stroke:#ffca58
+  style c2node1sender fill:#e8eeff,stroke:#a7bcff
+  style c2node2sender fill:#fffdee,stroke:#ffca58
+  style c3node1sender fill:#e8eeff,stroke:#a7bcff
+  style c3node2sender fill:#fffdee,stroke:#ffca58
+  style seq1components fill:#ffffff,stroke:#ffffff
+  style seq2components fill:#ffffff,stroke:#ffffff
+  style seq3components fill:#ffffff,stroke:#ffffff
+  style seq4components fill:#ffffff,stroke:#ffffff
+  style seq5components fill:#ffffff,stroke:#ffffff
+  style seq6components fill:#ffffff,stroke:#ffffff
+  style seq1componentlist fill:#ffffff,stroke:#ffffff
+  style seq2componentlist fill:#ffffff,stroke:#ffffff
+  style seq3componentlist fill:#ffffff,stroke:#ffffff
+  style seq4componentlist fill:#ffffff,stroke:#ffffff
+  style seq5componentlist fill:#ffffff,stroke:#ffffff
+  style seq6componentlist fill:#ffffff,stroke:#ffffff
+  style lcnodes fill:#ffffff,stroke:#ffffff
+  style lcnodelist fill:#ffffff,stroke:#ffffff
+  style lcsequencercomponents fill:#ffffff,stroke:#ffffff
+  style elnodes fill:#ffffff,stroke:#ffffff
+  style elnodelist fill:#ffffff,stroke:#ffffff
+  style elsequencercomponents fill:#ffffff,stroke:#ffffff
+  style rcnodes fill:#ffffff,stroke:#ffffff
+  style rcnodelist fill:#ffffff,stroke:#ffffff
+  style rcsequencercomponents fill:#ffffff,stroke:#ffffff
+  style domaintokens fill:#ffffff,stroke:#ffffff
+  style domaincontracts fill:#ffffff,stroke:#ffffff
 ```
 
-The coordination role varies depending on the type of domain. In some cases there are specific nodes in the network who coordinate all activity relating to a private transaction (e.g. Noto). In other cases the only node who can coordinate transactions is the originator of the transaction (e.g. Zeto).
+In the example above the coordination is as follows:
 
-Therefore, for every private contract a node participates in, the node may take one of 3 roles:
+- The locally coordinated contract requires every node to coordinate their own private transactions.
+- The remotely coordinated contract is always coordinated by node 1. Node 2 never acts as the coordinator.
+- The elected coordinator contract is coordinated by the currently elected leader. At any given time, either node may be the coordinator depending on the leadership election algorithm
 
-1. Always acts as coordinator for its own transactions relating to the contract, for example when participating in a Zeto token contract.
-2. Never acts as a coordinator for the private contract, for example when particpating in a Noto token but never acting as the notiary for the token
-3. May act as a coordinator based on the distributed coordination algorithm, for example when participating in a Pente private contract
-
-Every Paladin node has one sequencer for every private contract it is participating in. However, if the node never acts as a coordinator for the private contract its sequencer for that contract only serves to submit transactions based on instructions from the coordinator (running on another node).
+Since a Paladin node may be participating in multiple private contracts in different Paladin domains, it may be running coordinators for some contracts but not running coordinators for others. If the node never acts as a coordinator for one of the private contracts its sequencer only serves to submit transactions based on instructions from the coordinator (running on another node).
 
 The following diagram shows the components that are active in a node for 3 types of domain contract:
 
