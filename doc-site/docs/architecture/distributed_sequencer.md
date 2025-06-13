@@ -149,7 +149,6 @@ block-beta
             space
             block:seq3componentlist
               block:seq3components
-                c2node1sender["Sender"]
                 c2node1coordinator["Coordinator"]
               end
             end
@@ -206,7 +205,6 @@ block-beta
   c1node2sequencer --> c1node2sender
   c1node1sequencer --> c1node1coordinator
   c1node2sequencer --> c1node2coordinator
-  c2node1sequencer --> c2node1sender
   c2node1sequencer --> c2node1coordinator
   c2node2sequencer --> c2node2sender
   c3node1sequencer --> c3node1sender
@@ -235,7 +233,6 @@ block-beta
   style c3node2coordinator fill:#ffffff,stroke:#777777,stroke-dasharray: 5 5
   style c1node1sender fill:#e8eeff,stroke:#a7bcff
   style c1node2sender fill:#fffdee,stroke:#ffca58
-  style c2node1sender fill:#e8eeff,stroke:#a7bcff
   style c2node2sender fill:#fffdee,stroke:#ffca58
   style c3node1sender fill:#e8eeff,stroke:#a7bcff
   style c3node2sender fill:#fffdee,stroke:#ffca58
@@ -268,6 +265,7 @@ In the example above the coordination is as follows:
 
 - The locally coordinated contract requires every node to coordinate their own private transactions.
 - The remotely coordinated contract is always coordinated by Node 1. Node 2 never acts as the coordinator.
+    - In this example Node 1 isn't participating in the private contract itself, it is only acting as the coordinator. This is a common pattern for notarized contracts where coordination is performed by a separate group of nodes.
 - The elected coordinator contract is coordinated by the currently elected leader. At any given time, either node may be the coordinator depending on the leadership election algorithm
 
 Since a Paladin node may be participating in multiple private contracts in different Paladin domains, it may be running coordinators for some contracts but not running coordinators for others. If the node never acts as a coordinator for one of the private contracts its sequencer only serves to submit transactions based on instructions from the coordinator (running on another node).
