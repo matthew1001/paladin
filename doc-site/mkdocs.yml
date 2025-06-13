@@ -81,9 +81,7 @@ plugins:
   - literate-nav
   - search
   - mike
-  - mermaid-export-to-svg
   - panzoom:
-      always_show_hint: true
       full_screen: true
 extra:
   analytics:

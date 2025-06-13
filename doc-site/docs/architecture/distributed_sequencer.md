@@ -22,7 +22,10 @@ A coordinator may not always be running on every node participating in the priva
 
 The following diagram provides a high-level view of how these components relate to private contracts and nodes:
 
+<p id="test" class="test">
+
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'fontSize': '25px', 'fill':'#33bb22'}}}%%
 block-beta
   columns 1
   block:contracts:1
@@ -42,7 +45,7 @@ block-beta
     sequencer2["Sequencer"]
   end
   space
-  block:components1
+  block:components
     columns 4
     sender1["Sender"]
     coordinator1["Coordinator"]
@@ -50,39 +53,42 @@ block-beta
     coordinator2["Coordinator"]
   end
 
-  contract --> node1
-  contract --> node2
-  node1 --> sequencer1
-  node2 --> sequencer2
-  sequencer1 --> sender1
-  sequencer1 --> coordinator1
-  sequencer2 --> sender2
-  sequencer2 --> coordinator2
-  style contract fill:#f9f9f9,stroke:#dddddd
-  style node1 fill:#eef0ff,stroke:#7e9dff
-  style node2 fill:#fffdee,stroke:#ffca58
-  style sequencer1 fill:#eef0ff,stroke:#7e9dff
-  style sequencer2 fill:#fffdee,stroke:#ffca58
-  style sender1 fill:#eef0ff,stroke:#7e9dff
-  style sender2 fill:#fffdee,stroke:#ffca58
-  style coordinator1 fill:#eef0ff,stroke:#7e9dff,stroke-dasharray: 5 5
-  style coordinator2 fill:#fffdee,stroke:#ffca58,stroke-dasharray: 5 5
-  style nodes fill:#ffffff,stroke:#ffffff
-  style sequencers fill:#ffffff,stroke:#ffffff
-  style components1 fill:#ffffff,stroke:#ffffff
-  style contracts fill:#ffffff,stroke:#ffffff
+contract --> node1
+contract --> node2
+node1 --> sequencer1
+node2 --> sequencer2
+sequencer1 --> sender1
+sequencer1 --> coordinator1
+sequencer2 --> sender2
+sequencer2 --> coordinator2
+style contract fill:#ffffff,stroke:#888888
+style contracts fill:#f5f5f5,stroke:#f5f5f5
+style nodes fill:#f5f5f5,stroke:#f5f5f5
+style components fill:#f5f5f5,stroke:#f5f5f5
+style sequencers fill:#f5f5f5,stroke:#f5f5f5
+style node1 fill:#eef0ff,stroke:#7e9dff
+style node2 fill:#fffdee,stroke:#ffca58
+style sequencer1 fill:#eef0ff,stroke:#7e9dff
+style sequencer2 fill:#fffdee,stroke:#ffca58
+style sender1 fill:#eef0ff,stroke:#7e9dff
+style sender2 fill:#fffdee,stroke:#ffca58
+style coordinator1 fill:#eef0ff,stroke:#7e9dff,stroke-dasharray: 5 5
+style coordinator2 fill:#fffdee,stroke:#ffca58,stroke-dasharray: 5 5
+
 ```
+
+</p>
 
 The coordination role varies depending on the type of domain. In some cases there are specific nodes in the network who coordinate all activity relating to a private transaction (for example Noto). In other cases the only node who can coordinate transactions is the originator of the transaction (for example Zeto).
 
 Paladin domains use one of the following coordination models:
 
 1. Always local
-   - Always acts as coordinator for its own transactions relating to the contract, for example when participating in a Zeto token contract.
+    - Always acts as coordinator for its own transactions relating to the contract, for example when participating in a Zeto token contract.
 2. Always remote
-   - Never acts as a coordinator for the private contract, for example when particpating in a Noto token but never acting as the notiary for the token
+    - Never acts as a coordinator for the private contract, for example when particpating in a Noto token but never acting as the notiary for the token
 3. Leader elected
-   - May act as a coordinator based on the distributed coordination algorithm, for example when participating in a Pente private contract
+    - May act as a coordinator based on the distributed coordination algorithm, for example when participating in a Pente private contract
 
 The following diagram shows 3 different domain contracts that 2 nodes are participating in. For the 3 domain contracts the nodes play different coordination roles:
 
@@ -211,9 +217,9 @@ block-beta
   c3node1sequencer --> c3node1coordinator
   c3node2sequencer --> c3node2sender
   c3node2sequencer --> c3node2coordinator
-  style domainContract1 fill:#f9f9f9,stroke:#bbbbbb
-  style domainContract2 fill:#f9f9f9,stroke:#bbbbbb
-  style domainContract3 fill:#f9f9f9,stroke:#bbbbbb
+  style domainContract1 fill:#ffffff,stroke:#999999
+  style domainContract2 fill:#ffffff,stroke:#999999
+  style domainContract3 fill:#ffffff,stroke:#999999
   style c1node1 fill:#eef0ff,stroke:#7e9dff
   style c1node2 fill:#fffdee,stroke:#ffca58
   style c2node1 fill:#eef0ff,stroke:#7e9dff
@@ -230,42 +236,42 @@ block-beta
   style c1node2coordinator fill:#fffdee,stroke:#ffca58
   style c2node1coordinator fill:#e8eeff,stroke:#a7bcff
   style c3node1coordinator fill:#e8eeff,stroke:#a7bcff
-  style c3node2coordinator fill:#f9f9f9,stroke:#777777,stroke-dasharray: 5 5
+  style c3node2coordinator fill:#ffffff,stroke:#777777,stroke-dasharray: 5 5
   style c1node1sender fill:#e8eeff,stroke:#a7bcff
   style c1node2sender fill:#fffdee,stroke:#ffca58
   style c2node1sender fill:#e8eeff,stroke:#a7bcff
   style c2node2sender fill:#fffdee,stroke:#ffca58
   style c3node1sender fill:#e8eeff,stroke:#a7bcff
   style c3node2sender fill:#fffdee,stroke:#ffca58
-  style seq1components fill:#ffffff,stroke:#ffffff
-  style seq2components fill:#ffffff,stroke:#ffffff
-  style seq3components fill:#ffffff,stroke:#ffffff
-  style seq4components fill:#ffffff,stroke:#ffffff
-  style seq5components fill:#ffffff,stroke:#ffffff
-  style seq6components fill:#ffffff,stroke:#ffffff
-  style seq1componentlist fill:#ffffff,stroke:#ffffff
-  style seq2componentlist fill:#ffffff,stroke:#ffffff
-  style seq3componentlist fill:#ffffff,stroke:#ffffff
-  style seq4componentlist fill:#ffffff,stroke:#ffffff
-  style seq5componentlist fill:#ffffff,stroke:#ffffff
-  style seq6componentlist fill:#ffffff,stroke:#ffffff
-  style lcnodes fill:#ffffff,stroke:#ffffff
-  style lcnodelist fill:#ffffff,stroke:#ffffff
-  style lcsequencercomponents fill:#ffffff,stroke:#ffffff
-  style elnodes fill:#ffffff,stroke:#ffffff
-  style elnodelist fill:#ffffff,stroke:#ffffff
-  style elsequencercomponents fill:#ffffff,stroke:#ffffff
-  style rcnodes fill:#ffffff,stroke:#ffffff
-  style rcnodelist fill:#ffffff,stroke:#ffffff
-  style rcsequencercomponents fill:#ffffff,stroke:#ffffff
-  style domaintokens fill:#ffffff,stroke:#ffffff
-  style domaincontracts fill:#ffffff,stroke:#ffffff
+  style seq1components fill:#f5f5f5,stroke:#f5f5f5
+  style seq2components fill:#f5f5f5,stroke:#f5f5f5
+  style seq3components fill:#f5f5f5,stroke:#f5f5f5
+  style seq4components fill:#f5f5f5,stroke:#f5f5f5
+  style seq5components fill:#f5f5f5,stroke:#f5f5f5
+  style seq6components fill:#f5f5f5,stroke:#f5f5f5
+  style seq1componentlist fill:#f5f5f5,stroke:#f5f5f5
+  style seq2componentlist fill:#f5f5f5,stroke:#f5f5f5
+  style seq3componentlist fill:#f5f5f5,stroke:#f5f5f5
+  style seq4componentlist fill:#f5f5f5,stroke:#f5f5f5
+  style seq5componentlist fill:#f5f5f5,stroke:#f5f5f5
+  style seq6componentlist fill:#f5f5f5,stroke:#f5f5f5
+  style lcnodes fill:#f5f5f5,stroke:#f5f5f5
+  style lcnodelist fill:#f5f5f5,stroke:#f5f5f5
+  style lcsequencercomponents fill:#f5f5f5,stroke:#f5f5f5
+  style elnodes fill:#f5f5f5,stroke:#f5f5f5
+  style elnodelist fill:#f5f5f5,stroke:#f5f5f5
+  style elsequencercomponents fill:#f5f5f5,stroke:#f5f5f5
+  style rcnodes fill:#f5f5f5,stroke:#f5f5f5
+  style rcnodelist fill:#f5f5f5,stroke:#f5f5f5
+  style rcsequencercomponents fill:#f5f5f5,stroke:#f5f5f5
+  style domaintokens fill:#f5f5f5,stroke:#f5f5f5
+  style domaincontracts fill:#f5f5f5,stroke:#f5f5f5
 ```
 
 In the example above the coordination is as follows:
 
 - The locally coordinated contract requires every node to coordinate their own private transactions.
-- The remotely coordinated contract is always coordinated by node 1. Node 2 never acts as the coordinator.
+- The remotely coordinated contract is always coordinated by Node 1. Node 2 never acts as the coordinator.
 - The elected coordinator contract is coordinated by the currently elected leader. At any given time, either node may be the coordinator depending on the leadership election algorithm
 
 Since a Paladin node may be participating in multiple private contracts in different Paladin domains, it may be running coordinators for some contracts but not running coordinators for others. If the node never acts as a coordinator for one of the private contracts its sequencer only serves to submit transactions based on instructions from the coordinator (running on another node).
@@ -279,14 +285,14 @@ block-beta
       columns 1
       block:nodes
         columns 1
-        node1["Node 1"]
+        node["Node 2"]
         space
       end
       block:nodecontracts
         columns 3
-        domainContract1["Zeto contract 1"]
-        domainContract2["Pente contract 1"]
-        domainContract3["Noto contract 1"]
+        domainContract1["Locally Coordinated Contract"]
+        domainContract2["Remotely Coordinated Contract"]
+        domainContract3["Elected Coordinator Contract"]
         space
         space
         space
@@ -310,7 +316,7 @@ block-beta
           block:comp2
           columns 2
             sender2["Sender"]
-            coordinator2["Sometimes coordinator"]
+            coordinator2["Never coordinator"]
           end
         end
         block:seq3
@@ -320,24 +326,38 @@ block-beta
           block:comp3
           columns 2
             sender3["Sender"]
-            coordinator3["Never coordinator"]
+            coordinator3["Sometimes coordinator"]
           end
         end
       end
   end
-  node1 --> domainContract1
-  node1 --> domainContract2
-  node1 --> domainContract3
+  node --> domainContract1
+  node --> domainContract2
+  node --> domainContract3
   domainContract1 --> sequencer1
   domainContract2 --> sequencer2
   domainContract3 --> sequencer3
   sequencer1 --> sender1
   sequencer1 --> coordinator1
   sequencer2 --> sender2
-  sequencer2 --> coordinator2
   sequencer3 --> sender3
+  sequencer3 --> coordinator3
   style coordinator2 fill:#eeeeee,stroke:#bbbbbb
   style coordinator3 fill:#eeeeee,stroke:#bbbbbb,stroke-dasharray: 5 5
+  style seq1 fill:#f5f5f5,stroke:#f5f5f5
+  style seq2 fill:#f5f5f5,stroke:#f5f5f5
+  style seq3 fill:#f5f5f5,stroke:#f5f5f5
+  style node fill:#fffdee,stroke:#ffca58
+  style sequencer1 fill:#fffdee,stroke:#ffca58
+  style sequencer2 fill:#fffdee,stroke:#ffca58
+  style sequencer3 fill:#fffdee,stroke:#ffca58
+  style sender1 fill:#fffdee,stroke:#ffca58
+  style sender2 fill:#fffdee,stroke:#ffca58
+  style sender3 fill:#fffdee,stroke:#ffca58
+  style coordinator1 fill:#fffdee,stroke:#ffca58
+  style domainContract1 fill:#fffdee,stroke:#ffca58
+  style domainContract2 fill:#fffdee,stroke:#ffca58
+  style domainContract3 fill:#fffdee,stroke:#ffca58
 ```
 
 ## Objectives
