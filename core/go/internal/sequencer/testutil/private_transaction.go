@@ -23,10 +23,10 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kaleido-io/paladin/core/internal/components"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 	"github.com/kaleido-io/paladin/toolkit/pkg/algorithms"
 	"github.com/kaleido-io/paladin/toolkit/pkg/prototk"
 	"github.com/kaleido-io/paladin/toolkit/pkg/signpayloads"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
 	"github.com/kaleido-io/paladin/toolkit/pkg/verifiers"
 	"golang.org/x/crypto/sha3"
 )
@@ -44,13 +44,13 @@ type PrivateTransactionBuilderForTesting struct {
 	senderNode             string
 	sender                 *identityForTesting
 	domain                 string
-	address                tktypes.EthAddress
-	signerAddress          *tktypes.EthAddress
+	address                pldtypes.EthAddress
+	signerAddress          *pldtypes.EthAddress
 	numberOfEndorsers      int
 	numberOfEndorsements   int
 	numberOfOutputStates   int
-	inputStateIDs          []tktypes.HexBytes
-	readStateIDs           []tktypes.HexBytes
+	inputStateIDs          []pldtypes.HexBytes
+	readStateIDs           []pldtypes.HexBytes
 	endorsers              []*identityForTesting
 	revertReason           *string
 	predefinedDependencies []uuid.UUID
@@ -85,7 +85,7 @@ func (b PrivateTransactionBuilderListForTesting) Build() []*components.PrivateTr
 	return transactions
 }
 
-func (b PrivateTransactionBuilderListForTesting) Address(address tktypes.EthAddress) PrivateTransactionBuilderListForTesting {
+func (b PrivateTransactionBuilderListForTesting) Address(address pldtypes.EthAddress) PrivateTransactionBuilderListForTesting {
 	for _, builder := range b {
 		builder.Address(address)
 	}
@@ -121,7 +121,7 @@ func NewPrivateTransactionBuilderForTesting() *PrivateTransactionBuilderForTesti
 	builder := &PrivateTransactionBuilderForTesting{
 		id:                   uuid.New(),
 		domain:               "defaultDomain",
-		address:              *tktypes.RandAddress(),
+		address:              *pldtypes.RandAddress(),
 		senderName:           "sender",
 		senderNode:           "senderNode",
 		signerAddress:        nil,
@@ -133,14 +133,14 @@ func NewPrivateTransactionBuilderForTesting() *PrivateTransactionBuilderForTesti
 	return builder
 }
 
-func (b *PrivateTransactionBuilderForTesting) Address(address tktypes.EthAddress) *PrivateTransactionBuilderForTesting {
+func (b *PrivateTransactionBuilderForTesting) Address(address pldtypes.EthAddress) *PrivateTransactionBuilderForTesting {
 	b.address = address
 	return b
 }
 
 func (b *PrivateTransactionBuilderForTesting) Sender(sender string) *PrivateTransactionBuilderForTesting {
 
-	name, node, err := tktypes.PrivateIdentityLocator(sender).Validate(context.Background(), "", false)
+	name, node, err := pldtypes.PrivateIdentityLocator(sender).Validate(context.Background(), "", false)
 	if err != nil {
 		//this is only used for testing so panic is fine
 		panic(err)
@@ -180,12 +180,12 @@ func (b *PrivateTransactionBuilderForTesting) NumberOfOutputStates(num int) *Pri
 	return b
 }
 
-func (b *PrivateTransactionBuilderForTesting) InputStateIDs(stateIDs ...tktypes.HexBytes) *PrivateTransactionBuilderForTesting {
+func (b *PrivateTransactionBuilderForTesting) InputStateIDs(stateIDs ...pldtypes.HexBytes) *PrivateTransactionBuilderForTesting {
 	b.inputStateIDs = stateIDs
 	return b
 }
 
-func (b *PrivateTransactionBuilderForTesting) ReadStateIDs(stateIDs ...tktypes.HexBytes) *PrivateTransactionBuilderForTesting {
+func (b *PrivateTransactionBuilderForTesting) ReadStateIDs(stateIDs ...pldtypes.HexBytes) *PrivateTransactionBuilderForTesting {
 	b.readStateIDs = stateIDs
 	return b
 }
@@ -217,7 +217,7 @@ func (b *PrivateTransactionBuilderForTesting) initializeSender() {
 	b.sender = &identityForTesting{
 		identityLocator: fmt.Sprintf("%s@%s", b.senderName, b.senderNode),
 		identity:        b.senderName,
-		verifier:        tktypes.RandAddress().String(),
+		verifier:        pldtypes.RandAddress().String(),
 		keyHandle:       b.senderName + "_KeyHandle",
 	}
 }
@@ -230,7 +230,7 @@ func (b *PrivateTransactionBuilderForTesting) initializeEndorsers() {
 		b.endorsers[i] = &identityForTesting{
 			identity:        endorserName,
 			identityLocator: endorserName + "@" + endorserNode,
-			verifier:        tktypes.RandAddress().String(),
+			verifier:        pldtypes.RandAddress().String(),
 			keyHandle:       endorserName + "KeyHandle",
 		}
 	}
@@ -282,7 +282,7 @@ func (b *PrivateTransactionBuilderForTesting) BuildPreAssembly() *components.Tra
 		Lookup:       b.sender.identityLocator,
 		Algorithm:    algorithms.ECDSA_SECP256K1,
 		VerifierType: verifiers.ETH_ADDRESS,
-		Verifier:     tktypes.RandAddress().String(),
+		Verifier:     pldtypes.RandAddress().String(),
 	}
 
 	for i := 0; i < b.numberOfEndorsers; i++ {
@@ -299,9 +299,11 @@ func (b *PrivateTransactionBuilderForTesting) BuildPreAssembly() *components.Tra
 		}
 	}
 
-	if b.predefinedDependencies != nil {
-		preAssembly.Dependencies = append(preAssembly.Dependencies, b.predefinedDependencies...)
-	}
+	// MRW TODO - why did we think pre-assembly could accept dependencies?
+
+	// if b.predefinedDependencies != nil {
+	// 	preAssembly.Dependencies = append(preAssembly.Dependencies, b.predefinedDependencies...)
+	// }
 
 	return preAssembly
 }
@@ -313,7 +315,7 @@ func (b *PrivateTransactionBuilderForTesting) BuildEndorsement(endorserIndex int
 	return &prototk.AttestationResult{
 		Name:            attReqName,
 		AttestationType: prototk.AttestationType_ENDORSE,
-		Payload:         tktypes.RandBytes(32),
+		Payload:         pldtypes.RandBytes(32),
 		Verifier: &prototk.ResolvedVerifier{
 			Lookup:       b.endorsers[endorserIndex].identityLocator,
 			Verifier:     b.endorsers[endorserIndex].verifier,
@@ -324,13 +326,13 @@ func (b *PrivateTransactionBuilderForTesting) BuildEndorsement(endorserIndex int
 }
 
 // Function BuildPostAssembly creates a new PostAssembly with all fields populated as per the builder's configuration using defaults unless explicitly set
-func (b *PrivateTransactionBuilderForTesting) BuildPostAssemblyAndHash() (*components.TransactionPostAssembly, *tktypes.Bytes32) {
+func (b *PrivateTransactionBuilderForTesting) BuildPostAssemblyAndHash() (*components.TransactionPostAssembly, *pldtypes.Bytes32) {
 	postAssembly := b.BuildPostAssembly()
 	hash := sha3.NewLegacyKeccak256()
 	for _, signature := range postAssembly.Signatures {
 		hash.Write(signature.Payload)
 	}
-	var h32 tktypes.Bytes32
+	var h32 pldtypes.Bytes32
 	_ = hash.Sum(h32[0:0])
 	return postAssembly, &h32
 }
@@ -364,7 +366,7 @@ func (b *PrivateTransactionBuilderForTesting) BuildPostAssembly() *components.Tr
 		{
 			Name:            "sign",
 			AttestationType: prototk.AttestationType_SIGN,
-			Payload:         tktypes.RandBytes(32),
+			Payload:         pldtypes.RandBytes(32),
 			Verifier: &prototk.ResolvedVerifier{
 				Lookup:       b.sender.identityLocator,
 				Verifier:     b.sender.verifier,
@@ -390,23 +392,23 @@ func (b *PrivateTransactionBuilderForTesting) BuildPostAssembly() *components.Tr
 
 	for i := 0; i < b.numberOfOutputStates; i++ {
 		postAssembly.OutputStates = append(postAssembly.OutputStates, &components.FullState{
-			ID: tktypes.HexBytes(tktypes.RandBytes(32)),
+			ID: pldtypes.HexBytes(pldtypes.RandBytes(32)),
 		})
 	}
 
 	for _, inputStateID := range b.inputStateIDs {
 		postAssembly.InputStates = append(postAssembly.InputStates, &components.FullState{
 			ID:     inputStateID,
-			Schema: tktypes.Bytes32(tktypes.RandBytes(32)),
-			Data:   tktypes.JSONString("{\"data\":\"hello\"}"),
+			Schema: pldtypes.Bytes32(pldtypes.RandBytes(32)),
+			Data:   pldtypes.JSONString("{\"data\":\"hello\"}"),
 		})
 	}
 
 	for _, readStateID := range b.readStateIDs {
 		postAssembly.ReadStates = append(postAssembly.ReadStates, &components.FullState{
 			ID:     readStateID,
-			Schema: tktypes.Bytes32(tktypes.RandBytes(32)),
-			Data:   tktypes.JSONString("{\"data\":\"hello\"}"),
+			Schema: pldtypes.Bytes32(pldtypes.RandBytes(32)),
+			Data:   pldtypes.JSONString("{\"data\":\"hello\"}"),
 		})
 	}
 

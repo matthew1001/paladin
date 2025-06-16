@@ -19,8 +19,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/kaleido-io/paladin/common/go/pkg/log"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/common"
-	"github.com/kaleido-io/paladin/toolkit/pkg/log"
 )
 
 type State int

@@ -22,7 +22,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/common"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/coordinator/transaction"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -539,7 +539,7 @@ func TestCoordinatorTransaction_Submitted_ToPooled_OnConfirmed_IfRevert(t *testi
 		BaseEvent: transaction.BaseEvent{
 			TransactionID: txn.ID,
 		},
-		RevertReason: tktypes.HexBytes("0x01020304"),
+		RevertReason: pldtypes.HexBytes("0x01020304"),
 	})
 	assert.NoError(t, err)
 

@@ -25,8 +25,8 @@ import (
 	"github.com/kaleido-io/paladin/core/internal/components"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/common"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/testutil"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 	"github.com/kaleido-io/paladin/toolkit/pkg/prototk"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
 )
 
 type identityForTesting struct {
@@ -136,7 +136,7 @@ func (r *SentMessageRecorder) SendDispatchConfirmationRequest(
 	transactionSender string,
 	idempotencyKey uuid.UUID,
 	transactionSpecification *prototk.TransactionSpecification,
-	hash *tktypes.Bytes32,
+	hash *pldtypes.Bytes32,
 ) error {
 	r.hasSentDispatchConfirmationRequest = true
 	r.sentDispatchConfirmationRequestIdempotencyKey = idempotencyKey
@@ -155,8 +155,8 @@ type TransactionBuilderForTesting struct {
 	privateTransactionBuilder          *testutil.PrivateTransactionBuilderForTesting
 	sender                             *identityForTesting
 	dispatchConfirmed                  bool
-	signerAddress                      *tktypes.EthAddress
-	latestSubmissionHash               *tktypes.Bytes32
+	signerAddress                      *pldtypes.EthAddress
+	latestSubmissionHash               *pldtypes.Bytes32
 	nonce                              *uint64
 	state                              State
 	sentMessageRecorder                *SentMessageRecorder
@@ -178,7 +178,7 @@ func NewTransactionBuilderForTesting(t *testing.T, state State) *TransactionBuil
 		sender: &identityForTesting{
 			identityLocator: fmt.Sprintf("%s@%s", senderName, senderNode),
 			identity:        senderName,
-			verifier:        tktypes.RandAddress().String(),
+			verifier:        pldtypes.RandAddress().String(),
 			keyHandle:       senderName + "_KeyHandle",
 		},
 		dispatchConfirmed:         false,
@@ -197,8 +197,8 @@ func NewTransactionBuilderForTesting(t *testing.T, state State) *TransactionBuil
 	case State_Submitted:
 		nonce := rand.Uint64()
 		builder.nonce = &nonce
-		builder.signerAddress = tktypes.RandAddress()
-		latestSubmissionHash := tktypes.Bytes32(tktypes.RandBytes(32))
+		builder.signerAddress = pldtypes.RandAddress()
+		latestSubmissionHash := pldtypes.Bytes32(pldtypes.RandBytes(32))
 		builder.latestSubmissionHash = &latestSubmissionHash
 	case State_Endorsement_Gathering:
 		//fine grained detail in this state needed to emulate what has already happened wrt endorsement requests and responses so far
@@ -232,12 +232,12 @@ func (b *TransactionBuilderForTesting) NumberOfOutputStates(num int) *Transactio
 	return b
 }
 
-func (b *TransactionBuilderForTesting) InputStateIDs(stateIDs ...tktypes.HexBytes) *TransactionBuilderForTesting {
+func (b *TransactionBuilderForTesting) InputStateIDs(stateIDs ...pldtypes.HexBytes) *TransactionBuilderForTesting {
 	b.privateTransactionBuilder.InputStateIDs(stateIDs...)
 	return b
 }
 
-func (b *TransactionBuilderForTesting) ReadStateIDs(stateIDs ...tktypes.HexBytes) *TransactionBuilderForTesting {
+func (b *TransactionBuilderForTesting) ReadStateIDs(stateIDs ...pldtypes.HexBytes) *TransactionBuilderForTesting {
 	b.privateTransactionBuilder.ReadStateIDs(stateIDs...)
 	return b
 }

@@ -23,7 +23,7 @@ import (
 	"github.com/kaleido-io/paladin/core/internal/sequencer/coordinator"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/coordinator/transaction"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/testutil"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -174,7 +174,7 @@ func TestCoordinator_PreparedNoTransition_OnTransactionConfirmed_IfNotFlushCompl
 	builder := coordinator.NewCoordinatorBuilderForTesting(coordinator.State_Prepared)
 	c, _ := builder.Build(ctx)
 
-	otherHash := tktypes.Bytes32(tktypes.RandBytes(32))
+	otherHash := pldtypes.Bytes32(pldtypes.RandBytes(32))
 	otherNonce := builder.GetFlushPointNonce() - 1
 
 	err := c.HandleEvent(ctx, &coordinator.TransactionConfirmedEvent{

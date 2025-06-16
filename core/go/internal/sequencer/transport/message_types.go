@@ -21,8 +21,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/kaleido-io/paladin/core/internal/components"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/common"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 	"github.com/kaleido-io/paladin/toolkit/pkg/prototk"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
 )
 
 const (
@@ -34,8 +34,8 @@ const (
 )
 
 type CoordinatorHeartbeatNotification struct {
-	From            string              `json:"from"`
-	ContractAddress *tktypes.EthAddress `json:"contractAddress"`
+	From            string               `json:"from"`
+	ContractAddress *pldtypes.EthAddress `json:"contractAddress"`
 	common.CoordinatorSnapshot
 }
 
@@ -62,24 +62,24 @@ func ParseCoordinatorHeartbeatNotification(bytes []byte) (*CoordinatorHeartbeatN
 
 type TransactionRequest struct {
 	Sender          string                           `json:"sender"` //TODO this is duplicate of the ReplyTo field in the transport message.  Would it be more secure to assert that they are the same?
-	ContractAddress *tktypes.EthAddress              `json:"contractAddress"`
+	ContractAddress *pldtypes.EthAddress             `json:"contractAddress"`
 	Transactions    []*components.PrivateTransaction `json:"transactions"`
 }
 
 type HandoverRequest struct {
-	ContractAddress *tktypes.EthAddress `json:"contractAddress"`
+	ContractAddress *pldtypes.EthAddress `json:"contractAddress"`
 }
 
 type DispatchConfirmationRequest struct {
-	ContractAddress *tktypes.EthAddress `json:"contractAddress"`
-	Coordinator     string              `json:"coordinator"`
-	TransactionID   uuid.UUID           `json:"transactionID"`
-	TransactionHash []byte              `json:"transactionHash"`
+	ContractAddress *pldtypes.EthAddress `json:"contractAddress"`
+	Coordinator     string               `json:"coordinator"`
+	TransactionID   uuid.UUID            `json:"transactionID"`
+	TransactionHash []byte               `json:"transactionHash"`
 }
 
 type DispatchConfirmationResponse struct {
-	ContractAddress *tktypes.EthAddress `json:"contractAddress"`
-	TransactionID   uuid.UUID           `json:"transactionID"`
+	ContractAddress *pldtypes.EthAddress `json:"contractAddress"`
+	TransactionID   uuid.UUID            `json:"transactionID"`
 }
 
 func (dr *HandoverRequest) bytes() []byte {

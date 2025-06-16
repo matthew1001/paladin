@@ -18,8 +18,8 @@ package sender
 import (
 	"context"
 
+	"github.com/kaleido-io/paladin/common/go/pkg/log"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/sender/transaction"
-	"github.com/kaleido-io/paladin/toolkit/pkg/log"
 )
 
 func (s *sender) applyHeartbeatReceived(ctx context.Context, event *HeartbeatReceivedEvent) error {

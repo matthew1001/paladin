@@ -24,8 +24,8 @@ import (
 	"github.com/kaleido-io/paladin/core/internal/sequencer/common"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/coordinator/transaction"
 
-	"github.com/kaleido-io/paladin/toolkit/pkg/log"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
+	"github.com/kaleido-io/paladin/common/go/pkg/log"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 )
 
 type Coordinator interface {
@@ -45,7 +45,7 @@ type coordinator struct {
 
 	/* Config */
 	blockRangeSize       uint64
-	contractAddress      *tktypes.EthAddress
+	contractAddress      *pldtypes.EthAddress
 	blockHeightTolerance uint64
 	closingGracePeriod   int // expressed as a multiple of heartbeat intervals
 	requestTimeout       common.Duration
@@ -72,7 +72,7 @@ func NewCoordinator(
 	requestTimeout,
 	assembleTimeout common.Duration,
 	blockRangeSize uint64,
-	contractAddress *tktypes.EthAddress,
+	contractAddress *pldtypes.EthAddress,
 	blockHeightTolerance uint64,
 	closingGracePeriod int,
 ) (*coordinator, error) {
@@ -93,7 +93,7 @@ func NewCoordinator(
 	}
 	c.committee = make(map[string][]string)
 	for _, member := range committeeMembers {
-		memberLocator := tktypes.PrivateIdentityLocator(member)
+		memberLocator := pldtypes.PrivateIdentityLocator(member)
 		memberNode, err := memberLocator.Node(ctx, false)
 		if err != nil {
 			log.L(ctx).Errorf("Error resolving node for member %s: %v", member, err)
@@ -244,7 +244,7 @@ func (c *coordinator) getTransactionsNotInStates(ctx context.Context, states []t
 	return matchingTxns
 }
 
-func (c *coordinator) findTransactionBySignerNonce(ctx context.Context, signer *tktypes.EthAddress, nonce uint64) *transaction.Transaction {
+func (c *coordinator) findTransactionBySignerNonce(ctx context.Context, signer *pldtypes.EthAddress, nonce uint64) *transaction.Transaction {
 	//TODO this would be more efficient by maintaining a separate index but that is error prone so
 	// deferring until we have a comprehensive test suite to catch errors
 	for _, txn := range c.transactionsByID {
@@ -255,7 +255,7 @@ func (c *coordinator) findTransactionBySignerNonce(ctx context.Context, signer *
 	return nil
 }
 
-func (c *coordinator) confirmDispatchedTransaction(ctx context.Context, from *tktypes.EthAddress, nonce uint64, hash tktypes.Bytes32, revertReason tktypes.HexBytes) (bool, error) {
+func (c *coordinator) confirmDispatchedTransaction(ctx context.Context, from *pldtypes.EthAddress, nonce uint64, hash pldtypes.Bytes32, revertReason pldtypes.HexBytes) (bool, error) {
 	// First check whether it is one that we have been coordinating
 	if dispatchedTransaction := c.findTransactionBySignerNonce(ctx, from, nonce); dispatchedTransaction != nil {
 		if dispatchedTransaction.GetLatestSubmissionHash() == nil || *(dispatchedTransaction.GetLatestSubmissionHash()) != hash {
@@ -280,7 +280,7 @@ func (c *coordinator) confirmDispatchedTransaction(ctx context.Context, from *tk
 
 }
 
-func (c *coordinator) confirmMonitoredTransaction(ctx context.Context, from *tktypes.EthAddress, nonce uint64) {
+func (c *coordinator) confirmMonitoredTransaction(ctx context.Context, from *pldtypes.EthAddress, nonce uint64) {
 	if flushPoint := c.activeCoordinatorsFlushPointsBySignerNonce[fmt.Sprintf("%s:%d", from.String(), nonce)]; flushPoint != nil {
 		//We do not remove the flushPoint from the list because there is a chance that the coordinator hasn't seen this confirmation themselves and
 		// when they send us the next heartbeat, it will contain this FlushPoint so it would get added back into the list and we would not see the confirmation again

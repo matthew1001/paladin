@@ -24,7 +24,7 @@ import (
 	"github.com/kaleido-io/paladin/core/internal/sequencer/coordinator/transaction"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/testutil"
 	"github.com/kaleido-io/paladin/core/mocks/sequencermocks"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -45,7 +45,7 @@ func NewCoordinatorForUnitTest(t *testing.T, ctx context.Context, committeeMembe
 		emit:              func(event common.Event) {},
 	}
 
-	coordinator, err := NewCoordinator(ctx, mocks.messageSender, committeeMembers, mocks.clock, mocks.emit, mocks.engineIntegration, mocks.clock.Duration(1000), mocks.clock.Duration(5000), 100, tktypes.RandAddress(), 5, 5)
+	coordinator, err := NewCoordinator(ctx, mocks.messageSender, committeeMembers, mocks.clock, mocks.emit, mocks.engineIntegration, mocks.clock.Duration(1000), mocks.clock.Duration(5000), 100, pldtypes.RandAddress(), 5, 5)
 	require.NoError(t, err)
 
 	return coordinator, mocks
@@ -144,7 +144,7 @@ func TestCoordinator_SingleTransactionLifecycle(t *testing.T) {
 	assert.Equal(t, txn.ID.String(), readyTransactions[0].ID.String(), "The transaction ready to dispatch should match the delegated transaction ID")
 
 	// Simulate the dispatcher thread collecting the transaction and dispatching it to a public transaction manager with a signing address
-	signerAddress := tktypes.RandAddress()
+	signerAddress := pldtypes.RandAddress()
 	err = c.HandleEvent(ctx, &transaction.CollectedEvent{
 		BaseEvent: transaction.BaseEvent{
 			TransactionID: txn.ID,
@@ -181,7 +181,7 @@ func TestCoordinator_SingleTransactionLifecycle(t *testing.T) {
 	assert.Equal(t, uint64(42), *snapshot.DispatchedTransactions[0].Nonce, "Snapshot should contain the dispatched transaction with nonce 42")
 
 	// Simulate the public transaction manager submitting the transaction
-	submissionHash := tktypes.Bytes32(tktypes.RandBytes(32))
+	submissionHash := pldtypes.Bytes32(pldtypes.RandBytes(32))
 	err = c.HandleEvent(ctx, &transaction.SubmittedEvent{
 		BaseEvent: transaction.BaseEvent{
 			TransactionID: txn.ID,

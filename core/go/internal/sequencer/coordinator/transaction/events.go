@@ -19,8 +19,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/kaleido-io/paladin/core/internal/components"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/common"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 	"github.com/kaleido-io/paladin/toolkit/pkg/prototk"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
 )
 
 type Event interface {
@@ -170,7 +170,7 @@ func (_ *DispatchConfirmationRejectedEvent) TypeString() string {
 // Collected by the dispatcher thread and dispatched to a public transaction manager for a given signer address
 type CollectedEvent struct {
 	BaseEvent
-	SignerAddress tktypes.EthAddress
+	SignerAddress pldtypes.EthAddress
 }
 
 func (_ *CollectedEvent) Type() EventType {
@@ -198,7 +198,7 @@ func (_ *NonceAllocatedEvent) TypeString() string {
 // SubmittedEvent
 type SubmittedEvent struct {
 	BaseEvent
-	SubmissionHash tktypes.Bytes32
+	SubmissionHash pldtypes.Bytes32
 }
 
 func (_ *SubmittedEvent) Type() EventType {
@@ -213,8 +213,8 @@ func (_ *SubmittedEvent) TypeString() string {
 type ConfirmedEvent struct {
 	BaseEvent
 	Nonce        uint64
-	Hash         tktypes.Bytes32
-	RevertReason tktypes.HexBytes
+	Hash         pldtypes.Bytes32
+	RevertReason pldtypes.HexBytes
 }
 
 func (_ *ConfirmedEvent) Type() EventType {

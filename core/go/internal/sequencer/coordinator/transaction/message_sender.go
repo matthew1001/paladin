@@ -20,8 +20,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kaleido-io/paladin/core/internal/components"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 	"github.com/kaleido-io/paladin/toolkit/pkg/prototk"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
 )
 
 type MessageSender interface {
@@ -52,6 +52,6 @@ type MessageSender interface {
 		transactionSender string,
 		idempotencyKey uuid.UUID,
 		transactionSpecification *prototk.TransactionSpecification,
-		hash *tktypes.Bytes32,
+		hash *pldtypes.Bytes32,
 	) error
 }

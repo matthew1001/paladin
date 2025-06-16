@@ -18,9 +18,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/kaleido-io/paladin/common/go/pkg/i18n"
+	"github.com/kaleido-io/paladin/common/go/pkg/log"
 	"github.com/kaleido-io/paladin/core/internal/msgs"
-	"github.com/kaleido-io/paladin/toolkit/pkg/i18n"
-	"github.com/kaleido-io/paladin/toolkit/pkg/log"
 )
 
 func (t *Transaction) isNotReady() bool {
@@ -44,9 +44,9 @@ func (t *Transaction) hasDependenciesNotReady(ctx context.Context) bool {
 		return true
 	}
 
-	dependencies := t.dependencies
-	if t.PreAssembly != nil {
-		dependencies = append(dependencies, t.PreAssembly.Dependencies...)
+	dependencies := t.dependencies.DependsOn
+	if t.preAssembleDependencies != nil {
+		dependencies = append(dependencies, t.preAssembleDependencies...)
 	}
 
 	for _, dependencyID := range dependencies {
@@ -68,7 +68,7 @@ func (t *Transaction) hasDependenciesNotReady(ctx context.Context) bool {
 func (t *Transaction) notifyDependentsOfReadiness(ctx context.Context) error {
 	//this function is called when the transaction enters the ready for dispatch state
 	// and we have a duty to inform all the transactions that are dependent on us that we are ready in case they are otherwise ready and are blocked waiting for us
-	for _, dependentId := range t.dependents {
+	for _, dependentId := range t.dependencies.PrereqOf {
 		dependent := t.grapher.TransactionByID(ctx, dependentId)
 		if dependent == nil {
 			msg := fmt.Sprintf("notifyDependentsOfReadiness: Dependent transaction %s not found in memory", dependentId)
@@ -114,11 +114,12 @@ func (t *Transaction) hasDependenciesNotIn(ctx context.Context, ignoreList []*Tr
 	dependencies := t.dependencies
 
 	//augment with the dependencies explicitly declared in the pre-assembly
-	if t.PreAssembly != nil {
-		dependencies = append(dependencies, t.PreAssembly.Dependencies...)
+
+	if t.preAssembleDependencies != nil {
+		dependencies.DependsOn = append(dependencies.DependsOn, t.preAssembleDependencies...)
 	}
 
-	for _, dependencyID := range dependencies {
+	for _, dependencyID := range dependencies.DependsOn {
 		dependency := t.grapher.TransactionByID(ctx, dependencyID)
 		if dependency == nil {
 			//assume the dependency has been confirmed and no longer in memory

@@ -24,7 +24,7 @@ import (
 	"github.com/kaleido-io/paladin/core/internal/sequencer/sender/transaction"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/testutil"
 	"github.com/kaleido-io/paladin/core/mocks/sequencermocks"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 	"github.com/stretchr/testify/assert"
 	mock "github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -51,7 +51,7 @@ func NewSenderForUnitTest(t *testing.T, ctx context.Context, committeeMembers []
 		mocks.emit,
 		mocks.engineIntegration,
 		100,
-		tktypes.RandAddress(),
+		pldtypes.RandAddress(),
 		5,
 		5,
 	)
@@ -140,8 +140,8 @@ func TestSender_SingleTransactionLifecycle(t *testing.T) {
 	assert.True(t, mocks.SentMessageRecorder.HasSentDispatchConfirmationResponse())
 
 	//simulate the coordinator sending a heartbeat after the transaction was submitted
-	signerAddress := tktypes.RandAddress()
-	submissionHash := tktypes.RandBytes32()
+	signerAddress := pldtypes.RandAddress()
+	submissionHash := pldtypes.RandBytes32()
 	nonce := uint64(42)
 	heartbeatEvent.DispatchedTransactions = []*common.DispatchedTransaction{
 		{

@@ -19,11 +19,12 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/kaleido-io/paladin/common/go/pkg/i18n"
+	"github.com/kaleido-io/paladin/common/go/pkg/log"
 	"github.com/kaleido-io/paladin/core/internal/components"
 	"github.com/kaleido-io/paladin/core/internal/msgs"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/common"
-	"github.com/kaleido-io/paladin/toolkit/pkg/i18n"
-	"github.com/kaleido-io/paladin/toolkit/pkg/log"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldapi"
 )
 
 func (t *Transaction) applyPostAssembly(ctx context.Context, postAssembly *components.TransactionPostAssembly) error {
@@ -115,7 +116,7 @@ func (t *Transaction) notifyDependentsOfAssembled(ctx context.Context) error {
 		}
 	}
 
-	for _, dependentId := range t.dependents {
+	for _, dependentId := range t.dependencies.PrereqOf {
 		dependent := t.grapher.TransactionByID(ctx, dependentId)
 		if dependent == nil {
 			msg := fmt.Sprintf("notifyDependentsOfReadiness: Dependent transaction %s not found in memory", dependentId)
@@ -140,7 +141,7 @@ func (t *Transaction) notifyDependentsOfRevert(ctx context.Context) error {
 	//this function is called when the transaction enters the reverted state on a revert response from assemble
 	// NOTE: at this point, we have not been assembled and therefore are not the minter of any state the only transactions that could possibly be dependent on us are those in the pool from the same sender
 
-	for _, dependentID := range append(t.dependents, t.preAssembleDependents...) {
+	for _, dependentID := range append(t.dependencies.PrereqOf, t.preAssembleDependents...) {
 		dependentTxn := t.grapher.TransactionByID(ctx, dependentID)
 		if dependentTxn != nil {
 			err := dependentTxn.HandleEvent(ctx, &DependencyRevertedEvent{
@@ -178,7 +179,10 @@ func (t *Transaction) calculatePostAssembleDependencies(ctx context.Context) err
 	}
 
 	found := make(map[uuid.UUID]bool)
-	t.dependencies = make([]uuid.UUID, 0, len(t.PostAssembly.InputStates)+len(t.PostAssembly.ReadStates))
+	t.dependencies = &pldapi.TransactionDependencies{
+		DependsOn: make([]uuid.UUID, 0, len(t.PostAssembly.InputStates)+len(t.PostAssembly.ReadStates)),
+		PrereqOf:  make([]uuid.UUID, 0, len(t.PostAssembly.InputStates)+len(t.PostAssembly.ReadStates)),
+	}
 	for _, state := range append(t.PostAssembly.InputStates, t.PostAssembly.ReadStates...) {
 		dependency, err := t.grapher.LookupMinter(ctx, state.ID)
 		if err != nil {
@@ -196,9 +200,9 @@ func (t *Transaction) calculatePostAssembleDependencies(ctx context.Context) err
 			continue
 		}
 		found[dependency.ID] = true
-		t.dependencies = append(t.dependencies, dependency.ID)
+		t.dependencies.DependsOn = append(t.dependencies.DependsOn, dependency.ID)
 		//also set up the reverse association
-		dependency.dependents = append(dependency.dependents, t.ID)
+		dependency.dependencies.PrereqOf = append(dependency.dependencies.PrereqOf, t.ID)
 	}
 	return nil
 }

@@ -20,11 +20,11 @@ import (
 
 	"github.com/kaleido-io/paladin/core/internal/sequencer/common"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/coordinator/transaction"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 )
 
 type MessageSender interface {
 	transaction.MessageSender
-	SendHandoverRequest(ctx context.Context, activeCoordinator string, contractAddress *tktypes.EthAddress)
+	SendHandoverRequest(ctx context.Context, activeCoordinator string, contractAddress *pldtypes.EthAddress)
 	SendHeartbeat(ctx context.Context, coordinatorSnapshop *common.CoordinatorSnapshot)
 }

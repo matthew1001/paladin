@@ -22,8 +22,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/kaleido-io/paladin/core/internal/components"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/sender/transaction"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 	"github.com/kaleido-io/paladin/toolkit/pkg/prototk"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -426,7 +426,7 @@ func TestSenderTransaction_EndorsementGathering_NoTransition_OnDispatchConfirmat
 	builder := transaction.NewTransactionBuilderForTesting(t, transaction.State_EndorsementGathering)
 	txn, mocks := builder.BuildWithMocks()
 
-	hash := tktypes.Bytes32(tktypes.RandBytes(32))
+	hash := pldtypes.Bytes32(pldtypes.RandBytes(32))
 
 	err := txn.HandleEvent(ctx, &transaction.DispatchConfirmationRequestReceivedEvent{
 		BaseEvent: transaction.BaseEvent{
@@ -461,7 +461,7 @@ func TestSenderTransaction_Prepared_ToDispatched_OnDispatched(t *testing.T) {
 	ctx := context.Background()
 	txn := transaction.NewTransactionBuilderForTesting(t, transaction.State_Prepared).Build()
 
-	signerAddress := tktypes.EthAddress(tktypes.RandBytes(20))
+	signerAddress := pldtypes.EthAddress(pldtypes.RandBytes(20))
 
 	err := txn.HandleEvent(ctx, &transaction.DispatchedEvent{
 		BaseEvent: transaction.BaseEvent{
@@ -523,7 +523,7 @@ func TestSenderTransaction_Prepared_Ignore_OnDispatchConfirmationRequestReceived
 	builder := transaction.NewTransactionBuilderForTesting(t, transaction.State_Prepared)
 	txn, mocks := builder.BuildWithMocks()
 
-	hash := tktypes.Bytes32(tktypes.RandBytes(32))
+	hash := pldtypes.Bytes32(pldtypes.RandBytes(32))
 
 	err := txn.HandleEvent(ctx, &transaction.DispatchConfirmationRequestReceivedEvent{
 		BaseEvent: transaction.BaseEvent{
@@ -576,7 +576,7 @@ func TestSenderTransaction_Dispatched_ToSequenced_OnNonceAssigned(t *testing.T) 
 		BaseEvent: transaction.BaseEvent{
 			TransactionID: txn.ID,
 		},
-		SignerAddress: tktypes.EthAddress(tktypes.RandBytes(20)),
+		SignerAddress: pldtypes.EthAddress(pldtypes.RandBytes(20)),
 		Nonce:         42,
 	})
 	assert.NoError(t, err)
@@ -592,9 +592,9 @@ func TestSenderTransaction_Dispatched_ToSubmitted_OnSubmitted(t *testing.T) {
 		BaseEvent: transaction.BaseEvent{
 			TransactionID: txn.ID,
 		},
-		SignerAddress:        tktypes.EthAddress(tktypes.RandBytes(20)),
+		SignerAddress:        pldtypes.EthAddress(pldtypes.RandBytes(20)),
 		Nonce:                42,
-		LatestSubmissionHash: tktypes.Bytes32(tktypes.RandBytes(32)),
+		LatestSubmissionHash: pldtypes.Bytes32(pldtypes.RandBytes(32)),
 	})
 	assert.NoError(t, err)
 
@@ -653,9 +653,9 @@ func TestSenderTransaction_Sequenced_ToSubmitted_OnSubmitted(t *testing.T) {
 		BaseEvent: transaction.BaseEvent{
 			TransactionID: txn.ID,
 		},
-		SignerAddress:        tktypes.EthAddress(tktypes.RandBytes(20)),
+		SignerAddress:        pldtypes.EthAddress(pldtypes.RandBytes(20)),
 		Nonce:                42,
-		LatestSubmissionHash: tktypes.Bytes32(tktypes.RandBytes(32)),
+		LatestSubmissionHash: pldtypes.Bytes32(pldtypes.RandBytes(32)),
 	})
 	assert.NoError(t, err)
 

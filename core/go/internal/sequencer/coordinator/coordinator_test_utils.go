@@ -23,7 +23,7 @@ import (
 	"github.com/kaleido-io/paladin/core/internal/components"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/common"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/coordinator/transaction"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 )
 
 func privateTransactionMatcher(txID ...uuid.UUID) func(*components.PrivateTransaction) bool {
@@ -55,7 +55,7 @@ func (r *SentMessageRecorder) Reset(ctx context.Context) {
 	r.SentMessageRecorder.Reset(ctx)
 }
 
-func (r *SentMessageRecorder) SendHandoverRequest(ctx context.Context, activeCoordinator string, contractAddress *tktypes.EthAddress) {
+func (r *SentMessageRecorder) SendHandoverRequest(ctx context.Context, activeCoordinator string, contractAddress *pldtypes.EthAddress) {
 	r.hasSentHandoverRequest = true
 }
 
@@ -74,14 +74,14 @@ func (r *SentMessageRecorder) HasSentHeartbeat() bool {
 type CoordinatorBuilderForTesting struct {
 	state                                    State
 	committeeMembers                         []string
-	contractAddress                          *tktypes.EthAddress
+	contractAddress                          *pldtypes.EthAddress
 	currentBlockHeight                       *uint64
 	activeCoordinatorBlockHeight             *uint64
 	activeCoordinator                        *string
 	flushPointTransactionID                  *uuid.UUID
-	flushPointHash                           *tktypes.Bytes32
+	flushPointHash                           *pldtypes.Bytes32
 	flushPointNonce                          *uint64
-	flushPointSignerAddress                  *tktypes.EthAddress
+	flushPointSignerAddress                  *pldtypes.EthAddress
 	emitFunction                             func(event common.Event)
 	transactions                             []*transaction.Transaction
 	heartbeatsUntilClosingGracePeriodExpires *int
@@ -105,12 +105,12 @@ func (b *CoordinatorBuilderForTesting) CommitteeMembers(committeeMembers ...stri
 	return b
 }
 
-func (b *CoordinatorBuilderForTesting) ContractAddress(contractAddress *tktypes.EthAddress) *CoordinatorBuilderForTesting {
+func (b *CoordinatorBuilderForTesting) ContractAddress(contractAddress *pldtypes.EthAddress) *CoordinatorBuilderForTesting {
 	b.contractAddress = contractAddress
 	return b
 }
 
-func (b *CoordinatorBuilderForTesting) GetContractAddress() tktypes.EthAddress {
+func (b *CoordinatorBuilderForTesting) GetContractAddress() pldtypes.EthAddress {
 	return *b.contractAddress
 }
 
@@ -138,11 +138,11 @@ func (b *CoordinatorBuilderForTesting) GetFlushPointNonce() uint64 {
 	return *b.flushPointNonce
 }
 
-func (b *CoordinatorBuilderForTesting) GetFlushPointSignerAddress() *tktypes.EthAddress {
+func (b *CoordinatorBuilderForTesting) GetFlushPointSignerAddress() *pldtypes.EthAddress {
 	return b.flushPointSignerAddress
 }
 
-func (b *CoordinatorBuilderForTesting) GetFlushPointHash() tktypes.Bytes32 {
+func (b *CoordinatorBuilderForTesting) GetFlushPointHash() pldtypes.Bytes32 {
 	return *b.flushPointHash
 }
 
@@ -152,7 +152,7 @@ func (b *CoordinatorBuilderForTesting) Build(ctx context.Context) (*coordinator,
 		b.committeeMembers = []string{"member1@node1"}
 	}
 	if b.contractAddress == nil {
-		b.contractAddress = tktypes.RandAddress()
+		b.contractAddress = pldtypes.RandAddress()
 	}
 	mocks := &CoordinatorDependencyMocks{
 		SentMessageRecorder: NewSentMessageRecorder(),
@@ -212,13 +212,13 @@ func (b *CoordinatorBuilderForTesting) Build(ctx context.Context) (*coordinator,
 			b.flushPointTransactionID = ptrTo(uuid.New())
 		}
 		if b.flushPointHash == nil {
-			b.flushPointHash = ptrTo(tktypes.Bytes32(tktypes.RandBytes(32)))
+			b.flushPointHash = ptrTo(pldtypes.Bytes32(pldtypes.RandBytes(32)))
 		}
 		if b.flushPointNonce == nil {
 			b.flushPointNonce = ptrTo(uint64(42))
 		}
 		if b.flushPointSignerAddress == nil {
-			b.flushPointSignerAddress = tktypes.RandAddress()
+			b.flushPointSignerAddress = pldtypes.RandAddress()
 		}
 
 		coordinator.activeCoordinatorsFlushPointsBySignerNonce = map[string]*common.FlushPoint{

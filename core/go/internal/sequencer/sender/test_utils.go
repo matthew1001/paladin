@@ -22,7 +22,7 @@ import (
 	"github.com/kaleido-io/paladin/core/internal/components"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/common"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/sender/transaction"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 )
 
 const (
@@ -68,7 +68,7 @@ type SenderBuilderForTesting struct {
 	state            State
 	nodeName         *string
 	committeeMembers []string
-	contractAddress  *tktypes.EthAddress
+	contractAddress  *pldtypes.EthAddress
 	emitFunction     func(event common.Event)
 	transactions     []*transaction.Transaction
 }
@@ -86,7 +86,7 @@ func NewSenderBuilderForTesting(state State) *SenderBuilderForTesting {
 	}
 }
 
-func (b *SenderBuilderForTesting) ContractAddress(contractAddress *tktypes.EthAddress) *SenderBuilderForTesting {
+func (b *SenderBuilderForTesting) ContractAddress(contractAddress *pldtypes.EthAddress) *SenderBuilderForTesting {
 	b.contractAddress = contractAddress
 	return b
 }
@@ -106,7 +106,7 @@ func (b *SenderBuilderForTesting) Transactions(transactions ...*transaction.Tran
 	return b
 }
 
-func (b *SenderBuilderForTesting) GetContractAddress() tktypes.EthAddress {
+func (b *SenderBuilderForTesting) GetContractAddress() pldtypes.EthAddress {
 	return *b.contractAddress
 }
 
@@ -125,7 +125,7 @@ func (b *SenderBuilderForTesting) Build(ctx context.Context) (*sender, *SenderDe
 	}
 
 	if b.contractAddress == nil {
-		b.contractAddress = tktypes.RandAddress()
+		b.contractAddress = pldtypes.RandAddress()
 	}
 	mocks := &SenderDependencyMocks{
 		SentMessageRecorder: NewSentMessageRecorder(),

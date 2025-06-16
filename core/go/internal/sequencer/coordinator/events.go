@@ -21,7 +21,7 @@ import (
 	"github.com/kaleido-io/paladin/core/internal/sequencer/common"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/coordinator/transaction"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/transport"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 )
 
 type Event interface {
@@ -59,10 +59,10 @@ func (_ *CoordinatorFlushedEvent) TypeString() string {
 }
 
 type TransactionConfirmedEvent struct {
-	From         *tktypes.EthAddress
+	From         *pldtypes.EthAddress
 	Nonce        uint64
-	Hash         tktypes.Bytes32
-	RevertReason tktypes.HexBytes
+	Hash         pldtypes.Bytes32
+	RevertReason pldtypes.HexBytes
 }
 
 func (_ *TransactionConfirmedEvent) Type() EventType {

@@ -18,9 +18,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/kaleido-io/paladin/common/go/pkg/i18n"
+	"github.com/kaleido-io/paladin/common/go/pkg/log"
 	"github.com/kaleido-io/paladin/core/internal/msgs"
-	"github.com/kaleido-io/paladin/toolkit/pkg/i18n"
-	"github.com/kaleido-io/paladin/toolkit/pkg/log"
 )
 
 func (t *Transaction) SetPreviousTransaction(ctx context.Context, previousTransaction *Transaction) {
@@ -43,7 +43,7 @@ func (t *Transaction) hasDependenciesNotAssembled(ctx context.Context) bool {
 		return true
 	}
 
-	for _, dependencyID := range t.PreAssembly.Dependencies {
+	for _, dependencyID := range t.preAssembleDependencies {
 		dependency := t.grapher.TransactionByID(ctx, dependencyID)
 		if dependency == nil {
 			//assume the dependency has been confirmed and no longer in memory
@@ -61,9 +61,9 @@ func (t *Transaction) hasDependenciesNotAssembled(ctx context.Context) bool {
 // Function hasUnknownDependencies checks if the transaction has any dependencies the coordinator does not have in memory.  These might be long gone confirmed to base ledger or maybe the delegation request for them hasn't reached us yet. At this point, we don't know
 func (t *Transaction) hasUnknownDependencies(ctx context.Context) bool {
 
-	dependencies := t.dependencies
+	dependencies := t.dependencies.DependsOn
 	if t.PreAssembly != nil {
-		dependencies = append(dependencies, t.PreAssembly.Dependencies...)
+		dependencies = append(dependencies, t.preAssembleDependencies...)
 	}
 
 	for _, dependencyID := range dependencies {
@@ -81,13 +81,13 @@ func (t *Transaction) hasUnknownDependencies(ctx context.Context) bool {
 
 // TODO rename this function because it is not clear that its main purpose is to attach this transaction to the dependency as a dependent
 func (t *Transaction) initializeDependencies(ctx context.Context) error {
-	if t.PreAssembly == nil {
+	if t.preAssembleDependents == nil {
 		msg := fmt.Sprintf("Cannot calculate dependencies for transaction %s without a PreAssembly", t.ID)
 		log.L(ctx).Error(msg)
 		return i18n.NewError(ctx, msgs.MsgSequencerInternalError, msg)
 	}
 
-	for _, dependencyID := range t.PreAssembly.Dependencies {
+	for _, dependencyID := range t.dependencies.DependsOn {
 		dependencyTxn := t.grapher.TransactionByID(ctx, dependencyID)
 
 		if nil == dependencyTxn {
@@ -100,7 +100,7 @@ func (t *Transaction) initializeDependencies(ctx context.Context) error {
 		}
 
 		//TODO this should be idempotent.
-		dependencyTxn.preAssembleDependents = append(dependencyTxn.preAssembleDependents, t.ID)
+		dependencyTxn.preAssembleDependencies = append(dependencyTxn.preAssembleDependencies, t.ID)
 	}
 
 	return nil

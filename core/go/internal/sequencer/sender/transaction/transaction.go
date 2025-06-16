@@ -18,11 +18,11 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/kaleido-io/paladin/common/go/pkg/i18n"
 	"github.com/kaleido-io/paladin/core/internal/components"
 	"github.com/kaleido-io/paladin/core/internal/msgs"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/common"
-	"github.com/kaleido-io/paladin/toolkit/pkg/i18n"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -42,8 +42,8 @@ type Transaction struct {
 	latestAssembleRequest            *assembleRequestFromCoordinator
 	latestFulfilledAssembleRequestID uuid.UUID
 	emit                             common.EmitEvent
-	signerAddress                    *tktypes.EthAddress
-	latestSubmissionHash             *tktypes.Bytes32
+	signerAddress                    *pldtypes.EthAddress
+	latestSubmissionHash             *pldtypes.Bytes32
 	nonce                            *uint64
 }
 
@@ -68,7 +68,7 @@ func NewTransaction(
 	return txn, nil
 }
 
-func (t *Transaction) Hash(ctx context.Context) (*tktypes.Bytes32, error) {
+func (t *Transaction) Hash(ctx context.Context) (*pldtypes.Bytes32, error) {
 	if t.PrivateTransaction == nil {
 		return nil, i18n.NewError(ctx, msgs.MsgSequencerInternalError, "Cannot hash transaction without PrivateTransaction")
 	}
@@ -84,7 +84,7 @@ func (t *Transaction) Hash(ctx context.Context) (*tktypes.Bytes32, error) {
 	for _, signature := range t.PostAssembly.Signatures {
 		hash.Write(signature.Payload)
 	}
-	var h32 tktypes.Bytes32
+	var h32 pldtypes.Bytes32
 	_ = hash.Sum(h32[0:0])
 	return &h32, nil
 
@@ -101,11 +101,11 @@ func (t *Transaction) GetCurrentState() State {
 	return t.stateMachine.currentState
 }
 
-func (t *Transaction) GetSignerAddress() *tktypes.EthAddress {
+func (t *Transaction) GetSignerAddress() *pldtypes.EthAddress {
 	return t.signerAddress
 }
 
-func (t *Transaction) GetLatestSubmissionHash() *tktypes.Bytes32 {
+func (t *Transaction) GetLatestSubmissionHash() *pldtypes.Bytes32 {
 	return t.latestSubmissionHash
 }
 

@@ -18,14 +18,14 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 )
 
 type FlushPoint struct {
-	From          tktypes.EthAddress
+	From          pldtypes.EthAddress
 	Nonce         uint64
 	TransactionID uuid.UUID
-	Hash          tktypes.Bytes32
+	Hash          pldtypes.Bytes32
 	Confirmed     bool
 }
 
@@ -67,13 +67,13 @@ func (t *Transaction) GetID() string {
 type DispatchedTransaction struct {
 	Transaction
 	SignerLocator        string
-	Signer               tktypes.EthAddress
-	LatestSubmissionHash *tktypes.Bytes32
+	Signer               pldtypes.EthAddress
+	LatestSubmissionHash *pldtypes.Bytes32
 	Nonce                *uint64
 }
 
 type ConfirmedTransaction struct {
 	DispatchedTransaction
-	Hash         tktypes.Bytes32
-	RevertReason tktypes.HexBytes
+	Hash         pldtypes.Bytes32
+	RevertReason pldtypes.HexBytes
 }

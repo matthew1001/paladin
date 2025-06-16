@@ -23,8 +23,8 @@ import (
 	"github.com/kaleido-io/paladin/core/internal/sequencer/common"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/sender/transaction"
 
-	"github.com/kaleido-io/paladin/toolkit/pkg/log"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
+	"github.com/kaleido-io/paladin/common/go/pkg/log"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 )
 
 type sender struct {
@@ -34,7 +34,7 @@ type sender struct {
 	activeCoordinatorBlockHeight uint64
 	timeOfMostRecentHeartbeat    common.Time
 	transactionsByID             map[uuid.UUID]*transaction.Transaction
-	submittedTransactionsByHash  map[tktypes.Bytes32]*uuid.UUID
+	submittedTransactionsByHash  map[pldtypes.Bytes32]*uuid.UUID
 	transactionsOrdered          []*uuid.UUID
 	currentBlockHeight           uint64
 	latestCoordinatorSnapshot    *common.CoordinatorSnapshot
@@ -42,7 +42,7 @@ type sender struct {
 	/* Config */
 	nodeName             string
 	blockRangeSize       uint64
-	contractAddress      *tktypes.EthAddress
+	contractAddress      *pldtypes.EthAddress
 	blockHeightTolerance uint64
 	committee            map[string][]string
 	heartbeatThresholdMs common.Duration
@@ -63,14 +63,14 @@ func NewSender(
 	emit common.EmitEvent,
 	engineIntegration common.EngineIntegration,
 	blockRangeSize uint64,
-	contractAddress *tktypes.EthAddress,
+	contractAddress *pldtypes.EthAddress,
 	heartbeatPeriodMs int,
 	heartbeatThresholdIntervals int,
 ) (*sender, error) {
 	s := &sender{
 		nodeName:                    nodeName,
 		transactionsByID:            make(map[uuid.UUID]*transaction.Transaction),
-		submittedTransactionsByHash: make(map[tktypes.Bytes32]*uuid.UUID),
+		submittedTransactionsByHash: make(map[pldtypes.Bytes32]*uuid.UUID),
 		messageSender:               messageSender,
 		blockRangeSize:              blockRangeSize,
 		contractAddress:             contractAddress,
@@ -81,7 +81,7 @@ func NewSender(
 	}
 	s.committee = make(map[string][]string)
 	for _, member := range committeeMembers {
-		memberLocator := tktypes.PrivateIdentityLocator(member)
+		memberLocator := pldtypes.PrivateIdentityLocator(member)
 		memberNode, err := memberLocator.Node(ctx, false)
 		if err != nil {
 			log.L(ctx).Errorf("Error resolving node for member %s: %v", member, err)

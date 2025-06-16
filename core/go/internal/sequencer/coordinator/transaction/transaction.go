@@ -18,13 +18,14 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/kaleido-io/paladin/common/go/pkg/i18n"
+	"github.com/kaleido-io/paladin/common/go/pkg/log"
 	"github.com/kaleido-io/paladin/core/internal/components"
 	"github.com/kaleido-io/paladin/core/internal/msgs"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/common"
-	"github.com/kaleido-io/paladin/toolkit/pkg/i18n"
-	"github.com/kaleido-io/paladin/toolkit/pkg/log"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldapi"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 	"github.com/kaleido-io/paladin/toolkit/pkg/prototk"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -47,11 +48,11 @@ type Transaction struct {
 	sender               string
 	senderIdentity       string
 	senderNode           string
-	signerAddress        *tktypes.EthAddress
-	latestSubmissionHash *tktypes.Bytes32
+	signerAddress        *pldtypes.EthAddress
+	latestSubmissionHash *pldtypes.Bytes32
 	nonce                *uint64
 	stateMachine         *StateMachine
-	revertReason         tktypes.HexBytes
+	revertReason         pldtypes.HexBytes
 
 	//TODO move the fields that are really just fine grained state info.  Move them into the stateMachine struct ( consider separate structs for each concrete state)
 	heartbeatIntervalsSinceStateChange               int
@@ -63,11 +64,13 @@ type Transaction struct {
 	pendingEndorsementRequests                       map[string]map[string]*common.IdempotentRequest //map of attestationRequest names to a map of parties to a struct containing information about the active pending request
 	pendingDispatchConfirmationRequest               *common.IdempotentRequest
 	latestError                                      string
-	dependencies                                     []uuid.UUID //TODO figure out naming of these fields and their relationship with the PrivateTransaction fields
-	dependents                                       []uuid.UUID
+	dependencies                                     *pldapi.TransactionDependencies
+	preAssembleDependencies                          []uuid.UUID
 	preAssembleDependents                            []uuid.UUID
 	previousTransaction                              *Transaction
 	nextTransaction                                  *Transaction
+	// dependencies                                     []uuid.UUID //TODO figure out naming of these fields and their relationship with the PrivateTransaction fields
+	// dependents                                       []uuid.UUID
 
 	//Configuration
 	requestTimeout        common.Duration
@@ -101,7 +104,7 @@ func NewTransaction(
 	onStateTransition OnStateTransition,
 	onCleanup func(context.Context),
 ) (*Transaction, error) {
-	senderIdentity, senderNode, err := tktypes.PrivateIdentityLocator(sender).Validate(ctx, "", false)
+	senderIdentity, senderNode, err := pldtypes.PrivateIdentityLocator(sender).Validate(ctx, "", false)
 	if err != nil {
 		log.L(ctx).Errorf("Error validating sender %s: %s", sender, err)
 		return nil, err
@@ -131,7 +134,7 @@ func (t *Transaction) cleanup(_ context.Context) error {
 	return t.grapher.Forget(t.ID)
 }
 
-func (t *Transaction) GetSignerAddress() *tktypes.EthAddress {
+func (t *Transaction) GetSignerAddress() *pldtypes.EthAddress {
 	return t.signerAddress
 }
 
@@ -143,16 +146,16 @@ func (t *Transaction) GetState() State {
 	return t.stateMachine.currentState
 }
 
-func (t *Transaction) GetLatestSubmissionHash() *tktypes.Bytes32 {
+func (t *Transaction) GetLatestSubmissionHash() *pldtypes.Bytes32 {
 	return t.latestSubmissionHash
 }
 
-func (t *Transaction) GetRevertReason() tktypes.HexBytes {
+func (t *Transaction) GetRevertReason() pldtypes.HexBytes {
 	return t.revertReason
 }
 
 // Hash method of Transaction
-func (t *Transaction) Hash(ctx context.Context) (*tktypes.Bytes32, error) {
+func (t *Transaction) Hash(ctx context.Context) (*pldtypes.Bytes32, error) {
 	if t.PrivateTransaction == nil {
 		return nil, i18n.NewError(ctx, msgs.MsgSequencerInternalError, "Cannot hash transaction without PrivateTransaction")
 	}
@@ -168,7 +171,7 @@ func (t *Transaction) Hash(ctx context.Context) (*tktypes.Bytes32, error) {
 	for _, signature := range t.PostAssembly.Signatures {
 		hash.Write(signature.Payload)
 	}
-	var h32 tktypes.Bytes32
+	var h32 pldtypes.Bytes32
 	_ = hash.Sum(h32[0:0])
 	return &h32, nil
 

@@ -19,10 +19,10 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/kaleido-io/paladin/common/go/pkg/log"
 	"github.com/kaleido-io/paladin/core/internal/components"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/common"
-	"github.com/kaleido-io/paladin/toolkit/pkg/log"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 )
 
 type Event interface {
@@ -63,7 +63,7 @@ func (_ *ConfirmedSuccessEvent) TypeString() string {
 
 type ConfirmedRevertedEvent struct {
 	BaseEvent
-	RevertReason tktypes.HexBytes
+	RevertReason pldtypes.HexBytes
 }
 
 func (_ *ConfirmedRevertedEvent) Type() EventType {
@@ -204,7 +204,7 @@ type DispatchConfirmationRequestReceivedEvent struct {
 	BaseEvent
 	RequestID        uuid.UUID
 	Coordinator      string
-	PostAssemblyHash *tktypes.Bytes32
+	PostAssemblyHash *pldtypes.Bytes32
 }
 
 func (_ *DispatchConfirmationRequestReceivedEvent) Type() EventType {
@@ -234,7 +234,7 @@ func (event *CoordinatorChangedEvent) ApplyToTransaction(_ context.Context, txn 
 
 type DispatchedEvent struct {
 	BaseEvent
-	SignerAddress tktypes.EthAddress
+	SignerAddress pldtypes.EthAddress
 }
 
 func (_ *DispatchedEvent) Type() EventType {
@@ -251,7 +251,7 @@ func (event *DispatchedEvent) ApplyToTransaction(_ context.Context, txn *Transac
 
 type NonceAssignedEvent struct {
 	BaseEvent
-	SignerAddress tktypes.EthAddress // include the signer address in case we never actually saw a dispatch event
+	SignerAddress pldtypes.EthAddress // include the signer address in case we never actually saw a dispatch event
 	Nonce         uint64
 }
 
@@ -270,9 +270,9 @@ func (event *NonceAssignedEvent) ApplyToTransaction(_ context.Context, txn *Tran
 
 type SubmittedEvent struct {
 	BaseEvent
-	SignerAddress        tktypes.EthAddress // include the signer address and nonce in case we never actually saw a dispatch event or nonce assigned event
+	SignerAddress        pldtypes.EthAddress // include the signer address and nonce in case we never actually saw a dispatch event or nonce assigned event
 	Nonce                uint64
-	LatestSubmissionHash tktypes.Bytes32
+	LatestSubmissionHash pldtypes.Bytes32
 }
 
 func (_ *SubmittedEvent) Type() EventType {

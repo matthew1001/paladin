@@ -19,19 +19,19 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/kaleido-io/paladin/common/go/pkg/i18n"
+	"github.com/kaleido-io/paladin/common/go/pkg/log"
 	"github.com/kaleido-io/paladin/core/internal/msgs"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/sender/transaction"
-	"github.com/kaleido-io/paladin/toolkit/pkg/i18n"
-	"github.com/kaleido-io/paladin/toolkit/pkg/log"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 )
 
 func (s *sender) confirmTransaction(
 	ctx context.Context,
-	From *tktypes.EthAddress,
+	From *pldtypes.EthAddress,
 	nonce uint64,
-	hash tktypes.Bytes32,
-	revertReason tktypes.HexBytes,
+	hash pldtypes.Bytes32,
+	revertReason pldtypes.HexBytes,
 ) error {
 	transactionID, ok := s.submittedTransactionsByHash[hash]
 	if !ok {

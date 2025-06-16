@@ -21,8 +21,8 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 	"github.com/kaleido-io/paladin/toolkit/pkg/prototk"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -33,7 +33,7 @@ func TestPrivateTransactionBuilder_Defaults(t *testing.T) {
 	require.NotNil(t, tx)
 	assert.NotEqual(t, "", tx.Domain)
 	assert.NotEqual(t, uuid.Nil, tx.ID)
-	assert.NotEqual(t, tktypes.EthAddress{}, tx.Address)
+	assert.NotEqual(t, pldtypes.EthAddress{}, tx.Address)
 
 	require.NotNil(t, tx.PreAssembly)
 	assert.Len(t, tx.PreAssembly.RequiredVerifiers, 4)
@@ -69,7 +69,7 @@ func TestPrivateTransactionBuilderList_SameSenderAndAddress(t *testing.T) {
 	for _, tx := range txns {
 		assert.NotEqual(t, "", tx.Domain)
 		assert.NotEqual(t, uuid.Nil, tx.ID)
-		assert.NotEqual(t, tktypes.EthAddress{}, tx.Address)
+		assert.NotEqual(t, pldtypes.EthAddress{}, tx.Address)
 
 		require.NotNil(t, tx.PreAssembly)
 		assert.Len(t, tx.PreAssembly.RequiredVerifiers, 4)

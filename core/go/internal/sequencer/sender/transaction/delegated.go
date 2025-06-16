@@ -17,8 +17,8 @@ package transaction
 import (
 	"context"
 
+	"github.com/kaleido-io/paladin/common/go/pkg/log"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/common"
-	"github.com/kaleido-io/paladin/toolkit/pkg/log"
 )
 
 func action_SendDispatchConfirmationResponse(ctx context.Context, txn *Transaction) error {

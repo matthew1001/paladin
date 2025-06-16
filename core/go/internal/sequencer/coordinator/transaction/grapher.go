@@ -20,10 +20,10 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/kaleido-io/paladin/common/go/pkg/i18n"
+	"github.com/kaleido-io/paladin/common/go/pkg/log"
 	"github.com/kaleido-io/paladin/core/internal/msgs"
-	"github.com/kaleido-io/paladin/toolkit/pkg/i18n"
-	"github.com/kaleido-io/paladin/toolkit/pkg/log"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 )
 
 // Interface Grapher allows transactions to link to each other in a dependency graph
@@ -37,8 +37,8 @@ import (
 type Grapher interface {
 	Add(context.Context, *Transaction)
 	TransactionByID(ctx context.Context, transactionID uuid.UUID) *Transaction
-	LookupMinter(ctx context.Context, stateID tktypes.HexBytes) (*Transaction, error)
-	AddMinter(ctx context.Context, stateID tktypes.HexBytes, transaction *Transaction) error
+	LookupMinter(ctx context.Context, stateID pldtypes.HexBytes) (*Transaction, error)
+	AddMinter(ctx context.Context, stateID pldtypes.HexBytes, transaction *Transaction) error
 	Forget(transactionID uuid.UUID) error
 }
 
@@ -60,11 +60,11 @@ func (s *grapher) Add(ctx context.Context, txn *Transaction) {
 	s.transactionByID[txn.ID] = txn
 }
 
-func (s *grapher) LookupMinter(ctx context.Context, stateID tktypes.HexBytes) (*Transaction, error) {
+func (s *grapher) LookupMinter(ctx context.Context, stateID pldtypes.HexBytes) (*Transaction, error) {
 	return s.transactionByOutputState[stateID.String()], nil
 }
 
-func (s *grapher) AddMinter(ctx context.Context, stateID tktypes.HexBytes, transaction *Transaction) error {
+func (s *grapher) AddMinter(ctx context.Context, stateID pldtypes.HexBytes, transaction *Transaction) error {
 	if txn, ok := s.transactionByOutputState[stateID.String()]; ok {
 		msg := fmt.Sprintf("Duplicate minter. stateID %s already indexed as minted by %s but attempted to add minter %s", stateID.String(), txn.ID.String(), transaction.ID.String())
 		log.L(ctx).Errorf(msg)

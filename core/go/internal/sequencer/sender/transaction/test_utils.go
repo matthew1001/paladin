@@ -25,8 +25,8 @@ import (
 	"github.com/kaleido-io/paladin/core/internal/components"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/common"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/testutil"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 	"github.com/kaleido-io/paladin/toolkit/pkg/prototk"
-	"github.com/kaleido-io/paladin/toolkit/pkg/tktypes"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -95,8 +95,8 @@ type TransactionBuilderForTesting struct {
 	/* Post Assembling States (e.g. endorsing, reverted, parked)*/
 	latestFulfilledAssembleRequestID uuid.UUID
 
-	latestSubmissionHash *tktypes.Bytes32
-	signerAddress        *tktypes.EthAddress
+	latestSubmissionHash *pldtypes.Bytes32
+	signerAddress        *pldtypes.EthAddress
 	nonce                *uint64
 }
 
@@ -127,9 +127,9 @@ func (b *TransactionBuilderForTesting) GetLatestFulfilledAssembleRequestID() uui
 	return b.latestFulfilledAssembleRequestID
 }
 
-func (b *TransactionBuilderForTesting) GetSignerAddress() tktypes.EthAddress {
+func (b *TransactionBuilderForTesting) GetSignerAddress() pldtypes.EthAddress {
 	if b.signerAddress == nil {
-		b.signerAddress = tktypes.RandAddress()
+		b.signerAddress = pldtypes.RandAddress()
 	}
 	return *b.signerAddress
 }
@@ -141,9 +141,9 @@ func (b *TransactionBuilderForTesting) GetNonce() uint64 {
 	return *b.nonce
 }
 
-func (b *TransactionBuilderForTesting) GetLatestSubmissionHash() tktypes.Bytes32 {
+func (b *TransactionBuilderForTesting) GetLatestSubmissionHash() pldtypes.Bytes32 {
 	if b.latestSubmissionHash == nil {
-		b.latestSubmissionHash = ptrTo(tktypes.RandBytes32())
+		b.latestSubmissionHash = ptrTo(pldtypes.RandBytes32())
 	}
 	return *b.latestSubmissionHash
 }

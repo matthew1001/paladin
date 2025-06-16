@@ -18,9 +18,9 @@ package coordinator
 import (
 	"context"
 
+	"github.com/kaleido-io/paladin/common/go/pkg/log"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/common"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/coordinator/transaction"
-	"github.com/kaleido-io/paladin/toolkit/pkg/log"
 )
 
 func action_SendHeartbeat(ctx context.Context, c *coordinator) error {
