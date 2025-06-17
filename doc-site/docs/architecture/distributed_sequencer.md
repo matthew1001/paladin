@@ -377,11 +377,11 @@ The desired properties of that algorithm are
 The 3 basic premises of the algorithm are:
 
   1. Once a coordinator has been elected, it is possible for it to continue indefinitely as the coordinator
-    - This is an intentional design choice, intended to provide optimal throughput for a contract
+      - This is an intentional design choice, intended to provide optimal throughput for a contract
   2. If an elected coordinator fails, another coordinator will take over the role
-    - This ensures high availability of the private contract
+      - This ensures high availability of the private contract
   3. The choice of coordinator is deterministic based on block number and liveness of the existing coordinator
-    - The deterministic choice  of coordinator only needs to take place if the existing coordinator becomes unavailable
+      - The deterministic choice  of coordinator only needs to take place if the existing coordinator becomes unavailable
 
 Full rules for the the algorithm:
 
