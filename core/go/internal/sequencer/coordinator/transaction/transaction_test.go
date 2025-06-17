@@ -22,7 +22,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/kaleido-io/paladin/core/internal/components"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/common"
-	"github.com/kaleido-io/paladin/core/mocks/sequencermocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -200,7 +199,7 @@ func TestTransaction_RemovesItselfFromGrapher(t *testing.T) {
 type transactionDependencyMocks struct {
 	messageSender     *MockMessageSender
 	clock             *common.FakeClockForTesting
-	engineIntegration *sequencermocks.EngineIntegration
+	engineIntegration *common.MockEngineIntegration
 }
 
 func newTransactionForUnitTesting(t *testing.T, grapher Grapher) (*Transaction, *transactionDependencyMocks) {
@@ -210,7 +209,7 @@ func newTransactionForUnitTesting(t *testing.T, grapher Grapher) (*Transaction, 
 	mocks := &transactionDependencyMocks{
 		messageSender:     NewMockMessageSender(t),
 		clock:             &common.FakeClockForTesting{},
-		engineIntegration: sequencermocks.NewEngineIntegration(t),
+		engineIntegration: common.NewMockEngineIntegration(t),
 	}
 	txn, err := NewTransaction(
 		context.Background(),

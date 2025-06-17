@@ -23,7 +23,6 @@ import (
 	"github.com/kaleido-io/paladin/core/internal/sequencer/common"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/coordinator/transaction"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/testutil"
-	"github.com/kaleido-io/paladin/core/mocks/sequencermocks"
 	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -41,7 +40,7 @@ func NewCoordinatorForUnitTest(t *testing.T, ctx context.Context, committeeMembe
 	mocks := &coordinatorDependencyMocks{
 		messageSender:     NewMockMessageSender(t),
 		clock:             &common.FakeClockForTesting{},
-		engineIntegration: sequencermocks.NewEngineIntegration(t),
+		engineIntegration: common.NewMockEngineIntegration(t),
 		emit:              func(event common.Event) {},
 	}
 
@@ -54,7 +53,7 @@ func NewCoordinatorForUnitTest(t *testing.T, ctx context.Context, committeeMembe
 type coordinatorDependencyMocks struct {
 	messageSender     *MockMessageSender
 	clock             *common.FakeClockForTesting
-	engineIntegration *sequencermocks.EngineIntegration
+	engineIntegration *common.MockEngineIntegration
 	emit              common.EmitEvent
 }
 

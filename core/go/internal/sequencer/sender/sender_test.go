@@ -23,7 +23,6 @@ import (
 	"github.com/kaleido-io/paladin/core/internal/sequencer/common"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/sender/transaction"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/testutil"
-	"github.com/kaleido-io/paladin/core/mocks/sequencermocks"
 	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 	"github.com/stretchr/testify/assert"
 	mock "github.com/stretchr/testify/mock"
@@ -38,7 +37,7 @@ func NewSenderForUnitTest(t *testing.T, ctx context.Context, committeeMembers []
 	mocks := &senderDependencyMocks{
 		messageSender:     NewMockMessageSender(t),
 		clock:             &common.FakeClockForTesting{},
-		engineIntegration: sequencermocks.NewEngineIntegration(t),
+		engineIntegration: common.NewMockEngineIntegration(t),
 		emit:              func(event common.Event) {},
 	}
 
@@ -63,7 +62,7 @@ func NewSenderForUnitTest(t *testing.T, ctx context.Context, committeeMembers []
 type senderDependencyMocks struct {
 	messageSender     *MockMessageSender
 	clock             *common.FakeClockForTesting
-	engineIntegration *sequencermocks.EngineIntegration
+	engineIntegration *common.MockEngineIntegration
 	emit              common.EmitEvent
 }
 

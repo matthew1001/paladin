@@ -21,7 +21,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/kaleido-io/paladin/core/internal/components"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/common"
-	"github.com/kaleido-io/paladin/core/mocks/sequencermocks"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -30,7 +29,7 @@ func TestStateMachine_InitializeOK(t *testing.T) {
 
 	messageSender := NewMockMessageSender(t)
 	clock := &common.FakeClockForTesting{}
-	engineIntegration := sequencermocks.NewEngineIntegration(t)
+	engineIntegration := common.NewMockEngineIntegration(t)
 	txn, err := NewTransaction(
 		ctx,
 		"sender@node1",
