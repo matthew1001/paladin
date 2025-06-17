@@ -49,11 +49,6 @@ type EndorsementResponse struct {
 	AttestationRequestName string                     `json:"attestationRequestName"`
 }
 
-func (chn *CoordinatorHeartbeatNotification) bytes() []byte {
-	jsonBytes, _ := json.Marshal(chn)
-	return jsonBytes
-}
-
 func ParseCoordinatorHeartbeatNotification(bytes []byte) (*CoordinatorHeartbeatNotification, error) {
 	chn := &CoordinatorHeartbeatNotification{}
 	err := json.Unmarshal(bytes, chn)
@@ -80,26 +75,6 @@ type DispatchConfirmationRequest struct {
 type DispatchConfirmationResponse struct {
 	ContractAddress *pldtypes.EthAddress `json:"contractAddress"`
 	TransactionID   uuid.UUID            `json:"transactionID"`
-}
-
-func (dr *HandoverRequest) bytes() []byte {
-	jsonBytes, _ := json.Marshal(dr)
-	return jsonBytes
-}
-
-func (dr *TransactionRequest) bytes() []byte {
-	jsonBytes, _ := json.Marshal(dr)
-	return jsonBytes
-}
-
-func (dr *DispatchConfirmationRequest) bytes() []byte {
-	jsonBytes, _ := json.Marshal(dr)
-	return jsonBytes
-}
-
-func (dr *DispatchConfirmationResponse) bytes() []byte {
-	jsonBytes, _ := json.Marshal(dr)
-	return jsonBytes
 }
 
 func ParseTransactionRequest(bytes []byte) (*TransactionRequest, error) {

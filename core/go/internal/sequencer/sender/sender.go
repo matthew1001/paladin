@@ -29,21 +29,19 @@ import (
 
 type sender struct {
 	/* State */
-	stateMachine                 *StateMachine
-	activeCoordinator            string
-	activeCoordinatorBlockHeight uint64
-	timeOfMostRecentHeartbeat    common.Time
-	transactionsByID             map[uuid.UUID]*transaction.Transaction
-	submittedTransactionsByHash  map[pldtypes.Bytes32]*uuid.UUID
-	transactionsOrdered          []*uuid.UUID
-	currentBlockHeight           uint64
-	latestCoordinatorSnapshot    *common.CoordinatorSnapshot
+	stateMachine                *StateMachine
+	activeCoordinator           string
+	timeOfMostRecentHeartbeat   common.Time
+	transactionsByID            map[uuid.UUID]*transaction.Transaction
+	submittedTransactionsByHash map[pldtypes.Bytes32]*uuid.UUID
+	transactionsOrdered         []*uuid.UUID
+	currentBlockHeight          uint64
+	latestCoordinatorSnapshot   *common.CoordinatorSnapshot
 
 	/* Config */
 	nodeName             string
 	blockRangeSize       uint64
 	contractAddress      *pldtypes.EthAddress
-	blockHeightTolerance uint64
 	committee            map[string][]string
 	heartbeatThresholdMs common.Duration
 

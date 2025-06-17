@@ -137,7 +137,8 @@ func Test_SortTransactions_ConfirmedDependency(t *testing.T) {
 		NumberOfOutputStates(1)
 	txn1 := txnBuilder1.Build()
 
-	grapher.Forget(txn1.ID) // Simulate that the grapher has been instructed to forget the transaction as a result of it being confirmed
+	err := grapher.Forget(txn1.ID) // Simulate that the grapher has been instructed to forget the transaction as a result of it being confirmed
+	assert.NoError(t, err)
 
 	txnBuilder2 := NewTransactionBuilderForTesting(t, State_Ready_For_Dispatch).
 		Grapher(grapher).

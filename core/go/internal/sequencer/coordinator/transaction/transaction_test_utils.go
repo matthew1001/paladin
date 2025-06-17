@@ -397,7 +397,3 @@ func (b *TransactionBuilderForTesting) BuildEndorseRejectedEvent(endorserIndex i
 func (b *TransactionBuilderForTesting) BuildPostAssembly() *components.TransactionPostAssembly {
 	return b.privateTransactionBuilder.BuildPostAssembly()
 }
-
-func ptrTo[T any](v T) *T {
-	return &v
-}

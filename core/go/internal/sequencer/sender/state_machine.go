@@ -287,28 +287,6 @@ func guard_Not(guard Guard) Guard {
 	}
 }
 
-func guard_And(guards ...Guard) Guard {
-	return func(ctx context.Context, s *sender) bool {
-		for _, guard := range guards {
-			if !guard(ctx, s) {
-				return false
-			}
-		}
-		return true
-	}
-}
-
-func guard_Or(guards ...Guard) Guard {
-	return func(ctx context.Context, s *sender) bool {
-		for _, guard := range guards {
-			if guard(ctx, s) {
-				return true
-			}
-		}
-		return false
-	}
-}
-
 func (s State) String() string {
 	switch s {
 	case State_Idle:

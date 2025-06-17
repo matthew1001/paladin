@@ -166,7 +166,10 @@ func (c *coordinator) addToDelegatedTransactions(ctx context.Context, sender str
 			func(ctx context.Context) {
 				//callback function to notify us when the transaction is cleaned up
 				delete(c.transactionsByID, txn.ID)
-				c.grapher.Forget(txn.ID)
+				err := c.grapher.Forget(txn.ID)
+				if err != nil {
+					log.L(ctx).Errorf("Error forgetting transaction %s: %v", txn.ID.String(), err)
+				}
 				log.L(ctx).Debugf("Transaction %s cleaned up", txn.ID.String())
 			})
 		if err != nil {

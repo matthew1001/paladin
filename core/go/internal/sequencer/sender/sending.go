@@ -17,9 +17,12 @@ package sender
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/kaleido-io/paladin/common/go/pkg/i18n"
 	"github.com/kaleido-io/paladin/common/go/pkg/log"
 	"github.com/kaleido-io/paladin/core/internal/components"
+	"github.com/kaleido-io/paladin/core/internal/msgs"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/sender/transaction"
 )
 
@@ -29,18 +32,23 @@ func action_SendDelegationRequest(ctx context.Context, s *sender) error {
 		log.L(ctx).Errorf("Failed to get transactions ordered by created time: %v", err)
 		return err
 	}
-	privateTransactions := make([]*components.PrivateTransaction, len(transactions), len(transactions))
+	privateTransactions := make([]*components.PrivateTransaction, len(transactions))
 	for i, txn := range transactions {
 		privateTransactions[i] = txn.PrivateTransaction
 	}
 	s.messageSender.SendDelegationRequest(ctx, s.activeCoordinator, privateTransactions, s.currentBlockHeight)
 	for _, txn := range transactions {
-		txn.HandleEvent(ctx, &transaction.DelegatedEvent{
+		err := txn.HandleEvent(ctx, &transaction.DelegatedEvent{
 			BaseEvent: transaction.BaseEvent{
 				TransactionID: txn.ID,
 			},
 			Coordinator: s.activeCoordinator,
 		})
+		if err != nil {
+			msg := fmt.Sprintf("Error handling delegated event for transaction %s: %v", txn.ID, err)
+			log.L(ctx).Errorf(msg)
+			return i18n.NewError(ctx, msgs.MsgSequencerInternalError, msg)
+		}
 	}
 	return nil
 

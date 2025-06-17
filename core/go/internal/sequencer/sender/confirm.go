@@ -69,18 +69,28 @@ func (s *sender) confirmTransaction(
 		return i18n.NewError(ctx, msgs.MsgSequencerInternalError, msg)
 	}
 	if revertReason.String() == "" {
-		txn.HandleEvent(ctx, &transaction.ConfirmedSuccessEvent{
+		err := txn.HandleEvent(ctx, &transaction.ConfirmedSuccessEvent{
 			BaseEvent: transaction.BaseEvent{
 				TransactionID: txn.ID,
 			},
 		})
+		if err != nil {
+			msg := fmt.Sprintf("Error handling confirmed success event for transaction %s: %v", txn.ID, err)
+			log.L(ctx).Errorf(msg)
+			return i18n.NewError(ctx, msgs.MsgSequencerInternalError, msg)
+		}
 	} else {
-		txn.HandleEvent(ctx, &transaction.ConfirmedRevertedEvent{
+		err := txn.HandleEvent(ctx, &transaction.ConfirmedRevertedEvent{
 			BaseEvent: transaction.BaseEvent{
 				TransactionID: txn.ID,
 			},
 			RevertReason: revertReason,
 		})
+		if err != nil {
+			msg := fmt.Sprintf("Error handling confirmed revert event for transaction %s: %v", txn.ID, err)
+			log.L(ctx).Errorf(msg)
+			return i18n.NewError(ctx, msgs.MsgSequencerInternalError, msg)
+		}
 	}
 
 	delete(s.submittedTransactionsByHash, hash)

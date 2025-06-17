@@ -525,28 +525,6 @@ func guard_Not(guard Guard) Guard {
 	}
 }
 
-func guard_And(guards ...Guard) Guard {
-	return func(ctx context.Context, txn *Transaction) bool {
-		for _, guard := range guards {
-			if !guard(ctx, txn) {
-				return false
-			}
-		}
-		return true
-	}
-}
-
-func guard_Or(guards ...Guard) Guard {
-	return func(ctx context.Context, txn *Transaction) bool {
-		for _, guard := range guards {
-			if guard(ctx, txn) {
-				return true
-			}
-		}
-		return false
-	}
-}
-
 func (s State) String() string {
 	switch s {
 	case State_Initial:

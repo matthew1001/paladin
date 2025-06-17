@@ -17,8 +17,11 @@ package sender
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/kaleido-io/paladin/common/go/pkg/i18n"
 	"github.com/kaleido-io/paladin/common/go/pkg/log"
+	"github.com/kaleido-io/paladin/core/internal/msgs"
 	"github.com/kaleido-io/paladin/core/internal/sequencer/sender/transaction"
 )
 
@@ -45,16 +48,27 @@ func (s *sender) applyHeartbeatReceived(ctx context.Context, event *HeartbeatRec
 					txnSubmittedEvent.Nonce = *dispatchedTransaction.Nonce
 				}
 
-				txn.HandleEvent(ctx, txnSubmittedEvent)
+				err := txn.HandleEvent(ctx, txnSubmittedEvent)
+				if err != nil {
+					msg := fmt.Sprintf("Error handling transaction submitted event for transaction %s: %v", txn.ID, err)
+					log.L(ctx).Errorf(msg)
+					return i18n.NewError(ctx, msgs.MsgSequencerInternalError, msg)
+				}
 				s.submittedTransactionsByHash[*dispatchedTransaction.LatestSubmissionHash] = &dispatchedTransaction.ID
 			} else if dispatchedTransaction.Nonce != nil {
 				//if the dispatched transaction has a nonce but no hash, then it is sequenced
-				txn.HandleEvent(ctx, &transaction.NonceAssignedEvent{
+				err := txn.HandleEvent(ctx, &transaction.NonceAssignedEvent{
 					BaseEvent: transaction.BaseEvent{
 						TransactionID: dispatchedTransaction.ID,
 					},
 					Nonce: *dispatchedTransaction.Nonce,
 				})
+
+				if err != nil {
+					msg := fmt.Sprintf("Error handling nonce assigned event for transaction %s: %v", txn.ID, err)
+					log.L(ctx).Errorf(msg)
+					return i18n.NewError(ctx, msgs.MsgSequencerInternalError, msg)
+				}
 			}
 		}
 	}
