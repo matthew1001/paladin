@@ -21,6 +21,7 @@ import (
 	"github.com/kaleido-io/paladin/common/go/pkg/i18n"
 	"github.com/kaleido-io/paladin/common/go/pkg/log"
 	"github.com/kaleido-io/paladin/core/internal/msgs"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldapi"
 )
 
 func (t *Transaction) SetPreviousTransaction(ctx context.Context, previousTransaction *Transaction) {
@@ -43,15 +44,17 @@ func (t *Transaction) hasDependenciesNotAssembled(ctx context.Context) bool {
 		return true
 	}
 
-	for _, dependencyID := range t.preAssembleDependencies {
-		dependency := t.grapher.TransactionByID(ctx, dependencyID)
-		if dependency == nil {
-			//assume the dependency has been confirmed and no longer in memory
-			//hasUnknownDependencies guard will be used to explicitly ensure the correct thing happens
-			continue
-		}
-		if dependency.isNotAssembled() {
-			return true
+	if t.PreAssembly.Dependencies != nil {
+		for _, dependencyID := range t.PreAssembly.Dependencies.DependsOn {
+			dependency := t.grapher.TransactionByID(ctx, dependencyID)
+			if dependency == nil {
+				//assume the dependency has been confirmed and no longer in memory
+				//hasUnknownDependencies guard will be used to explicitly ensure the correct thing happens
+				continue
+			}
+			if dependency.isNotAssembled() {
+				return true
+			}
 		}
 	}
 
@@ -62,8 +65,8 @@ func (t *Transaction) hasDependenciesNotAssembled(ctx context.Context) bool {
 func (t *Transaction) hasUnknownDependencies(ctx context.Context) bool {
 
 	dependencies := t.dependencies.DependsOn
-	if t.PreAssembly != nil {
-		dependencies = append(dependencies, t.preAssembleDependencies...)
+	if t.PreAssembly != nil && t.PreAssembly.Dependencies != nil {
+		dependencies = append(dependencies, t.PreAssembly.Dependencies.DependsOn...)
 	}
 
 	for _, dependencyID := range dependencies {
@@ -81,26 +84,31 @@ func (t *Transaction) hasUnknownDependencies(ctx context.Context) bool {
 
 // TODO rename this function because it is not clear that its main purpose is to attach this transaction to the dependency as a dependent
 func (t *Transaction) initializeDependencies(ctx context.Context) error {
-	if t.preAssembleDependents == nil {
-		msg := fmt.Sprintf("Cannot calculate dependencies for transaction %s without a PreAssembly", t.ID)
+	if t.PreAssembly == nil {
+		msg := fmt.Sprintf("Cannot mrw calculate dependencies for transaction %s without a PreAssembly", t.ID)
 		log.L(ctx).Error(msg)
 		return i18n.NewError(ctx, msgs.MsgSequencerInternalError, msg)
 	}
 
-	for _, dependencyID := range t.dependencies.DependsOn {
-		dependencyTxn := t.grapher.TransactionByID(ctx, dependencyID)
+	if t.PreAssembly.Dependencies != nil {
+		for _, dependencyID := range t.PreAssembly.Dependencies.DependsOn {
+			dependencyTxn := t.grapher.TransactionByID(ctx, dependencyID)
 
-		if nil == dependencyTxn {
-			//either the dependency has been confirmed and no longer in memory or there was a overtake on the network and we have not received the delegation request for the dependency yet
-			// in either case, the guards will stop this transaction from being assembled but will appear in the heartbeat messages so that the sender can take appropriate action (remove the dependency if it is confirmed, resend the dependency delegation request if it is an inflight transaction)
+			if nil == dependencyTxn {
+				//either the dependency has been confirmed and no longer in memory or there was a overtake on the network and we have not received the delegation request for the dependency yet
+				// in either case, the guards will stop this transaction from being assembled but will appear in the heartbeat messages so that the sender can take appropriate action (remove the dependency if it is confirmed, resend the dependency delegation request if it is an inflight transaction)
 
-			//This should be relatively rare so worth logging as an info
-			log.L(ctx).Infof("Dependency %s not found in memory for transaction %s", dependencyID, t.ID)
-			continue
+				//This should be relatively rare so worth logging as an info
+				log.L(ctx).Infof("Dependency %s not found in memory for transaction %s", dependencyID, t.ID)
+				continue
+			}
+
+			//TODO this should be idempotent.
+			if dependencyTxn.PreAssembly.Dependencies == nil {
+				dependencyTxn.PreAssembly.Dependencies = &pldapi.TransactionDependencies{}
+			}
+			dependencyTxn.PreAssembly.Dependencies.PrereqOf = append(dependencyTxn.PreAssembly.Dependencies.PrereqOf, t.ID)
 		}
-
-		//TODO this should be idempotent.
-		dependencyTxn.preAssembleDependencies = append(dependencyTxn.preAssembleDependencies, t.ID)
 	}
 
 	return nil

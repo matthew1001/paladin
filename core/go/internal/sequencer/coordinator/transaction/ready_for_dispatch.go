@@ -45,8 +45,8 @@ func (t *Transaction) hasDependenciesNotReady(ctx context.Context) bool {
 	}
 
 	dependencies := t.dependencies.DependsOn
-	if t.preAssembleDependencies != nil {
-		dependencies = append(dependencies, t.preAssembleDependencies...)
+	if t.PreAssembly != nil && t.PreAssembly.Dependencies != nil && t.PreAssembly.Dependencies.DependsOn != nil {
+		dependencies = append(dependencies, t.PreAssembly.Dependencies.DependsOn...)
 	}
 
 	for _, dependencyID := range dependencies {
@@ -115,8 +115,8 @@ func (t *Transaction) hasDependenciesNotIn(ctx context.Context, ignoreList []*Tr
 
 	//augment with the dependencies explicitly declared in the pre-assembly
 
-	if t.preAssembleDependencies != nil {
-		dependencies.DependsOn = append(dependencies.DependsOn, t.preAssembleDependencies...)
+	if t.PreAssembly.Dependencies != nil && t.PreAssembly.Dependencies.DependsOn != nil {
+		dependencies.DependsOn = append(dependencies.DependsOn, t.PreAssembly.Dependencies.DependsOn...)
 	}
 
 	for _, dependencyID := range dependencies.DependsOn {

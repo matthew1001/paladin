@@ -23,6 +23,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kaleido-io/paladin/core/internal/components"
+	"github.com/kaleido-io/paladin/sdk/go/pkg/pldapi"
 	"github.com/kaleido-io/paladin/sdk/go/pkg/pldtypes"
 	"github.com/kaleido-io/paladin/toolkit/pkg/algorithms"
 	"github.com/kaleido-io/paladin/toolkit/pkg/prototk"
@@ -299,11 +300,10 @@ func (b *PrivateTransactionBuilderForTesting) BuildPreAssembly() *components.Tra
 		}
 	}
 
-	// MRW TODO - why did we think pre-assembly could accept dependencies?
-
-	// if b.predefinedDependencies != nil {
-	// 	preAssembly.Dependencies = append(preAssembly.Dependencies, b.predefinedDependencies...)
-	// }
+	if b.predefinedDependencies != nil {
+		preAssembly.Dependencies = &pldapi.TransactionDependencies{}
+		preAssembly.Dependencies.DependsOn = append(preAssembly.Dependencies.DependsOn, b.predefinedDependencies...)
+	}
 
 	return preAssembly
 }

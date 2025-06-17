@@ -17,7 +17,6 @@ package transaction
 import (
 	"context"
 
-	"github.com/google/uuid"
 	"github.com/kaleido-io/paladin/common/go/pkg/i18n"
 	"github.com/kaleido-io/paladin/common/go/pkg/log"
 	"github.com/kaleido-io/paladin/core/internal/components"
@@ -65,8 +64,6 @@ type Transaction struct {
 	pendingDispatchConfirmationRequest               *common.IdempotentRequest
 	latestError                                      string
 	dependencies                                     *pldapi.TransactionDependencies
-	preAssembleDependencies                          []uuid.UUID
-	preAssembleDependents                            []uuid.UUID
 	previousTransaction                              *Transaction
 	nextTransaction                                  *Transaction
 	// dependencies                                     []uuid.UUID //TODO figure out naming of these fields and their relationship with the PrivateTransaction fields
@@ -124,6 +121,7 @@ func NewTransaction(
 		notifyOfTransition:    onStateTransition,
 		onCleanup:             onCleanup,
 		emit:                  emit,
+		dependencies:          &pldapi.TransactionDependencies{},
 	}
 	txn.InitializeStateMachine(State_Initial)
 	grapher.Add(context.Background(), txn)

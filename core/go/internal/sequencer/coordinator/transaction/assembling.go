@@ -141,7 +141,12 @@ func (t *Transaction) notifyDependentsOfRevert(ctx context.Context) error {
 	//this function is called when the transaction enters the reverted state on a revert response from assemble
 	// NOTE: at this point, we have not been assembled and therefore are not the minter of any state the only transactions that could possibly be dependent on us are those in the pool from the same sender
 
-	for _, dependentID := range append(t.dependencies.PrereqOf, t.preAssembleDependents...) {
+	dependents := t.dependencies.PrereqOf
+	if t.PreAssembly.Dependencies != nil {
+		dependents = append(dependents, t.PreAssembly.Dependencies.PrereqOf...)
+	}
+
+	for _, dependentID := range dependents {
 		dependentTxn := t.grapher.TransactionByID(ctx, dependentID)
 		if dependentTxn != nil {
 			err := dependentTxn.HandleEvent(ctx, &DependencyRevertedEvent{
@@ -161,7 +166,6 @@ func (t *Transaction) notifyDependentsOfRevert(ctx context.Context) error {
 			log.L(ctx).Error(msg)
 			return i18n.NewError(ctx, msgs.MsgSequencerInternalError, msg)
 		}
-
 	}
 
 	return nil
