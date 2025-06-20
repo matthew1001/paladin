@@ -30,6 +30,8 @@ import (
 
 type Coordinator interface {
 	GetTransactionsReadyToDispatch(ctx context.Context) ([]*components.PrivateTransaction, error)
+	GetActiveCoordinatorNode(ctx context.Context) string
+	HandleEvent(ctx context.Context, event common.Event) error
 }
 
 type coordinator struct {
@@ -44,7 +46,7 @@ type coordinator struct {
 	grapher                                    transaction.Grapher
 
 	/* Config */
-	blockRangeSize       uint64
+	blockRangeSize       int64
 	contractAddress      *pldtypes.EthAddress
 	blockHeightTolerance uint64
 	closingGracePeriod   int // expressed as a multiple of heartbeat intervals
@@ -71,7 +73,7 @@ func NewCoordinator(
 	engineIntegration common.EngineIntegration,
 	requestTimeout,
 	assembleTimeout common.Duration,
-	blockRangeSize uint64,
+	blockRangeSize int64,
 	contractAddress *pldtypes.EthAddress,
 	blockHeightTolerance uint64,
 	closingGracePeriod int,
@@ -121,6 +123,10 @@ func NewCoordinator(
 
 func (c *coordinator) sendHandoverRequest(ctx context.Context) {
 	c.messageSender.SendHandoverRequest(ctx, c.activeCoordinator, c.contractAddress)
+}
+
+func (c *coordinator) GetActiveCoordinatorNode(ctx context.Context) string {
+	return c.activeCoordinator
 }
 
 // TODO consider renaming to setDelegatedTransactionsForSender to make it clear that we expect senders to include all inflight transactions in every delegation request and therefore this is

@@ -82,7 +82,7 @@ Paladin domains use one of the following coordination models:
 1. Always local
     - Always acts as coordinator for its own transactions relating to the contract, for example when participating in a Zeto token contract.
 2. Always remote
-    - Never acts as a coordinator for the private contract, for example when particpating in a Noto token but never acting as the notiary for the token
+    - Never acts as a coordinator for the private contract, for example when particpating in a Noto token but never acting as the notary for the token
 3. Leader elected
     - May act as a coordinator based on the distributed coordination algorithm, for example when participating in a Pente private contract
 

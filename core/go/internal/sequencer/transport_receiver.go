@@ -13,7 +13,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package privatetxnmgr
+package sequencer
 
 import (
 	"context"
@@ -23,31 +23,17 @@ import (
 	"github.com/kaleido-io/paladin/core/internal/sequencer/transport"
 )
 
-func (p *privateTxManager) HandlePaladinMsg(ctx context.Context, message *components.ReceivedMessage) {
+func (d *distributedSequencerManager) HandlePaladinMsg(ctx context.Context, message *components.ReceivedMessage) {
 	//TODO this need to become an ultra low latency, non blocking, handover to the event loop thread.
 	// need some thought on how to handle errors, retries, buffering, swapping idle sequencers in and out of memory etc...
 
 	//Send the event to the sequencer for the contract and any transaction manager for the signing key
 	messagePayload := message.Payload
-	fromNode := message.FromNode
+	// fromNode := message.FromNode // MRW TODO - do we need this here?
 
 	switch message.MessageType {
-	case "EndorsementRequest":
-		go p.handleEndorsementRequest(p.ctx, messagePayload, fromNode)
-	case "EndorsementResponse":
-		go p.handleEndorsementResponse(p.ctx, messagePayload)
-	case "DelegationRequest":
-		go p.handleDelegationRequest(p.ctx, messagePayload, fromNode)
-	case "DelegationRequestAcknowledgment":
-		go p.handleDelegationRequestAcknowledgment(p.ctx, messagePayload)
-	case "AssembleRequest":
-		go p.handleAssembleRequest(p.ctx, messagePayload, fromNode)
-	case "AssembleResponse":
-		go p.handleAssembleResponse(p.ctx, messagePayload)
-	case "AssembleError":
-		go p.handleAssembleError(p.ctx, messagePayload)
 	case transport.MessageType_CoordinatorHeartbeatNotification:
-		go p.handleCoordinatorHeartbeatNotification(p.ctx, messagePayload)
+		go d.handleCoordinatorHeartbeatNotification(d.ctx, messagePayload)
 	default:
 		log.L(ctx).Errorf("Unknown message type: %s", message.MessageType)
 	}

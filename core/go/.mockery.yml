@@ -67,3 +67,9 @@ packages:
       dir: "{{.InterfaceDir}}"
       pkgname: "{{.SrcPackageName}}"
       structname: "Mock{{.InterfaceName}}"
+  github.com/kaleido-io/paladin/core/internal/sequencer:
+    config:
+      all: true
+      dir: "{{.InterfaceDir}}"
+      pkgname: "{{.SrcPackageName}}"
+      structname: "Mock{{.InterfaceName}}"

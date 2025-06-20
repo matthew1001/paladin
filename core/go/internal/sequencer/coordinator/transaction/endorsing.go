@@ -145,7 +145,6 @@ func (t *Transaction) sendEndorsementRequests(ctx context.Context) error {
 }
 
 func (t *Transaction) requestEndorsement(ctx context.Context, idempotencyKey uuid.UUID, party string, attRequest *prototk.AttestationRequest) error {
-
 	err := t.messageSender.SendEndorsementRequest(
 		ctx,
 		idempotencyKey,

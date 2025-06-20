@@ -83,6 +83,8 @@ plugins:
   - mike
   - panzoom:
       full_screen: true
+      include_selectors:
+        - .zoomable-image
 extra:
   analytics:
     provider: google

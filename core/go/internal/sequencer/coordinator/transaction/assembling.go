@@ -55,7 +55,6 @@ func (t *Transaction) sendAssembleRequest(ctx context.Context) error {
 	//When we first send the request, we start a ticker to emit a requestTimeout event for each tick
 	// we and nudge the request every requestTimeout event implement the short retry.
 	// the state machine will deal with the long timeout via the guard assembleTimeoutExpired
-
 	t.pendingAssembleRequest = common.NewIdempotentRequest(ctx, t.clock, t.requestTimeout, func(ctx context.Context, idempotencyKey uuid.UUID) error {
 		return t.messageSender.SendAssembleRequest(ctx, t.sender, t.ID, idempotencyKey, t.PreAssembly)
 	})
