@@ -22,83 +22,56 @@ import PaladinClient, {
 import {
   checkDeploy,
   checkReceipt,
-  getCachePath,
   DEFAULT_POLL_TIMEOUT,
-  LONG_POLL_TIMEOUT,
-  POLL_INTERVAL,
 } from "paladin-example-common";
-import atomJson from "./abis/Atom.json";
-import atomFactoryJson from "./abis/AtomFactory.json";
-import bondTrackerPublicJson from "./abis/BondTrackerPublic.json";
-import { newBondSubscription } from "./helpers/bondsubscription";
 import { newBondTracker } from "./helpers/bondtracker";
-import * as fs from 'fs';
-import * as path from 'path';
-import { ContractData } from "./tests/data-persistence";
 import { nodeConnections } from "paladin-example-common";
+import bondTrackerPublicJson from "./abis/BondTrackerPublic.json";
 
 const logger = console;
 
 async function main(): Promise<boolean> {
   // --- Initialization from Imported Config ---
   if (nodeConnections.length < 3) {
-    logger.error("The environment config must provide at least 3 nodes for this scenario.");
+    logger.error(
+      "The environment config must provide at least 3 nodes for this scenario.",
+    );
     return false;
   }
-  
-  logger.log("Initializing Paladin clients from the environment configuration...");
-  const clients = nodeConnections.map(node => new PaladinClient(node.clientOptions));
-  const [paladin1, paladin2, paladin3] = clients;
 
-  const [cashIssuer, bondIssuer] = paladin1.getVerifiers(
-    `cashIssuer@${nodeConnections[0].id}`,
-    `bondIssuer@${nodeConnections[0].id}`
-  );
-
-  const [bondCustodian] = paladin2.getVerifiers(`bondCustodian@${nodeConnections[1].id}`);
-  const [investor] = paladin3.getVerifiers(`investor@${nodeConnections[2].id}`);
-  // Create a Noto token to represent cash
-  logger.log("Deploying Noto cash token...");
-  const notoFactory = new NotoFactory(paladin1, "noto");
-  const notoCash = await notoFactory
-    .newNoto(cashIssuer, {
-      name: "BOND",
-      symbol: "BOND",
-      notary: cashIssuer,
-      notaryMode: "basic",
-    })
-    .waitForDeploy(DEFAULT_POLL_TIMEOUT);
-  if (!checkDeploy(notoCash)) return false;
-
-  // Issue some cash
-  logger.log("Issuing cash...");
-  let receipt = await notoCash
-    .mint(cashIssuer, {
-      to: investor,
-      amount: 100000,
-      data: "0x",
-    })
-    .waitForReceipt(DEFAULT_POLL_TIMEOUT);
-  if (!checkReceipt(receipt)) return false;
-
-  let balanceInvestor = await notoCash.balanceOf(cashIssuer, {
-    account: investor.lookup,
-  });
   logger.log(
-    `(NotoCash) Investor State: ${balanceInvestor.totalBalance} units of cash, ${balanceInvestor.totalStates} states, overflow: ${balanceInvestor.overflow}`
+    "Initializing Paladin clients from the environment configuration...",
   );
+  const clients = nodeConnections.map(
+    (node) => new PaladinClient(node.clientOptions),
+  );
+  const [paladin1] = clients;
 
-  // Create a Pente privacy group between the bond issuer and bond custodian
-  logger.log("Creating issuer+custodian privacy group...");
+  const bondIssuer = paladin1.getVerifiers("issuer@pnode1")[0];
+  const allowedInvestor = paladin1.getVerifiers("bankA@pnode2")[0];
+
+  logger.log("Creating issuer privacy group");
   const penteFactory = new PenteFactory(paladin1, "pente");
   const issuerCustodianGroup = await penteFactory
     .newPrivacyGroup({
-      members: [bondIssuer, bondCustodian],
+      members: [bondIssuer],
       evmVersion: "shanghai",
       externalCallsEnabled: true,
     })
     .waitForDeploy(DEFAULT_POLL_TIMEOUT);
   if (!checkDeploy(issuerCustodianGroup)) return false;
+
+  logger.log("Deploying Noto cash token...");
+  const notoFactory = new NotoFactory(paladin1, "noto");
+  const notoCash = await notoFactory
+    .newNoto(bondIssuer, {
+      name: "BOND",
+      symbol: "BOND",
+      notary: bondIssuer,
+      notaryMode: "basic",
+    })
+    .waitForDeploy(DEFAULT_POLL_TIMEOUT);
+  if (!checkDeploy(notoCash)) return false;
 
   // Deploy the public bond tracker on the base ledger (controlled by the privacy group)
   logger.log("Creating public bond tracker...");
@@ -118,7 +91,7 @@ async function main(): Promise<boolean> {
       faceValue_: 1,
     },
   });
-  receipt = await paladin1.pollForReceipt(txID, DEFAULT_POLL_TIMEOUT);
+  let receipt = await paladin1.pollForReceipt(txID, DEFAULT_POLL_TIMEOUT);
   if (receipt?.contractAddress === undefined) {
     logger.error("Failed!");
     return false;
@@ -131,18 +104,19 @@ async function main(): Promise<boolean> {
   const bondTracker = await newBondTracker(issuerCustodianGroup, bondIssuer, {
     name: "BOND",
     symbol: "BOND",
-    custodian: await bondCustodian.address(),
+    custodian: await bondIssuer.address(),
     publicTracker: bondTrackerPublicAddress,
   });
   if (!checkDeploy(bondTracker)) return false;
 
   // Deploy Noto token to represent bond
+
   logger.log("Deploying Noto bond token...");
   const notoBond = await notoFactory
     .newNoto(bondIssuer, {
       name: "BOND",
       symbol: "BOND",
-      notary: bondCustodian,
+      notary: bondIssuer,
       notaryMode: "hooks",
       options: {
         hooks: {
@@ -155,374 +129,16 @@ async function main(): Promise<boolean> {
     .waitForDeploy(DEFAULT_POLL_TIMEOUT);
   if (!checkDeploy(notoBond)) return false;
 
-  // Deploy the atom factory on the base ledger
-  logger.log("Creating atom factory...");
-  txID = await paladin1.ptx.sendTransaction({
-    type: TransactionType.PUBLIC,
-    abi: atomFactoryJson.abi,
-    bytecode: atomFactoryJson.bytecode,
-    function: "",
-    from: bondIssuer.lookup,
-    data: {},
-  });
-  receipt = await paladin1.pollForReceipt(txID, DEFAULT_POLL_TIMEOUT);
-  if (receipt?.contractAddress === undefined) {
-    logger.error("Failed!");
-    return false;
-  }
-  logger.log(`Success! address: ${receipt.contractAddress}`);
-  const atomFactoryAddress = receipt.contractAddress;
-
-  // Issue the bond to the custodian
-  logger.log("Issuing bond...");
-  receipt = await notoBond
-    .mint(bondIssuer, {
-      to: bondCustodian,
-      amount: 1000,
-      data: "0x",
-    })
-    .waitForReceipt(DEFAULT_POLL_TIMEOUT);
-  if (!checkReceipt(receipt)) return false;
-  let balanceCustodian = await notoBond.balanceOf(bondIssuer, {
-    account: bondCustodian.lookup,
-  });
-  logger.log(
-    `(NotoBond) Bond Custodian State: ${balanceCustodian.totalBalance} units of cash, ${balanceCustodian.totalStates} states, overflow: ${balanceCustodian.overflow}`
-  );
-
-  // Begin bond distribution to investors
-  logger.log("Beginning distribution...");
-  receipt = await bondTracker
-    .using(paladin2)
-    .beginDistribution(bondCustodian, {
-      discountPrice: 1,
-      minimumDenomination: 1,
-    })
-    .waitForReceipt(DEFAULT_POLL_TIMEOUT);
-  if (!checkReceipt(receipt)) return false;
-
   // Add allowed investors
   const investorList = await bondTracker.investorList(bondIssuer);
+  logger.log("Adding allowed investor...");
   receipt = await investorList
-    .using(paladin2)
-    .addInvestor(bondCustodian, { addr: await investor.address() })
+    .using(paladin1)
+    .addInvestor(bondIssuer, { addr: await allowedInvestor.address() })
     .waitForReceipt(DEFAULT_POLL_TIMEOUT);
   if (!checkReceipt(receipt)) return false;
 
-  // Create a Pente privacy group between the bond investor and bond custodian
-  logger.log("Creating investor+custodian privacy group...");
-  const investorCustodianGroup = await penteFactory
-    .using(paladin3)
-    .newPrivacyGroup({
-      members: [investor, bondCustodian],
-      evmVersion: "shanghai",
-      externalCallsEnabled: true,
-    })
-    .waitForDeploy(DEFAULT_POLL_TIMEOUT);
-  if (investorCustodianGroup === undefined) {
-    logger.error("Failed!");
-    return false;
-  }
-  logger.log(`Success! address: ${investorCustodianGroup.address}`);
-
-  // Deploy bond subscription to the investor/custodian privacy group
-  logger.log("Creating private bond subscription...");
-  const bondSubscription = await newBondSubscription(
-    investorCustodianGroup,
-    investor,
-    {
-      bondAddress_: notoBond.address,
-      units_: 100,
-      custodian_: await bondCustodian.address(),
-      atomFactory_: atomFactoryAddress,
-    }
-  );
-  if (!checkDeploy(bondSubscription)) return false;
-
-  // Prepare the payment transfer (investor -> custodian)
-  logger.log("Locking cash transfer from investor...");
-  receipt = await notoCash
-    .using(paladin3)
-    .lock(investor, {
-      amount: 100,
-      data: "0x",
-    })
-    .waitForReceipt(DEFAULT_POLL_TIMEOUT);
-  if (!checkReceipt(receipt)) return false;
-  receipt = await paladin3.ptx.getTransactionReceiptFull(receipt.id);
-  let domainReceipt = receipt?.domainReceipt as INotoDomainReceipt | undefined;
-  const cashLockId = domainReceipt?.lockInfo?.lockId;
-  if (cashLockId === undefined) {
-    logger.error("No lock ID found in domain receipt");
-    return false;
-  }
-  balanceInvestor = await notoCash
-    .using(paladin3)
-    .balanceOf(investor, { account: investor.lookup });
-  logger.log(
-    `(NotoCash) Investor State: ${balanceInvestor.totalBalance} units of cash, ${balanceInvestor.totalStates} states, overflow: ${balanceInvestor.overflow}`
-  );
-
-  // Prepare unlock operation
-  logger.log("Preparing unlock to bond custodian...");
-  receipt = await notoCash
-    .using(paladin3)
-    .prepareUnlock(investor, {
-      lockId: cashLockId,
-      from: investor,
-      recipients: [{ to: bondCustodian, amount: 100 }],
-      unlockData: "0x",
-      data: "0x",
-    })
-    .waitForReceipt(DEFAULT_POLL_TIMEOUT, true);
-  if (!checkReceipt(receipt)) return false;
-  domainReceipt = receipt?.domainReceipt as INotoDomainReceipt | undefined;
-  const cashUnlockCall = domainReceipt?.lockInfo?.unlockCall;
-  if (cashUnlockCall === undefined) {
-    logger.error("No unlock data found in domain receipt");
-    return false;
-  }
-
-  // Prepare the bond transfer (custodian -> investor)
-  logger.log("Locking bond asset from custodian...");
-  receipt = await notoBond
-    .using(paladin2)
-    .lock(bondCustodian, {
-      amount: 100,
-      data: "0x",
-    })
-    .waitForReceipt(DEFAULT_POLL_TIMEOUT, true);
-  if (!checkReceipt(receipt)) return false;
-  domainReceipt = receipt?.domainReceipt as INotoDomainReceipt | undefined;
-  const bondLockId = domainReceipt?.lockInfo?.lockId;
-  if (bondLockId === undefined) {
-    logger.error("No lock ID found in domain receipt");
-    return false;
-  }
-  balanceCustodian = await notoBond
-    .using(paladin2)
-    .balanceOf(bondCustodian, { account: bondCustodian.lookup });
-  logger.log(
-    `(NotoBond) Bond Custodian State: ${balanceCustodian.totalBalance} units of bonds, ${balanceCustodian.totalStates} states, overflow: ${balanceCustodian.overflow}`
-  );
-
-  // Prepare unlock operation
-  logger.log("Preparing unlock to investor...");
-  receipt = await notoBond
-    .using(paladin2)
-    .prepareUnlock(bondCustodian, {
-      lockId: bondLockId,
-      from: bondCustodian,
-      recipients: [{ to: investor, amount: 100 }],
-      unlockData: "0x",
-      data: "0x",
-    })
-    .waitForReceipt(DEFAULT_POLL_TIMEOUT, true);
-  if (!checkReceipt(receipt)) return false;
-  domainReceipt = receipt?.domainReceipt as INotoDomainReceipt | undefined;
-  const assetUnlockCall = domainReceipt?.lockInfo?.unlockCall;
-  if (assetUnlockCall === undefined) {
-    logger.error("No unlock data found in domain receipt");
-    return false;
-  }
-
-  // Pass the prepared payment transfer to the subscription contract
-  logger.log("Adding payment information to subscription request...");
-  receipt = await bondSubscription
-    .using(paladin3)
-    .preparePayment(investor, {
-      to: notoCash.address,
-      encodedCall: cashUnlockCall,
-    })
-    .waitForReceipt(DEFAULT_POLL_TIMEOUT);
-  if (!checkReceipt(receipt)) return false;
-
-  // Pass the prepared bond transfer to the subscription contract
-  logger.log("Adding bond information to subscription request...");
-  receipt = await bondSubscription
-    .using(paladin2)
-    .prepareBond(bondCustodian, {
-      to: notoBond.address,
-      encodedCall: assetUnlockCall,
-    })
-    .waitForReceipt(DEFAULT_POLL_TIMEOUT);
-  if (!checkReceipt(receipt)) return false;
-
-  // Prepare bond distribution (initializes atomic swap of payment and bond units)
-  logger.log("Generating atom for bond distribution...");
-  receipt = await bondSubscription
-    .using(paladin2)
-    .distribute(bondCustodian)
-    .waitForReceipt(DEFAULT_POLL_TIMEOUT);
-  if (!checkReceipt(receipt)) return false;
-
-  // Extract the address of the created Atom
-  const events = await paladin2.bidx.decodeTransactionEvents(
-    receipt.transactionHash,
-    atomFactoryJson.abi,
-    ""
-  );
-  const atomDeployedEvent = events.find(
-    (e) => e.soliditySignature === "event AtomDeployed(address addr)"
-  );
-  if (atomDeployedEvent === undefined) {
-    logger.error("Did not find AtomDeployed event");
-    return false;
-  }
-  const atomAddress = atomDeployedEvent.data.addr;
   logger.log("Success!");
-
-  // Approve the payment transfer
-  logger.log("Approving payment transfer...");
-  receipt = await notoCash
-    .using(paladin3)
-    .delegateLock(investor, {
-      lockId: cashLockId,
-      delegate: atomAddress,
-      data: "0x",
-    })
-    .waitForReceipt(DEFAULT_POLL_TIMEOUT);
-  if (!checkReceipt(receipt)) return false;
-
-  // Approve the bond transfer
-  logger.log("Approving bond transfer...");
-  receipt = await notoBond
-    .using(paladin2)
-    .delegateLock(bondCustodian, {
-      lockId: bondLockId,
-      delegate: atomAddress,
-      data: "0x",
-    })
-    .waitForReceipt(DEFAULT_POLL_TIMEOUT);
-  if (!checkReceipt(receipt)) return false;
-
-  // Execute the atomic transfer
-  logger.log("Distributing bond...");
-  txID = await paladin2.ptx.sendTransaction({
-    type: TransactionType.PUBLIC,
-    abi: atomJson.abi,
-    function: "execute",
-    from: bondCustodian.lookup,
-    to: atomAddress,
-    data: {},
-  });
-  receipt = await paladin2.pollForReceipt(txID, DEFAULT_POLL_TIMEOUT);
-  if (!checkReceipt(receipt)) return false;
-
-
-  // it can take some time for the balances to update, so loop until all balances are >0
-  let finalCashBalanceInvestor: NotoBalanceOfResult | undefined;
-  let finalBondBalanceInvestor: NotoBalanceOfResult | undefined;
-  let finalCashBalanceCustodian: NotoBalanceOfResult | undefined;
-  let finalBondBalanceCustodian: NotoBalanceOfResult | undefined;
-  const startTime = Date.now();
-  while (true) {
-    // Get final balances after the bond distribution
-    finalCashBalanceInvestor = await notoCash
-      .using(paladin3)
-      .balanceOf(investor, { account: investor.lookup });
-
-    finalBondBalanceInvestor = await notoBond
-      .using(paladin3)
-      .balanceOf(investor, { account: investor.lookup });
-
-    finalCashBalanceCustodian = await notoCash
-      .using(paladin2)
-      .balanceOf(bondCustodian, { account: bondCustodian.lookup });
-
-    finalBondBalanceCustodian = await notoBond
-      .using(paladin2)
-      .balanceOf(bondCustodian, { account: bondCustodian.lookup });
-
-    if (finalCashBalanceInvestor?.totalBalance !== "0" &&
-      finalBondBalanceInvestor?.totalBalance !== "0" &&
-      finalCashBalanceCustodian?.totalBalance !== "0" &&
-      finalBondBalanceCustodian?.totalBalance !== "0") {
-      break;
-    }
-
-    if (Date.now() - startTime > LONG_POLL_TIMEOUT) {
-      logger.error(`Failed to get final balances after ${LONG_POLL_TIMEOUT / 1000} seconds`);
-      return false;
-    }
-
-    await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL));
-  }
-
-      // Save contract data to file for later use
-  const contractData: ContractData = {
-    notoCashAddress: notoCash.address,
-    notoBondAddress: notoBond.address,
-    issuerCustodianGroupId: issuerCustodianGroup.group.id,
-    issuerCustodianGroupAddress: issuerCustodianGroup.address,
-    investorCustodianGroupId: investorCustodianGroup.group.id,
-    investorCustodianGroupAddress: investorCustodianGroup.address,
-    bondTrackerAddress: bondTracker.address,
-    bondTrackerPublicAddress: bondTrackerPublicAddress,
-    bondSubscriptionAddress: bondSubscription.address,
-    atomFactoryAddress: atomFactoryAddress,
-    atomAddress: atomAddress,
-    bondDetails: {
-      issueDate: issueDate,
-      maturityDate: maturityDate,
-      faceValue: 1,
-      discountPrice: 1,
-      minimumDenomination: 1,
-      bondUnits: 100,
-      cashAmount: 100
-    },
-    lockDetails: {
-      cashLockId: cashLockId,
-      bondLockId: bondLockId,
-      cashUnlockCall: cashUnlockCall,
-      assetUnlockCall: assetUnlockCall
-    },
-    finalBalances: {
-      cash: {
-        investor: {
-          totalBalance: finalCashBalanceInvestor.totalBalance,
-          totalStates: finalCashBalanceInvestor.totalStates,
-          overflow: finalCashBalanceInvestor.overflow
-        },
-        custodian: {
-          totalBalance: finalCashBalanceCustodian.totalBalance,
-          totalStates: finalCashBalanceCustodian.totalStates,
-          overflow: finalCashBalanceCustodian.overflow
-        }
-      },
-      bond: {
-        investor: {
-          totalBalance: finalBondBalanceInvestor.totalBalance,
-          totalStates: finalBondBalanceInvestor.totalStates,
-          overflow: finalBondBalanceInvestor.overflow
-        },
-        custodian: {
-          totalBalance: finalBondBalanceCustodian.totalBalance,
-          totalStates: finalBondBalanceCustodian.totalStates,
-          overflow: finalBondBalanceCustodian.overflow
-        }
-      }
-    },
-    participants: {
-      cashIssuer: cashIssuer.lookup,
-      bondIssuer: bondIssuer.lookup,
-      bondCustodian: bondCustodian.lookup,
-      investor: investor.lookup
-    },
-    timestamp: new Date().toISOString()
-  };
-
-  // Use command-line argument for data directory if provided, otherwise use default
-  const dataDir = getCachePath();
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
-  }
-
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const dataFile = path.join(dataDir, `contract-data-${timestamp}.json`);
-  fs.writeFileSync(dataFile, JSON.stringify(contractData, null, 2));
-  logger.log(`Contract data saved to ${dataFile}`);
-
   return true;
 }
 
